@@ -19,7 +19,7 @@ class GlowingCard extends StatelessWidget {
     this.backgroundGradients,
     this.blur = 15.0,
     this.borderRadius = 20.0,
-    this.padding = const EdgeInsets.all(20.0),
+    this.padding = const EdgeInsets.symmetric(horizontal: 12.0, vertical: 16.0),
     this.margin = const EdgeInsets.symmetric(vertical: 10.0),
     this.glowColor = Colors.cyan,
     this.glowRadius = 0.0,

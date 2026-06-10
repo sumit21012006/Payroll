@@ -30,6 +30,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     final isDesktop = size.width > 1000;
+    const double paddingVal = 8.0;
 
     // Calculate aggregated metrics
     double totalPayroll = 0.0;
@@ -83,9 +84,12 @@ class _AdminDashboardState extends State<AdminDashboard> {
           children: [
             const Icon(Icons.admin_panel_settings, color: Colors.cyanAccent),
             const SizedBox(width: 10.0),
-            Text(
-              'ADMINISTRATOR DASHBOARD',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18.0),
+            Flexible(
+              child: Text(
+                'ADMINISTRATOR DASHBOARD',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18.0),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -126,7 +130,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
           ),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(horizontal: paddingVal, vertical: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -378,6 +382,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildEmployeeTableCard(List<Employee> crew) {
+    const double paddingVal = 8.0;
     return GlowingCard(
       margin: EdgeInsets.zero,
       child: Column(
@@ -407,7 +412,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                         scrollDirection: Axis.horizontal,
                         child: SizedBox(
                           width: MediaQuery.of(context).size.width > 1000 
-                              ? MediaQuery.of(context).size.width - 96.0 
+                              ? MediaQuery.of(context).size.width - paddingVal * 2 - 24.0 
                               : 950.0,
                           child: Table(
                             columnWidths: const {
@@ -547,7 +552,11 @@ class _AdminDashboardState extends State<AdminDashboard> {
   }
 
   Widget _buildFilterSearchHeader() {
-    final List<String> depts = ['All', 'Production', 'IT', 'HR', 'Admin', 'Accounts', 'Sales'];
+    final Set<String> uniqueDepts = widget.payrollService.employees.map((e) => e.department).toSet();
+    final List<String> depts = ['All', ...uniqueDepts.where((d) => d.isNotEmpty)];
+    if (!depts.contains(_deptFilter)) {
+      _deptFilter = 'All';
+    }
     final bool isMobile = MediaQuery.of(context).size.width < 600;
 
     final headerText = Column(
@@ -660,35 +669,44 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: isLoad ? Colors.purpleAccent.withOpacity(0.2) : Colors.cyanAccent.withOpacity(0.2),
-                              radius: 20.0,
-                              child: Text(
-                                emp.name.substring(0, 1),
-                                style: TextStyle(
-                                  color: isLoad ? Colors.purpleAccent : Colors.cyanAccent, 
-                                  fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                backgroundColor: isLoad ? Colors.purpleAccent.withOpacity(0.2) : Colors.cyanAccent.withOpacity(0.2),
+                                radius: 20.0,
+                                child: Text(
+                                  emp.name.substring(0, 1),
+                                  style: TextStyle(
+                                    color: isLoad ? Colors.purpleAccent : Colors.cyanAccent, 
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12.0),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  emp.name,
-                                  style: GoogleFonts.outfit(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
+                              const SizedBox(width: 12.0),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      emp.name,
+                                      style: GoogleFonts.outfit(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    Text(
+                                      'ID: ${emp.employeeId}  |  Dept: ${emp.department}',
+                                      style: const TextStyle(color: Colors.white54, fontSize: 12.0),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                                Text(
-                                  'ID: ${emp.employeeId}  |  Dept: ${emp.department}',
-                                  style: const TextStyle(color: Colors.white54, fontSize: 12.0),
-                                ),
-                              ],
-                            ),
-                          ],
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(width: 16.0),
                         // Interactive Toggle Switch for Pay Basis!
                         Row(
                           children: [
@@ -741,11 +759,74 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     ),
                     const SizedBox(height: 24.0),
 
+                    // Real Company Metadata Section
+                    Builder(
+                      builder: (context) {
+                        Widget metadataRow(IconData icon, String label, String val) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                            child: Row(
+                              children: [
+                                Icon(icon, size: 16.0, color: Colors.cyanAccent),
+                                const SizedBox(width: 10.0),
+                                Text(
+                                  label,
+                                  style: const TextStyle(color: Colors.white54, fontSize: 12.0, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(width: 8.0),
+                                Expanded(
+                                  child: Text(
+                                    val,
+                                    style: const TextStyle(color: Colors.white, fontSize: 12.0),
+                                    textAlign: TextAlign.right,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        return Container(
+                          padding: const EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.01),
+                            borderRadius: BorderRadius.circular(10.0),
+                            border: Border.all(color: Colors.white.withOpacity(0.05)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'REAL COMPANY METADATA',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 12.0, 
+                                  fontWeight: FontWeight.bold, 
+                                  color: Colors.cyanAccent,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const Divider(color: Colors.white12, height: 16.0),
+                              metadataRow(Icons.pin, 'UAN Number', emp.uan.isNotEmpty ? emp.uan : 'N/A'),
+                              metadataRow(Icons.security, 'ESIC Number', emp.esic.isNotEmpty ? emp.esic : 'N/A'),
+                              metadataRow(Icons.account_balance, 'Bank Name', emp.bankName.isNotEmpty ? emp.bankName : 'N/A'),
+                              metadataRow(Icons.code, 'IFSC Code', emp.ifscCode.isNotEmpty ? emp.ifscCode : 'N/A'),
+                              metadataRow(Icons.numbers, 'Bank Account', emp.bankAcc.isNotEmpty ? emp.bankAcc : 'N/A'),
+                              metadataRow(Icons.fingerprint, 'Biometric Punch Code', emp.punchingCode.isNotEmpty ? emp.punchingCode : 'N/A'),
+                              metadataRow(Icons.phone, 'Mobile Number', emp.mobileNo.isNotEmpty ? emp.mobileNo : 'N/A'),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24.0),
+
                     // Active custom calendar inside modal!
                     AttendanceCalendar(
                       employeeId: emp.employeeId,
                       logs: empLogs,
                       jobs: widget.payrollService.jobLogs,
+                      getJobSplitOverride: (job, empId) => widget.payrollService.getEmployeeJobSplit(job, empId),
                     ),
                     const SizedBox(height: 24.0),
 
@@ -811,15 +892,17 @@ class _AdminDashboardState extends State<AdminDashboard> {
             '⚙️ PAYROLL GLOBAL SETTINGS',
             style: GoogleFonts.outfit(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 16.0),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _settingsInput('Standard Shift Duration (Hours)', shiftCtrl),
-              _settingsInput('Overtime Pay Rate Multiplier', otCtrl),
-              _settingsInput('Allowed Monthly Paid Leaves', leavesCtrl),
-              _settingsInput('Lateness Grace Period (Minutes)', graceCtrl),
-              _settingsInput('Default Rate per Ton (₹)', rateCtrl),
-            ],
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _settingsInput('Standard Shift Duration (Hours)', shiftCtrl),
+                _settingsInput('Overtime Pay Rate Multiplier', otCtrl),
+                _settingsInput('Allowed Monthly Paid Leaves', leavesCtrl),
+                _settingsInput('Lateness Grace Period (Minutes)', graceCtrl),
+                _settingsInput('Default Rate per Ton (₹)', rateCtrl),
+              ],
+            ),
           ),
           actions: [
             TextButton(

@@ -133,6 +133,8 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
+    const double pagePadding = 8.0;
+    const double cardPadding = 12.0;
 
     return Scaffold(
       body: Container(
@@ -191,10 +193,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             // Login panel
             SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: EdgeInsets.symmetric(horizontal: pagePadding, vertical: 24.0),
               child: Center(
-                child: SizedBox(
-                  width: 450.0, // Fixed width on web/desktop, fits nicely
+                child: Container(
+                  constraints: const BoxConstraints(maxWidth: 800.0), // Fills screens up to 800px wide, centers on ultra-wide screens
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -227,7 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       GlowingCard(
                         glowRadius: 20.0,
                         glowColor: Colors.cyan,
-                        padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 40.0),
+                        padding: EdgeInsets.symmetric(horizontal: cardPadding, vertical: 30.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -247,10 +249,10 @@ class _LoginScreenState extends State<LoginScreen> {
                             if (_selectedRoleIndex == 0) ...[
                               _buildInputField(
                                 label: 'Employee ID',
-                                hint: 'Enter 4-digit ID (e.g. 1001-1100)',
+                                hint: 'Enter Employee ID (e.g. KFIL/L1-406)',
                                 controller: _idController,
                                 icon: Icons.badge_outlined,
-                                keyboardType: TextInputType.number,
+                                keyboardType: TextInputType.text,
                               ),
                               _buildEmployeeDetailsDisplay(),
                             ] else ...[
@@ -303,7 +305,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 style: TextStyle(color: Colors.white54, fontSize: 10.0),
                               ),
                               Text(
-                                'Day-Basis Emp: "1001" (Employee_1)  |  Load-Basis Emp: "1008" (Employee_8)',
+                                'Real Emp: "KFIL/L1-406" (ABHIJIT P WAGHMARE)  |  "KFIL/L1-410" (AKIB SADIK SHAIKH)',
                                 style: TextStyle(color: Colors.white54, fontSize: 10.0),
                               ),
                             ],

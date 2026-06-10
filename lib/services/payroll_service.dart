@@ -23,6 +23,18 @@ class PayrollCalculation {
   final double grossSalary;
   final double netSalary;
 
+  // New real statutory fields
+  final double basicPay;
+  final double otPay;
+  final double basicDa;
+  final double hra;
+  final double otherAllowance;
+  final double pfDeduction;
+  final double esicDeduction;
+  final double ptDeduction;
+  final double otherDeduction;
+  final double totalDeductions;
+
   PayrollCalculation({
     required this.employee,
     required this.totalDaysLogged,
@@ -39,6 +51,16 @@ class PayrollCalculation {
     required this.jobEarnings,
     required this.grossSalary,
     required this.netSalary,
+    this.basicPay = 0.0,
+    this.otPay = 0.0,
+    this.basicDa = 0.0,
+    this.hra = 0.0,
+    this.otherAllowance = 0.0,
+    this.pfDeduction = 0.0,
+    this.esicDeduction = 0.0,
+    this.ptDeduction = 0.0,
+    this.otherDeduction = 0.0,
+    this.totalDeductions = 0.0,
   });
 }
 
@@ -226,6 +248,42 @@ class PayrollService {
     return loadBasisEmployeeIds.contains(id);
   }
 
+  double getEmployeeJobSplit(JobLog job, String employeeId) {
+    if (!isEmployeeLoadBasis(employeeId)) {
+      return 0.0;
+    }
+
+    final crew = job.employeeIds;
+    final loadBasisCrew = crew.where((id) => isEmployeeLoadBasis(id)).toList();
+    final dayBasisCrew = crew.where((id) => !isEmployeeLoadBasis(id)).toList();
+
+    if (loadBasisCrew.isEmpty) {
+      return 0.0;
+    }
+
+    double totalDayWagesToDeduct = 0.0;
+    for (var dayEmpId in dayBasisCrew) {
+      final emp = employees.firstWhere(
+        (e) => e.employeeId == dayEmpId,
+        orElse: () => Employee(
+          employeeId: dayEmpId,
+          name: '',
+          department: '',
+          salaryPerDay: 636.0,
+          deductionPerDay: 0.0,
+        ),
+      );
+      totalDayWagesToDeduct += emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0;
+    }
+
+    final double remainingPool = job.totalPayout - totalDayWagesToDeduct;
+    if (remainingPool <= 0.0) {
+      return 0.0;
+    }
+
+    return remainingPool / loadBasisCrew.length;
+  }
+
   // Add new supervisor Job Log
   void addJobLog(JobLog log) {
     jobLogs.add(log);
@@ -260,15 +318,10 @@ class PayrollService {
         halfDays++;
       }
 
-      // Overtime hours calculation:
-      // If check_out is 13:00 (which we see in some half-days/overtimes), hours might be short.
-      // But standard overtime is calculated for hours exceeding the standard shift hours (e.g. 9 hours)
       final double duration = log.hoursWorked;
       if (duration > standardShiftHours) {
         otHours += (duration - standardShiftHours);
       } else if (status.contains('OVERTIME') && duration > 0.0) {
-        // If status is OVERTIME but duration <= 9 (e.g. weekend or holiday short shift),
-        // we pay all hours worked as overtime!
         otHours += duration;
       }
     }
@@ -276,8 +329,6 @@ class PayrollService {
     final int daysLogged = empLogs.length;
 
     // Calculate absent days (unpaid leaves)
-    // May 2026 has 21 weekdays (Mon-Fri)
-    // We check how many of those 21 weekdays the employee has any biometric record
     final List<String> weekdays = [];
     for (int d = 1; d <= 31; d++) {
       final dt = DateTime(2026, 5, d);
@@ -292,52 +343,93 @@ class PayrollService {
         .toSet();
 
     final int rawAbsentWeekdays = weekdays.length - loggedWeekdays.length;
-    final int netUnpaidAbsents = rawAbsentWeekdays > allowedPaidLeaves 
-        ? rawAbsentWeekdays - allowedPaidLeaves 
-        : 0;
-
-    // Calculate earnings components
-    double baseEarn = 0.0;
-    double otEarn = 0.0;
-    double lateDeduct = 0.0;
-    double absentDeduct = 0.0;
-
-    if (!isLoadBasis) {
-      // Day-basis employee calculations
-      // PRESENT, LATE, and OVERTIME get full day rate. HALF_DAY gets 50%
-      final double activeFullDays = (present + lates + overtimes).toDouble();
-      final double activeHalfDays = halfDays.toDouble();
-      
-      baseEarn = (activeFullDays * employee.salaryPerDay) + (activeHalfDays * employee.salaryPerDay * 0.5);
-
-      // Overtime Pay
-      final double hourlyRate = employee.salaryPerDay / 8.0; // assuming 8 working hours per shift
-      otEarn = otHours * hourlyRate * overtimeMultiplier;
-
-      // Cuttings / Deductions
-      lateDeduct = lates * employee.deductionPerDay;
-      absentDeduct = netUnpaidAbsents * employee.salaryPerDay;
-    } else {
-      // Load-basis employee calculations
-      // Base pay is 0. Overtime is 0. Absent deductions are 0.
-      baseEarn = 0.0;
-      otEarn = 0.0;
-      lateDeduct = 0.0;
-      absentDeduct = 0.0;
-    }
 
     // Load-basis and Day-basis employees both get their share of supervisor Job splits!
-    // Total job earnings = sum of split payouts for all jobs this employee worked on
     double jobEarn = 0.0;
     for (var job in jobLogs) {
       if (job.employeeIds.contains(employee.employeeId)) {
-        jobEarn += job.splitPayout;
+        jobEarn += getEmployeeJobSplit(job, employee.employeeId);
       }
     }
 
-    // Gross and Net salary
-    final double gross = baseEarn + otEarn + jobEarn;
-    final double net = gross - lateDeduct - absentDeduct;
+    // Run real company statutory math
+    double basicPay = 0.0;
+    double otPay = 0.0;
+    double basicDa = 0.0;
+    double hra = 0.0;
+    double otherAllowance = 0.0;
+    double pfDeduction = 0.0;
+    double esicDeduction = 0.0;
+    double ptDeduction = 0.0;
+    double otherDeduction = 0.0;
+    double totalDeductions = 0.0;
+
+    double gross = 0.0;
+    double net = 0.0;
+
+    if (!isLoadBasis) {
+      // Day-basis employee calculations
+      final double rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : 636.0;
+      
+      final double workedDays = (present + lates).toDouble() + (halfDays.toDouble() * 0.5);
+      final double otDays = overtimes.toDouble();
+      
+      basicPay = workedDays * rate;
+      otPay = otDays * rate;
+      gross = basicPay + otPay + jobEarn;
+
+      // BASIC+DA = workedDays * (15746 / 26) = workedDays * 605.61538
+      basicDa = (workedDays * (15746.0 / 26.0)).roundToDouble();
+      
+      // HRA = 5% of BASIC+DA
+      hra = (basicDa * 0.05).roundToDouble();
+      
+      // Other Allowance = Gross - BASIC+DA - HRA
+      otherAllowance = gross - basicDa - hra;
+      if (otherAllowance < 0.0) otherAllowance = 0.0;
+
+      // Deductions
+      // PF = 12% of BASIC+DA
+      pfDeduction = (basicDa * 0.12).roundToDouble();
+
+      // ESIC = 0.75% of Gross Wages
+      esicDeduction = (gross * 0.0075).roundToDouble();
+
+      // PT = Maharashtra Slab based on Gross Wages
+      if (gross <= 7500.0) {
+        ptDeduction = 0.0;
+      } else if (gross <= 10000.0) {
+        ptDeduction = 175.0;
+      } else {
+        ptDeduction = 200.0;
+      }
+
+      // Other deduction (Mess/Canteen charge = 500 flat)
+      if (gross > 0.0) {
+        otherDeduction = 500.0;
+      } else {
+        otherDeduction = 0.0;
+      }
+
+      totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction;
+      net = gross - totalDeductions;
+    } else {
+      // Load-basis calculations
+      basicPay = 0.0;
+      otPay = 0.0;
+      gross = jobEarn;
+      
+      basicDa = 0.0;
+      hra = 0.0;
+      otherAllowance = 0.0;
+      pfDeduction = 0.0;
+      esicDeduction = 0.0;
+      ptDeduction = 0.0;
+      otherDeduction = 0.0;
+      totalDeductions = 0.0;
+      
+      net = gross;
+    }
 
     return PayrollCalculation(
       employee: employee,
@@ -348,13 +440,25 @@ class PayrollService {
       halfDays: halfDays,
       absentDays: rawAbsentWeekdays,
       overtimeHours: otHours,
-      baseEarnings: baseEarn,
-      overtimeEarnings: otEarn,
-      lateDeductions: lateDeduct,
-      absentDeductions: absentDeduct,
+      
+      baseEarnings: basicPay,
+      overtimeEarnings: otPay,
+      lateDeductions: totalDeductions, // mapped to totalDeductions for backward compatibility
+      absentDeductions: 0.0,
       jobEarnings: jobEarn,
       grossSalary: gross,
-      netSalary: net < 0.0 ? 0.0 : net, // net pay cannot be negative
+      netSalary: net < 0.0 ? 0.0 : net,
+
+      basicPay: basicPay,
+      otPay: otPay,
+      basicDa: basicDa,
+      hra: hra,
+      otherAllowance: otherAllowance,
+      pfDeduction: pfDeduction,
+      esicDeduction: esicDeduction,
+      ptDeduction: ptDeduction,
+      otherDeduction: otherDeduction,
+      totalDeductions: totalDeductions,
     );
   }
 

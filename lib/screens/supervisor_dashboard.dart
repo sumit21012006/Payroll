@@ -24,14 +24,25 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   String _selectedDate = '5/1/2026';
   List<String> _selectedEmployeeIds = [];
   String _searchQuery = '';
-  String _deptFilter = 'Production'; // Default filter to show Production crew first
+  String _deptFilter = 'All'; // Default filter to show all crew first
 
   double _calculatedTotal = 0.0;
   double _calculatedSplit = 0.0;
 
+  final List<String> _defaultJobNames = [
+    'Loading Bauxite',
+    'Casting',
+    'Shafting',
+    'Scraping',
+    'Other (Write Custom Name)...'
+  ];
+  String _selectedJobName = 'Loading Bauxite';
+  bool _isCustomJob = false;
+
   @override
   void initState() {
     super.initState();
+    _selectedJobName = _defaultJobNames.first;
     _rateController.text = widget.payrollService.defaultRatePerTon.toString();
     _tonsController.addListener(_calculateSplits);
     _rateController.addListener(_calculateSplits);
@@ -48,11 +59,31 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   void _calculateSplits() {
     final tons = double.tryParse(_tonsController.text) ?? 0.0;
     final rate = double.tryParse(_rateController.text) ?? 0.0;
-    final crewSize = _selectedEmployeeIds.length;
+
+    final loadCrew = _selectedEmployeeIds.where((id) => widget.payrollService.isEmployeeLoadBasis(id)).toList();
+    final dayCrew = _selectedEmployeeIds.where((id) => !widget.payrollService.isEmployeeLoadBasis(id)).toList();
+
+    double totalDayWagesToDeduct = 0.0;
+    for (var dayEmpId in dayCrew) {
+      final emp = widget.payrollService.employees.firstWhere(
+        (e) => e.employeeId == dayEmpId,
+        orElse: () => Employee(
+          employeeId: dayEmpId,
+          name: '',
+          department: '',
+          salaryPerDay: 636.0,
+          deductionPerDay: 0.0,
+        ),
+      );
+      totalDayWagesToDeduct += emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0;
+    }
+
+    final totalValue = tons * rate;
+    final remaining = totalValue - totalDayWagesToDeduct;
 
     setState(() {
-      _calculatedTotal = tons * rate;
-      _calculatedSplit = crewSize > 0 ? _calculatedTotal / crewSize : 0.0;
+      _calculatedTotal = totalValue;
+      _calculatedSplit = loadCrew.isNotEmpty && remaining > 0.0 ? remaining / loadCrew.length : 0.0;
     });
   }
 
@@ -81,11 +112,12 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
 
       final tons = double.tryParse(_tonsController.text) ?? 0.0;
       final rate = double.tryParse(_rateController.text) ?? 0.0;
+      final jobName = _isCustomJob ? _jobNameController.text.trim() : _selectedJobName;
       
       final newJob = JobLog(
         id: 'JOB-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
         date: _selectedDate,
-        jobName: _jobNameController.text.trim(),
+        jobName: jobName,
         totalTons: tons,
         ratePerTon: rate,
         employeeIds: List<String>.from(_selectedEmployeeIds),
@@ -105,6 +137,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         _jobNameController.clear();
         _tonsController.clear();
         _selectedEmployeeIds.clear();
+        _selectedJobName = _defaultJobNames.first;
+        _isCustomJob = false;
         _calculateSplits();
       });
     }
@@ -114,6 +148,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
+    const double paddingVal = 8.0;
 
     // Filter employees based on search & department
     final filteredEmployees = widget.payrollService.employees.where((emp) {
@@ -132,9 +167,12 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
           children: [
             const Icon(Icons.engineering, color: Colors.cyanAccent),
             const SizedBox(width: 10.0),
-            Text(
-              'SUPERVISOR PORTAL',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18.0),
+            Flexible(
+              child: Text(
+                'SUPERVISOR PORTAL',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 18.0),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -165,7 +203,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
           ),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(horizontal: paddingVal, vertical: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -241,6 +279,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
                             dropdownColor: const Color(0xFF1E293B),
+                            isExpanded: true,
                             value: _selectedDate,
                             style: const TextStyle(color: Colors.white, fontSize: 14.0),
                             onChanged: (val) {
@@ -264,20 +303,29 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                       const Text('Job Name / Description', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8.0),
                       Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.02),
                           borderRadius: BorderRadius.circular(10.0),
                           border: Border.all(color: Colors.white.withOpacity(0.08)),
                         ),
-                        child: TextFormField(
-                          controller: _jobNameController,
-                          style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                          validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. Loading Bauxite Cargo B',
-                            hintStyle: TextStyle(color: Colors.white24, fontSize: 13.0),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            dropdownColor: const Color(0xFF1E293B),
+                            isExpanded: true,
+                            value: _selectedJobName,
+                            style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() {
+                                  _selectedJobName = val;
+                                  _isCustomJob = val == 'Other (Write Custom Name)...';
+                                });
+                              }
+                            },
+                            items: _defaultJobNames.map((n) {
+                              return DropdownMenuItem(value: n, child: Text(n));
+                            }).toList(),
                           ),
                         ),
                       ),
@@ -286,6 +334,34 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                 ),
               ],
             ),
+            if (_isCustomJob) ...[
+              const SizedBox(height: 15.0),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Enter Custom Job Name', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8.0),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.02),
+                      borderRadius: BorderRadius.circular(10.0),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: TextFormField(
+                      controller: _jobNameController,
+                      style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                      decoration: const InputDecoration(
+                        hintText: 'e.g. Loading Bauxite Cargo B',
+                        hintStyle: TextStyle(color: Colors.white24, fontSize: 13.0),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 20.0),
             
             // Tons & Rate per ton rows
@@ -388,25 +464,28 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                               color: isSelected ? Colors.cyan.withOpacity(0.3) : Colors.transparent,
                             ),
                           ),
-                          child: CheckboxListTile(
-                            activeColor: Colors.cyan,
-                            checkColor: Colors.white,
-                            value: isSelected,
-                            onChanged: (_) => _toggleEmployeeSelection(emp.employeeId),
-                            title: Text(
-                              emp.name,
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.0),
-                            ),
-                            subtitle: Text(
-                              'ID: ${emp.employeeId} | ${emp.department} | ${isLoad ? "Load Basis" : "Day Basis"}',
-                              style: const TextStyle(color: Colors.white38, fontSize: 11.0),
-                            ),
-                            secondary: CircleAvatar(
-                              radius: 14.0,
-                              backgroundColor: isLoad ? Colors.purple.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
-                              child: Text(
-                                emp.name.substring(0, 1),
-                                style: const TextStyle(color: Colors.white, fontSize: 11.0, fontWeight: FontWeight.bold),
+                          child: Material(
+                            color: Colors.transparent,
+                            child: CheckboxListTile(
+                              activeColor: Colors.cyan,
+                              checkColor: Colors.white,
+                              value: isSelected,
+                              onChanged: (_) => _toggleEmployeeSelection(emp.employeeId),
+                              title: Text(
+                                emp.name,
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.0),
+                              ),
+                              subtitle: Text(
+                                'ID: ${emp.employeeId} | ${emp.department} | ${isLoad ? "Load Basis" : "Day Basis"}',
+                                style: const TextStyle(color: Colors.white38, fontSize: 11.0),
+                              ),
+                              secondary: CircleAvatar(
+                                radius: 14.0,
+                                backgroundColor: isLoad ? Colors.purple.withOpacity(0.3) : Colors.blue.withOpacity(0.3),
+                                child: Text(
+                                  emp.name.substring(0, 1),
+                                  style: const TextStyle(color: Colors.white, fontSize: 11.0, fontWeight: FontWeight.bold),
+                                ),
                               ),
                             ),
                           ),
@@ -444,7 +523,11 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   }
 
   Widget _buildCrewFilters() {
-    final List<String> depts = ['All', 'Production', 'IT', 'HR', 'Admin', 'Accounts', 'Sales'];
+    final Set<String> uniqueDepts = widget.payrollService.employees.map((e) => e.department).toSet();
+    final List<String> depts = ['All', ...uniqueDepts.where((d) => d.isNotEmpty)];
+    if (!depts.contains(_deptFilter)) {
+      _deptFilter = 'All';
+    }
 
     return Row(
       children: [
@@ -487,6 +570,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 dropdownColor: const Color(0xFF1E293B),
+                isExpanded: true,
                 value: _deptFilter,
                 style: const TextStyle(color: Colors.white, fontSize: 12.0),
                 onChanged: (val) {
@@ -514,40 +598,52 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('TOTAL JOB VALUE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4.0),
-              Text(
-                '₹${_calculatedTotal.toStringAsFixed(0)}',
-                style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('TOTAL JOB VALUE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4.0),
+                Text(
+                  '₹${_calculatedTotal.toStringAsFixed(0)}',
+                  style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
           Container(width: 1.0, height: 35.0, color: Colors.white12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('CREW SIZE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4.0),
-              Text(
-                '${_selectedEmployeeIds.length} Workers',
-                style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                const Text('CREW SIZE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4.0),
+                Text(
+                  '${_selectedEmployeeIds.length} Workers',
+                  style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
           Container(width: 1.0, height: 35.0, color: Colors.white12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('INDIVIDUAL SPLIT PAY', style: TextStyle(color: Colors.cyanAccent, fontSize: 10.0, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 4.0),
-              Text(
-                '₹${_calculatedSplit.toStringAsFixed(2)}',
-                style: const TextStyle(color: Colors.cyanAccent, fontSize: 18.0, fontWeight: FontWeight.bold),
-              ),
-            ],
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text('INDIVIDUAL SPLIT PAY', style: TextStyle(color: Colors.cyanAccent, fontSize: 10.0, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4.0),
+                Text(
+                  '₹${_calculatedSplit.toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.cyanAccent, fontSize: 18.0, fontWeight: FontWeight.bold),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -608,12 +704,15 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Text(
-                                        job.jobName,
-                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.0),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
+                                      Expanded(
+                                        child: Text(
+                                          job.jobName,
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13.0),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
+                                      const SizedBox(width: 8.0),
                                       Text(
                                         job.date,
                                         style: const TextStyle(color: Colors.cyanAccent, fontSize: 11.0, fontWeight: FontWeight.bold),
@@ -625,9 +724,15 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                     'Load: ${job.totalTons.toStringAsFixed(0)} Tons @ ₹${job.ratePerTon.toStringAsFixed(0)}/T',
                                     style: const TextStyle(color: Colors.white54, fontSize: 11.0),
                                   ),
-                                  Text(
-                                    'Crew: ${job.employeeIds.length} members | Share: ₹${job.splitPayout.toStringAsFixed(1)} each',
-                                    style: const TextStyle(color: Colors.white38, fontSize: 11.0),
+                                  Builder(
+                                    builder: (context) {
+                                      final loadCrew = job.employeeIds.where((id) => widget.payrollService.isEmployeeLoadBasis(id)).toList();
+                                      final double dynamicShare = widget.payrollService.getEmployeeJobSplit(job, loadCrew.isNotEmpty ? loadCrew.first : '');
+                                      return Text(
+                                        'Crew: ${job.employeeIds.length} members | Loader Share: ₹${dynamicShare.toStringAsFixed(1)} each',
+                                        style: const TextStyle(color: Colors.white38, fontSize: 11.0),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),

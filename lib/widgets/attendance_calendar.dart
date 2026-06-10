@@ -7,6 +7,7 @@ class AttendanceCalendar extends StatelessWidget {
   final List<Attendance> logs;
   final List<JobLog> jobs;
   final double itemSize;
+  final double Function(JobLog job, String empId)? getJobSplitOverride;
 
   const AttendanceCalendar({
     super.key,
@@ -14,6 +15,7 @@ class AttendanceCalendar extends StatelessWidget {
     required this.logs,
     required this.jobs,
     this.itemSize = 45.0,
+    this.getJobSplitOverride,
   });
 
   @override
@@ -242,6 +244,13 @@ class AttendanceCalendar extends StatelessWidget {
     );
   }
 
+  double _getJobSplit(JobLog job) {
+    if (getJobSplitOverride != null) {
+      return getJobSplitOverride!(job, employeeId);
+    }
+    return job.splitPayout;
+  }
+
   String _getTooltipMessage(int day, Attendance? log, List<JobLog> workedJobs, bool isWeekend) {
     String msg = 'May $day, 2026';
     if (log != null) {
@@ -256,7 +265,7 @@ class AttendanceCalendar extends StatelessWidget {
     if (workedJobs.isNotEmpty) {
       msg += '\nJobs Worked (${workedJobs.length}):';
       for (var job in workedJobs) {
-        msg += '\n• ${job.jobName} (+₹${job.splitPayout.toStringAsFixed(0)})';
+        msg += '\n• ${job.jobName} (+₹${_getJobSplit(job).toStringAsFixed(0)})';
       }
     }
     return msg;
@@ -306,10 +315,11 @@ class AttendanceCalendar extends StatelessWidget {
             'Date details: May $day, 2026',
             style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               // Biometric details
               const Text(
                 'BIOMETRIC TIME CLOCK:',
@@ -365,14 +375,15 @@ class AttendanceCalendar extends StatelessWidget {
                         _detailRow('Rate per Ton', '₹${job.ratePerTon.toStringAsFixed(0)}', Colors.white70),
                         _detailRow('Total Payout', '₹${job.totalPayout.toStringAsFixed(0)}', Colors.white70),
                         _detailRow('Crew Size', '${job.employeeIds.length} members', Colors.white70),
-                        _detailRow('Your Split Pay', '₹${job.splitPayout.toStringAsFixed(2)}', Colors.cyanAccent),
+                        _detailRow('Your Split Pay', '₹${_getJobSplit(job).toStringAsFixed(2)}', Colors.cyanAccent),
                       ],
                     ),
                   );
                 }),
             ],
           ),
-          actions: [
+        ),
+        actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('Close', style: TextStyle(color: Colors.cyanAccent)),
@@ -389,7 +400,10 @@ class AttendanceCalendar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12.0)),
+          Expanded(
+            child: Text(label, style: const TextStyle(color: Colors.white38, fontSize: 12.0)),
+          ),
+          const SizedBox(width: 8.0),
           Text(
             value,
             style: TextStyle(color: valueColor, fontWeight: FontWeight.bold, fontSize: 12.0),

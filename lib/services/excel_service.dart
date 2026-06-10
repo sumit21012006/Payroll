@@ -40,7 +40,22 @@ class ExcelService {
       'Absent Penalty',
       'Load Job Pay',
       'Gross Salary',
-      'Net Salary'
+      'Net Salary',
+      'UAN NO',
+      'ESIC NO',
+      'Bank Name',
+      'IFSC Code',
+      'Bank Acc',
+      'Punching Code',
+      'Mobile No',
+      'BASIC+DA',
+      'HRA',
+      'Other Allowances',
+      'PF Deduction',
+      'ESIC Deduction',
+      'PT Deduction',
+      'Other Deductions',
+      'Total Deductions'
     ];
 
     for (int col = 0; col < summaryHeaders.length; col++) {
@@ -69,7 +84,22 @@ class ExcelService {
         calc.absentDeductions,
         calc.jobEarnings,
         calc.grossSalary,
-        calc.netSalary
+        calc.netSalary,
+        emp.uan,
+        emp.esic,
+        emp.bankName,
+        emp.ifscCode,
+        emp.bankAcc,
+        emp.punchingCode,
+        emp.mobileNo,
+        calc.basicDa,
+        calc.hra,
+        calc.otherAllowance,
+        calc.pfDeduction,
+        calc.esicDeduction,
+        calc.ptDeduction,
+        calc.otherDeduction,
+        calc.totalDeductions
       ];
 
       for (int col = 0; col < rowValues.length; col++) {

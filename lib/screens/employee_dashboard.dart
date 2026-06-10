@@ -22,6 +22,7 @@ class EmployeeDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     final Size size = MediaQuery.of(context).size;
     final isDesktop = size.width > 900;
+    const double paddingVal = 8.0;
 
     final calculation = payrollService.calculatePayroll(employee);
     final isLoadBasis = payrollService.isEmployeeLoadBasis(employee.employeeId);
@@ -61,9 +62,12 @@ class EmployeeDashboard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10.0),
-            Text(
-              'EMPLOYEE PORTAL',
-              style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16.0),
+            Flexible(
+              child: Text(
+                'EMPLOYEE PORTAL',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.bold, fontSize: 16.0),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
           ],
         ),
@@ -99,7 +103,7 @@ class EmployeeDashboard extends StatelessWidget {
           ),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.symmetric(horizontal: paddingVal, vertical: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -125,6 +129,7 @@ class EmployeeDashboard extends StatelessWidget {
                           employeeId: employee.employeeId,
                           logs: empLogs,
                           jobs: payrollService.jobLogs,
+                          getJobSplitOverride: (job, empId) => payrollService.getEmployeeJobSplit(job, empId),
                         ),
                       ),
                     ),
@@ -145,6 +150,7 @@ class EmployeeDashboard extends StatelessWidget {
                         employeeId: employee.employeeId,
                         logs: empLogs,
                         jobs: payrollService.jobLogs,
+                        getJobSplitOverride: (job, empId) => payrollService.getEmployeeJobSplit(job, empId),
                       ),
                     ),
                     const SizedBox(height: 24.0),
@@ -158,27 +164,34 @@ class EmployeeDashboard extends StatelessWidget {
     );
   }
 
+
+
   Widget _buildHeader(bool isLoad) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Welcome Back, ${employee.name}',
-              style: GoogleFonts.outfit(
-                fontSize: 22.0,
-                fontWeight: FontWeight.w900,
-                color: Colors.white,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Welcome Back, ${employee.name}',
+                style: GoogleFonts.outfit(
+                  fontSize: 22.0,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Text(
-              'Department: ${employee.department}   |   ID: ${employee.employeeId}   |   Type: ${isLoad ? "Load-Basis (Per Ton)" : "Day-Basis"}',
-              style: const TextStyle(color: Colors.white38, fontSize: 12.0),
-            ),
-          ],
+              Text(
+                'ID: ${employee.employeeId} | Dept: ${employee.department} | UAN: ${employee.uan.isNotEmpty ? employee.uan : "N/A"} | ESIC: ${employee.esic.isNotEmpty ? employee.esic : "N/A"}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12.0),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: 16.0),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
           decoration: BoxDecoration(
@@ -328,19 +341,24 @@ class EmployeeDashboard extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      log.date,
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.0),
-                                    ),
-                                    Text(
-                                      'Hours: ${log.checkIn} - ${log.checkOut} (${log.hoursWorked.toStringAsFixed(2)} hrs)',
-                                      style: const TextStyle(color: Colors.white38, fontSize: 11.0),
-                                    ),
-                                  ],
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        log.date,
+                                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12.0),
+                                      ),
+                                      Text(
+                                        'Hours: ${log.checkIn} - ${log.checkOut} (${log.hoursWorked.toStringAsFixed(2)} hrs)',
+                                        style: const TextStyle(color: Colors.white38, fontSize: 11.0),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
+                                const SizedBox(width: 10.0),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
                                   decoration: BoxDecoration(
@@ -425,7 +443,7 @@ class EmployeeDashboard extends StatelessWidget {
                                       style: const TextStyle(color: Colors.purpleAccent, fontWeight: FontWeight.bold, fontSize: 11.0),
                                     ),
                                     Text(
-                                      '+₹${job.splitPayout.toStringAsFixed(0)}',
+                                      '+₹${payrollService.getEmployeeJobSplit(job, employee.employeeId).toStringAsFixed(0)}',
                                       style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 13.0),
                                     ),
                                   ],
@@ -472,8 +490,8 @@ class EmployeeDashboard extends StatelessWidget {
               ],
             ),
           ),
-          content: SizedBox(
-            width: 400.0,
+          content: Container(
+            constraints: const BoxConstraints(maxWidth: 450.0),
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,7 +500,13 @@ class EmployeeDashboard extends StatelessWidget {
                   // Employee details
                   _payslipRow('Employee Name', employee.name, isBold: true),
                   _payslipRow('Employee ID', employee.employeeId),
+                  _payslipRow('UAN NO', employee.uan.isNotEmpty ? employee.uan : 'N/A'),
+                  _payslipRow('ESIC NO', employee.esic.isNotEmpty ? employee.esic : 'N/A'),
                   _payslipRow('Department', employee.department),
+                  _payslipRow('Bank Name', employee.bankName.isNotEmpty ? employee.bankName : 'N/A'),
+                  _payslipRow('IFSC Code', employee.ifscCode.isNotEmpty ? employee.ifscCode : 'N/A'),
+                  _payslipRow('Bank Acc', employee.bankAcc.isNotEmpty ? employee.bankAcc : 'N/A'),
+                  _payslipRow('Mobile No', employee.mobileNo.isNotEmpty ? employee.mobileNo : 'N/A'),
                   _payslipRow('Payment Model', isLoad ? 'Load Basis (Per Ton)' : 'Day Basis'),
                   const Divider(color: Colors.white12, height: 24.0),
                   
@@ -490,24 +514,32 @@ class EmployeeDashboard extends StatelessWidget {
                   const Text('EARNINGS', style: TextStyle(color: Colors.cyanAccent, fontSize: 11.0, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                   const SizedBox(height: 8.0),
                   if (!isLoad) ...[
-                    _payslipRow('Base Days Worked (${calc.presentDays + calc.lateDays + calc.overtimeDays} days)', '₹${calc.baseEarnings.toStringAsFixed(2)}'),
-                    _payslipRow('Half Days Worked (${calc.halfDays} days)', '₹${(calc.halfDays * employee.salaryPerDay * 0.5).toStringAsFixed(2)}'),
-                    _payslipRow('Overtime Pay (${calc.overtimeHours.toStringAsFixed(2)} hrs)', '₹${calc.overtimeEarnings.toStringAsFixed(2)}'),
+                    _payslipRow('Daily Rate', '₹${employee.salaryPerDay.toStringAsFixed(2)}'),
+                    _payslipRow('Base Days Worked (${calc.presentDays + calc.lateDays} days)', '₹${calc.basicPay.toStringAsFixed(2)}'),
+                    _payslipRow('OT Days Worked (${calc.overtimeDays} days)', '₹${calc.otPay.toStringAsFixed(2)}'),
+                    if (calc.jobEarnings > 0)
+                      _payslipRow('Load Job Split Share', '₹${calc.jobEarnings.toStringAsFixed(2)}'),
+                    _payslipRow('GROSS PAYABLE', '₹${calc.grossSalary.toStringAsFixed(2)}', isBold: true),
+                    const Divider(color: Colors.white12, height: 16.0),
+                    _payslipRow('BASIC + DA', '₹${calc.basicDa.toStringAsFixed(2)}'),
+                    _payslipRow('House Rent Allowance (HRA)', '₹${calc.hra.toStringAsFixed(2)}'),
+                    _payslipRow('Other Allowances', '₹${calc.otherAllowance.toStringAsFixed(2)}'),
                   ] else ...[
                     _payslipRow('Load Tons Done (${totalTons.toStringAsFixed(1)} Tons)', '₹${calc.jobEarnings.toStringAsFixed(2)}'),
                     _payslipRow('Total Load Jobs Worked', '${employeeJobs.length} Jobs'),
-                  ],
-                  if (calc.jobEarnings > 0 && !isLoad) ...[
-                    _payslipRow('Additional Load Job Payout', '₹${calc.jobEarnings.toStringAsFixed(2)}'),
+                    _payslipRow('GROSS PAYABLE', '₹${calc.grossSalary.toStringAsFixed(2)}', isBold: true),
                   ],
                   const Divider(color: Colors.white12, height: 24.0),
                   
                   // Deductions breakdown
-                  const Text('CUTTINGS & DEDUCTIONS', style: TextStyle(color: Colors.redAccent, fontSize: 11.0, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                  const Text('STATUTORY DEDUCTIONS', style: TextStyle(color: Colors.redAccent, fontSize: 11.0, fontWeight: FontWeight.bold, letterSpacing: 1.0)),
                   const SizedBox(height: 8.0),
                   if (!isLoad) ...[
-                    _payslipRow('Late Penalties (${calc.lateDays} occurrences)', '-₹${calc.lateDeductions.toStringAsFixed(2)}'),
-                    _payslipRow('Unpaid Leaves (${calc.absentDays} days)', '-₹${calc.absentDeductions.toStringAsFixed(2)}'),
+                    _payslipRow('Provident Fund (PF - 12%)', '₹${calc.pfDeduction.toStringAsFixed(2)}'),
+                    _payslipRow('State Insurance (ESIC - 0.75%)', '₹${calc.esicDeduction.toStringAsFixed(2)}'),
+                    _payslipRow('Professional Tax (PT)', '₹${calc.ptDeduction.toStringAsFixed(2)}'),
+                    _payslipRow('Other Deduction (Canteen/Mess)', '₹${calc.otherDeduction.toStringAsFixed(2)}'),
+                    _payslipRow('TOTAL DEDUCTIONS', '₹${calc.totalDeductions.toStringAsFixed(2)}', isBold: true),
                   ] else ...[
                     const Text('No biometric cuttings/deductions for Load Basis staff.', style: TextStyle(color: Colors.white24, fontSize: 11.0, fontStyle: FontStyle.italic)),
                   ],
@@ -558,7 +590,14 @@ class EmployeeDashboard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12.0)),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(color: Colors.white54, fontSize: 12.0),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8.0),
           Text(
             value,
             style: TextStyle(
