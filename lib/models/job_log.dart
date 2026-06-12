@@ -2,9 +2,10 @@ class JobLog {
   final String id;
   final String date;
   final String jobName;
-  final double totalTons;
-  final double ratePerTon;
+  final double totalTons; // Acts as units done (either tons or pieces)
+  final double ratePerTon; // Acts as rate per unit (either per ton or per piece)
   final List<String> employeeIds;
+  final String unit; // 'Tons' or 'Pieces'
 
   JobLog({
     required this.id,
@@ -13,6 +14,7 @@ class JobLog {
     required this.totalTons,
     required this.ratePerTon,
     required this.employeeIds,
+    this.unit = 'Tons',
   });
 
   double get totalPayout => totalTons * ratePerTon;
@@ -26,6 +28,7 @@ class JobLog {
       totalTons: double.tryParse(json['totalTons'].toString()) ?? 0.0,
       ratePerTon: double.tryParse(json['ratePerTon'].toString()) ?? 0.0,
       employeeIds: List<String>.from(json['employeeIds'] ?? []),
+      unit: json['unit']?.toString() ?? 'Tons',
     );
   }
 
@@ -37,6 +40,7 @@ class JobLog {
       'totalTons': totalTons,
       'ratePerTon': ratePerTon,
       'employeeIds': employeeIds,
+      'unit': unit,
     };
   }
 }

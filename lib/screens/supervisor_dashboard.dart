@@ -30,20 +30,60 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   double _calculatedSplit = 0.0;
 
   final List<String> _defaultJobNames = [
-    'Loading Bauxite',
-    'Casting',
-    'Shafting',
-    'Scraping',
+    'HE Casting - ₹320/Ton',
+    'Final Quality Inspection - ₹220/Ton',
+    'Rework Sorting - ₹4.90/Piece',
+    'Painting Job - ₹6.00/Piece',
+    'AVG Inspection - ₹5.00/Piece',
+    'Yanmark Line Assembly - ₹28.00/Piece',
     'Other (Write Custom Name)...'
   ];
-  String _selectedJobName = 'Loading Bauxite';
+  String _selectedJobName = 'HE Casting - ₹320/Ton';
   bool _isCustomJob = false;
+  String _selectedUnit = 'Tons';
+  String _crewRecommendation = 'HE Casting: Per Ton - ₹320/-';
+
+  void _updateJobProperties(String jobName) {
+    if (jobName == 'Other (Write Custom Name)...') {
+      _isCustomJob = true;
+      _selectedUnit = 'Tons';
+      _rateController.text = '';
+      _crewRecommendation = 'Custom Job - Enter Rate and Qty manually';
+    } else {
+      _isCustomJob = false;
+      if (jobName.startsWith('HE Casting')) {
+        _selectedUnit = 'Tons';
+        _rateController.text = '320.0';
+        _crewRecommendation = 'HE Casting: Per Ton - ₹320/-';
+      } else if (jobName.startsWith('Final Quality')) {
+        _selectedUnit = 'Tons';
+        _rateController.text = '220.0';
+        _crewRecommendation = 'Final Inspection: Per Ton - ₹220/-';
+      } else if (jobName.startsWith('Rework Sorting')) {
+        _selectedUnit = 'Pieces';
+        _rateController.text = '4.90';
+        _crewRecommendation = 'Rework: Per Piece - ₹4.90/- (Standard Crew: 2 Employees)';
+      } else if (jobName.startsWith('Painting Job')) {
+        _selectedUnit = 'Pieces';
+        _rateController.text = '6.00';
+        _crewRecommendation = 'Painter: Per Piece - ₹6/- (Standard Crew: 3 Shifts, 3 Employees per shift)';
+      } else if (jobName.startsWith('AVG Inspection')) {
+        _selectedUnit = 'Pieces';
+        _rateController.text = '5.00';
+        _crewRecommendation = 'AVG: Per Piece - ₹5/- (Standard Crew: 2 Shifts, 1 Employee per shift)';
+      } else if (jobName.startsWith('Yanmark Line')) {
+        _selectedUnit = 'Pieces';
+        _rateController.text = '28.00';
+        _crewRecommendation = 'Yanmark: Per Piece - ₹28/- (Standard Crew: 1 Shift, 3 Employees)';
+      }
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _selectedJobName = _defaultJobNames.first;
-    _rateController.text = widget.payrollService.defaultRatePerTon.toString();
+    _updateJobProperties(_selectedJobName);
     _tonsController.addListener(_calculateSplits);
     _rateController.addListener(_calculateSplits);
   }
@@ -121,6 +161,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         totalTons: tons,
         ratePerTon: rate,
         employeeIds: List<String>.from(_selectedEmployeeIds),
+        unit: _selectedUnit,
       );
 
       widget.payrollService.addJobLog(newJob);
@@ -139,6 +180,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         _selectedEmployeeIds.clear();
         _selectedJobName = _defaultJobNames.first;
         _isCustomJob = false;
+        _updateJobProperties(_selectedJobName);
         _calculateSplits();
       });
     }
@@ -319,7 +361,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                               if (val != null) {
                                 setState(() {
                                   _selectedJobName = val;
-                                  _isCustomJob = val == 'Other (Write Custom Name)...';
+                                  _updateJobProperties(val);
+                                  _calculateSplits();
                                 });
                               }
                             },
@@ -336,27 +379,73 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
             ),
             if (_isCustomJob) ...[
               const SizedBox(height: 15.0),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  const Text('Enter Custom Job Name', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8.0),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.02),
-                      borderRadius: BorderRadius.circular(10.0),
-                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  Expanded(
+                    flex: 6,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Enter Custom Job Name', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8.0),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.02),
+                            borderRadius: BorderRadius.circular(10.0),
+                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                          ),
+                          child: TextFormField(
+                            controller: _jobNameController,
+                            style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                            validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                            decoration: const InputDecoration(
+                              hintText: 'e.g. Loading Bauxite Cargo B',
+                              hintStyle: TextStyle(color: Colors.white24, fontSize: 13.0),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: TextFormField(
-                      controller: _jobNameController,
-                      style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                      validator: (v) => v == null || v.isEmpty ? 'Required' : null,
-                      decoration: const InputDecoration(
-                        hintText: 'e.g. Loading Bauxite Cargo B',
-                        hintStyle: TextStyle(color: Colors.white24, fontSize: 13.0),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
-                      ),
+                  ),
+                  const SizedBox(width: 15.0),
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Unit Type', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8.0),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.02),
+                            borderRadius: BorderRadius.circular(10.0),
+                            border: Border.all(color: Colors.white.withOpacity(0.08)),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              dropdownColor: const Color(0xFF1E293B),
+                              isExpanded: true,
+                              value: _selectedUnit,
+                              style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                              onChanged: (val) {
+                                if (val != null) {
+                                  setState(() {
+                                    _selectedUnit = val;
+                                    _calculateSplits();
+                                  });
+                                }
+                              },
+                              items: const [
+                                DropdownMenuItem(value: 'Tons', child: Text('Tons')),
+                                DropdownMenuItem(value: 'Pieces', child: Text('Pieces')),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -371,7 +460,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Total Tons Done', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                      Text(_selectedUnit == 'Tons' ? 'Total Tons Done' : 'Total Pieces Done', style: const TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8.0),
                       Container(
                         decoration: BoxDecoration(
@@ -384,11 +473,11 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                           keyboardType: TextInputType.number,
                           style: const TextStyle(color: Colors.white, fontSize: 14.0),
                           validator: (v) => v == null || double.tryParse(v) == null ? 'Invalid' : null,
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. 150',
-                            hintStyle: TextStyle(color: Colors.white24, fontSize: 13.0),
+                          decoration: InputDecoration(
+                            hintText: _selectedUnit == 'Tons' ? 'e.g. 150' : 'e.g. 1200',
+                            hintStyle: const TextStyle(color: Colors.white24, fontSize: 13.0),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
                           ),
                         ),
                       ),
@@ -400,7 +489,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Rate per Ton (₹)', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                      Text(_selectedUnit == 'Tons' ? 'Rate per Ton (₹)' : 'Rate per Piece (₹)', style: const TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 8.0),
                       Container(
                         decoration: BoxDecoration(
@@ -413,11 +502,11 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                           keyboardType: TextInputType.number,
                           style: const TextStyle(color: Colors.white, fontSize: 14.0),
                           validator: (v) => v == null || double.tryParse(v) == null ? 'Invalid' : null,
-                          decoration: const InputDecoration(
-                            hintText: 'e.g. 15',
-                            hintStyle: TextStyle(color: Colors.white24, fontSize: 13.0),
+                          decoration: InputDecoration(
+                            hintText: _selectedUnit == 'Tons' ? 'e.g. 15' : 'e.g. 6',
+                            hintStyle: const TextStyle(color: Colors.white24, fontSize: 13.0),
                             border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 12.0),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
                           ),
                         ),
                       ),
@@ -425,6 +514,41 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                   ),
                 ),
               ],
+            ),
+            const SizedBox(height: 20.0),
+            
+            // Recommendation Helper Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12.0),
+              margin: const EdgeInsets.only(bottom: 4.0),
+              decoration: BoxDecoration(
+                color: Colors.cyan.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10.0),
+                border: Border.all(color: Colors.cyan.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.cyanAccent, size: 20.0),
+                  const SizedBox(width: 10.0),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'STANDARD RATE & CREW DESIGNATION',
+                          style: TextStyle(color: Colors.cyanAccent, fontSize: 10.0, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 4.0),
+                        Text(
+                          _crewRecommendation,
+                          style: const TextStyle(color: Colors.white70, fontSize: 12.0),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 24.0),
             
@@ -721,7 +845,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                   ),
                                   const SizedBox(height: 6.0),
                                   Text(
-                                    'Load: ${job.totalTons.toStringAsFixed(0)} Tons @ ₹${job.ratePerTon.toStringAsFixed(0)}/T',
+                                    job.unit == 'Tons'
+                                        ? 'Load: ${job.totalTons.toStringAsFixed(0)} Tons @ ₹${job.ratePerTon.toStringAsFixed(0)}/T'
+                                        : 'Qty: ${job.totalTons.toStringAsFixed(0)} Pieces @ ₹${job.ratePerTon.toStringAsFixed(2)}/Pc',
                                     style: const TextStyle(color: Colors.white54, fontSize: 11.0),
                                   ),
                                   Builder(

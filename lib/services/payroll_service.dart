@@ -72,6 +72,59 @@ class PayrollService {
   // Custom load-basis overrides (set of employee IDs designated as load basis)
   Set<String> loadBasisEmployeeIds = {};
 
+  // Department-specific configurations: units, default rates, and shift recommendations
+  static const Map<String, Map<String, dynamic>> departmentConfigs = {
+    'HE': {
+      'unit': 'Tons',
+      'rate': 320.0,
+      'recommendation': 'Per Ton - ₹320/-',
+    },
+    'FINAL': {
+      'unit': 'Tons',
+      'rate': 220.0,
+      'recommendation': 'Per Ton - ₹220/-',
+    },
+    'REWORK': {
+      'unit': 'Pieces',
+      'rate': 4.90,
+      'recommendation': 'Per Piece - ₹4.90/- (2 Employees)',
+    },
+    'PAINTER': {
+      'unit': 'Pieces',
+      'rate': 6.00,
+      'recommendation': 'Per Piece - ₹6/- (3 Shifts, 3 Employees per shift)',
+    },
+    'AVG': {
+      'unit': 'Pieces',
+      'rate': 5.00,
+      'recommendation': 'Per Piece - ₹5/- (2 Shifts, 1 Employee per shift)',
+    },
+    'YANMAR LINE': {
+      'unit': 'Pieces',
+      'rate': 28.00,
+      'recommendation': 'Per Piece - ₹28/- (1 Shift, 3 Employees)',
+    },
+  };
+
+  Map<String, dynamic> getDeptConfig(String deptName) {
+    final key = deptName.toUpperCase().trim();
+    if (key.contains('YANMAR')) {
+      return departmentConfigs['YANMAR LINE']!;
+    }
+    if (key.contains('PAINTER')) {
+      return departmentConfigs['PAINTER']!;
+    }
+    if (departmentConfigs.containsKey(key)) {
+      return departmentConfigs[key]!;
+    }
+    // Fallback default
+    return {
+      'unit': 'Tons',
+      'rate': defaultRatePerTon,
+      'recommendation': 'Custom Job',
+    };
+  }
+
   // Customizable settings
   double standardShiftHours = 9.0;
   double overtimeMultiplier = 1.5;
@@ -138,11 +191,19 @@ class PayrollService {
         .map((e) => e.employeeId)
         .toList();
 
-    final prodEmpIds = loadBasisEmpIds; // Keep local name for compatibility with job logs below
+    final prodEmpIds = loadBasisEmpIds; // Keep local name for compatibility with other methods
     if (prodEmpIds.isEmpty) return;
+
+    final heEmpIds = employees.where((e) => e.department.toUpperCase() == 'HE').map((e) => e.employeeId).toList();
+    final finalEmpIds = employees.where((e) => e.department.toUpperCase() == 'FINAL').map((e) => e.employeeId).toList();
+    final reworkEmpIds = employees.where((e) => e.department.toUpperCase() == 'REWORK').map((e) => e.employeeId).toList();
+    final painterEmpIds = employees.where((e) => e.department.toUpperCase().contains('PAINTER')).map((e) => e.employeeId).toList();
+    final avgEmpIds = employees.where((e) => e.department.toUpperCase() == 'AVG').map((e) => e.employeeId).toList();
+    final yanmarEmpIds = employees.where((e) => e.department.toUpperCase().contains('YANMAR')).map((e) => e.employeeId).toList();
 
     // Helper to get subset of employees
     List<String> getSubset(List<String> list, int start, int count) {
+      if (list.isEmpty) return [];
       final List<String> result = [];
       for (int i = 0; i < count; i++) {
         result.add(list[(start + i) % list.length]);
@@ -150,94 +211,73 @@ class PayrollService {
       return result;
     }
 
+    List<String> getDeptCrew(List<String> deptList) {
+      return deptList.isNotEmpty ? deptList : prodEmpIds;
+    }
+
     jobLogs = [
       JobLog(
         id: 'JOB-101',
         date: '5/4/2026',
-        jobName: 'Loading Steel Rails (Platform A)',
+        jobName: 'HE Casting Operation',
         totalTons: 120.0,
-        ratePerTon: 15.0,
-        employeeIds: getSubset(prodEmpIds, 0, 4),
+        ratePerTon: 320.0,
+        unit: 'Tons',
+        employeeIds: getSubset(getDeptCrew(heEmpIds), 0, 4),
       ),
       JobLog(
         id: 'JOB-102',
         date: '5/6/2026',
-        jobName: 'Unloading Coal Cargo (Bay 3)',
-        totalTons: 210.0,
-        ratePerTon: 12.0,
-        employeeIds: getSubset(prodEmpIds, 2, 5),
+        jobName: 'Final Warehouse Loadout',
+        totalTons: 95.0,
+        ratePerTon: 220.0,
+        unit: 'Tons',
+        employeeIds: getSubset(getDeptCrew(finalEmpIds), 0, 3),
       ),
       JobLog(
         id: 'JOB-103',
         date: '5/8/2026',
-        jobName: 'Iron Ore Sorting & Washing',
-        totalTons: 85.0,
-        ratePerTon: 20.0,
-        employeeIds: getSubset(prodEmpIds, 5, 4),
+        jobName: 'Rework Area Jobs',
+        totalTons: 3200.0,
+        ratePerTon: 4.90,
+        unit: 'Pieces',
+        employeeIds: getSubset(getDeptCrew(reworkEmpIds), 0, 2),
       ),
       JobLog(
         id: 'JOB-104',
         date: '5/11/2026',
-        jobName: 'Bauxite Heavy Transfer',
-        totalTons: 160.0,
-        ratePerTon: 16.0,
-        employeeIds: getSubset(prodEmpIds, 1, 6),
+        jobName: 'Painting Platform Shift 1',
+        totalTons: 1800.0,
+        ratePerTon: 6.00,
+        unit: 'Pieces',
+        employeeIds: getSubset(getDeptCrew(painterEmpIds), 0, 3),
       ),
       JobLog(
         id: 'JOB-105',
-        date: '5/13/2026',
-        jobName: 'Scrap Metal Compacting',
-        totalTons: 95.0,
-        ratePerTon: 18.0,
-        employeeIds: getSubset(prodEmpIds, 4, 4),
+        date: '5/15/2026',
+        jobName: 'Painting Platform Shift 2',
+        totalTons: 2100.0,
+        ratePerTon: 6.00,
+        unit: 'Pieces',
+        employeeIds: getSubset(getDeptCrew(painterEmpIds), 3, 3),
       ),
       JobLog(
         id: 'JOB-106',
-        date: '5/15/2026',
-        jobName: 'Loading Finished Girders',
-        totalTons: 150.0,
-        ratePerTon: 15.0,
-        employeeIds: getSubset(prodEmpIds, 0, 5),
+        date: '5/20/2026',
+        jobName: 'AVG Sorting Line',
+        totalTons: 1500.0,
+        ratePerTon: 5.00,
+        unit: 'Pieces',
+        employeeIds: getSubset(getDeptCrew(avgEmpIds), 0, 1),
       ),
       JobLog(
         id: 'JOB-107',
-        date: '5/18/2026',
-        jobName: 'Raw Materials Bin Stacking',
-        totalTons: 110.0,
-        ratePerTon: 14.0,
-        employeeIds: getSubset(prodEmpIds, 3, 4),
-      ),
-      JobLog(
-        id: 'JOB-108',
-        date: '5/20/2026',
-        jobName: 'Coke Fuel Loading',
-        totalTons: 180.0,
-        ratePerTon: 13.0,
-        employeeIds: getSubset(prodEmpIds, 6, 5),
-      ),
-      JobLog(
-        id: 'JOB-109',
-        date: '5/22/2026',
-        jobName: 'Steel Slag Extraction',
-        totalTons: 75.0,
-        ratePerTon: 25.0,
-        employeeIds: getSubset(prodEmpIds, 2, 4),
-      ),
-      JobLog(
-        id: 'JOB-110',
-        date: '5/26/2026',
-        jobName: 'Heavy Machinery Lubrication Load',
-        totalTons: 140.0,
-        ratePerTon: 15.0,
-        employeeIds: getSubset(prodEmpIds, 5, 5),
-      ),
-      JobLog(
-        id: 'JOB-111',
-        date: '5/28/2026',
-        jobName: 'Final Monthly Warehouse Loadout',
-        totalTons: 250.0,
-        ratePerTon: 12.0,
-        employeeIds: prodEmpIds.sublist(0, prodEmpIds.length > 8 ? 8 : prodEmpIds.length),
+        date: '5/25/2026',
+        jobName: 'Yanmar Line Assembly',
+        totalTons: 450.0,
+        ratePerTon: 28.00,
+        unit: 'Pieces',
+        employeeIds: getSubset(getDeptCrew(yanmarEmpIds), 0, 3),
       ),
     ];
   }
