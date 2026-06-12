@@ -6,6 +6,8 @@ class JobLog {
   final double ratePerTon; // Acts as rate per unit (either per ton or per piece)
   final List<String> employeeIds;
   final String unit; // 'Tons' or 'Pieces'
+  final String? castingName;
+  final int? castingQty;
 
   JobLog({
     required this.id,
@@ -15,6 +17,8 @@ class JobLog {
     required this.ratePerTon,
     required this.employeeIds,
     this.unit = 'Tons',
+    this.castingName,
+    this.castingQty,
   });
 
   double get totalPayout => totalTons * ratePerTon;
@@ -29,6 +33,8 @@ class JobLog {
       ratePerTon: double.tryParse(json['ratePerTon'].toString()) ?? 0.0,
       employeeIds: List<String>.from(json['employeeIds'] ?? []),
       unit: json['unit']?.toString() ?? 'Tons',
+      castingName: json['castingName']?.toString(),
+      castingQty: json['castingQty'] != null ? int.tryParse(json['castingQty'].toString()) : null,
     );
   }
 
@@ -41,6 +47,8 @@ class JobLog {
       'ratePerTon': ratePerTon,
       'employeeIds': employeeIds,
       'unit': unit,
+      'castingName': castingName,
+      'castingQty': castingQty,
     };
   }
 }

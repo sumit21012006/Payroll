@@ -6,6 +6,44 @@ import '../models/job_log.dart';
 import '../widgets/glowing_card.dart';
 import 'login_screen.dart';
 
+class CastingInfo {
+  final String code;
+  final String name;
+  final double weightKg;
+
+  const CastingInfo({required this.code, required this.name, required this.weightKg});
+
+  String get displayName => '$code - $name ($weightKg kg)';
+}
+
+const List<CastingInfo> _defaultCastings = [
+  CastingInfo(code: '402', name: '4DI BLOCK', weightKg: 83.9),
+  CastingInfo(code: '459', name: 'DHRUV 3DI BLOCK', weightKg: 74.2),
+  CastingInfo(code: '745', name: 'DHRUV 4DI BLOCK', weightKg: 89.5),
+  CastingInfo(code: '4011', name: 'D25 REIMAGINE', weightKg: 86.6),
+  CastingInfo(code: '715', name: 'D25LCV', weightKg: 90.4),
+  CastingInfo(code: '466', name: 'P-15 CYL BLOCK', weightKg: 46.4),
+  CastingInfo(code: '467', name: 'ZD30 UPPER BLK', weightKg: 74.7),
+  CastingInfo(code: '475', name: 'MHWAK REG', weightKg: 69.2),
+  CastingInfo(code: '717', name: 'W109', weightKg: 72.0),
+  CastingInfo(code: '718', name: 'D09 2CB', weightKg: 42.5),
+  CastingInfo(code: '730', name: '3D15', weightKg: 55.6),
+  CastingInfo(code: '731', name: '4D15', weightKg: 62.7),
+  CastingInfo(code: '748', name: 'UPP BLK', weightKg: 53.4),
+  CastingInfo(code: '476', name: '2CB TURBO CHARGER', weightKg: 42.0),
+  CastingInfo(code: '719', name: 'HINO BLOCK', weightKg: 104.1),
+  CastingInfo(code: '732', name: 'YANMAR BLOCK', weightKg: 40.8),
+  CastingInfo(code: '729', name: '3R 1190 CYL BLOCK', weightKg: 106.4),
+  CastingInfo(code: '4029', name: '3R 550 BLOCK', weightKg: 54.9),
+  CastingInfo(code: '4026', name: 'EICHER -483', weightKg: 110.9),
+  CastingInfo(code: '4046', name: 'EICHER TITAN BLOCK', weightKg: 87.0),
+  CastingInfo(code: '495', name: 'EICHER 3CB', weightKg: 80.5),
+  CastingInfo(code: '711', name: 'EICHER 4CB', weightKg: 96.3),
+  CastingInfo(code: '4022', name: 'EICHER 110 HP', weightKg: 110.3),
+  CastingInfo(code: '4068', name: 'ISUZU', weightKg: 73.0),
+];
+
+
 class SupervisorDashboard extends StatefulWidget {
   final PayrollService payrollService;
 
@@ -20,6 +58,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   final TextEditingController _jobNameController = TextEditingController();
   final TextEditingController _tonsController = TextEditingController();
   final TextEditingController _rateController = TextEditingController();
+  final TextEditingController _qtyController = TextEditingController();
   
   String _selectedDate = '5/1/2026';
   List<String> _selectedEmployeeIds = [];
@@ -28,6 +67,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
 
   double _calculatedTotal = 0.0;
   double _calculatedSplit = 0.0;
+
+  CastingInfo? _selectedCasting;
 
   final List<String> _defaultJobNames = [
     'HE Casting - ₹320/Ton',
@@ -79,6 +120,18 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     }
   }
 
+  void _onQtyChanged() {
+    if (_selectedCasting != null) {
+      final qty = int.tryParse(_qtyController.text) ?? 0;
+      if (_selectedUnit == 'Tons') {
+        final double calculatedTons = (_selectedCasting!.weightKg * qty) / 1000.0;
+        _tonsController.text = calculatedTons.toStringAsFixed(3);
+      } else {
+        _tonsController.text = qty.toString();
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -86,6 +139,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     _updateJobProperties(_selectedJobName);
     _tonsController.addListener(_calculateSplits);
     _rateController.addListener(_calculateSplits);
+    _qtyController.addListener(_onQtyChanged);
   }
 
   @override
@@ -93,6 +147,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     _jobNameController.dispose();
     _tonsController.dispose();
     _rateController.dispose();
+    _qtyController.dispose();
     super.dispose();
   }
 
@@ -162,6 +217,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         ratePerTon: rate,
         employeeIds: List<String>.from(_selectedEmployeeIds),
         unit: _selectedUnit,
+        castingName: _selectedCasting?.displayName,
+        castingQty: int.tryParse(_qtyController.text),
       );
 
       widget.payrollService.addJobLog(newJob);
@@ -177,6 +234,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
       setState(() {
         _jobNameController.clear();
         _tonsController.clear();
+        _qtyController.clear();
+        _selectedCasting = null;
         _selectedEmployeeIds.clear();
         _selectedJobName = _defaultJobNames.first;
         _isCustomJob = false;
@@ -451,6 +510,102 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                 ],
               ),
             ],
+            const SizedBox(height: 15.0),
+            
+            // Casting Selection Row
+            Row(
+              children: [
+                Expanded(
+                  flex: 6,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Select Casting', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8.0),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(10.0),
+                          border: Border.all(color: Colors.white.withOpacity(0.08)),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<CastingInfo?>(
+                            dropdownColor: const Color(0xFF1E293B),
+                            isExpanded: true,
+                            hint: const Text('None (Manual Entry Only)', style: TextStyle(color: Colors.white24, fontSize: 13.0)),
+                            value: _selectedCasting,
+                            style: const TextStyle(color: Colors.white, fontSize: 13.0),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedCasting = val;
+                                _onQtyChanged();
+                              });
+                            },
+                            items: [
+                              const DropdownMenuItem<CastingInfo?>(
+                                value: null,
+                                child: Text('None (Manual Entry Only)', style: TextStyle(color: Colors.white30)),
+                              ),
+                              ..._defaultCastings.map((c) {
+                                return DropdownMenuItem<CastingInfo?>(
+                                  value: c,
+                                  child: Text(c.displayName),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 15.0),
+                Expanded(
+                  flex: 4,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Quantity (Pieces)', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 8.0),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: _selectedCasting == null ? Colors.white.withOpacity(0.01) : Colors.white.withOpacity(0.02),
+                          borderRadius: BorderRadius.circular(10.0),
+                          border: Border.all(
+                            color: _selectedCasting == null ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.08),
+                          ),
+                        ),
+                        child: TextFormField(
+                          controller: _qtyController,
+                          keyboardType: TextInputType.number,
+                          enabled: _selectedCasting != null,
+                          style: TextStyle(
+                            color: _selectedCasting == null ? Colors.white30 : Colors.white, 
+                            fontSize: 14.0,
+                          ),
+                          decoration: InputDecoration(
+                            hintText: 'e.g. 150',
+                            hintStyle: const TextStyle(color: Colors.white24, fontSize: 13.0),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
+                            suffixIcon: _selectedCasting != null 
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 16.0, color: Colors.white30),
+                                  onPressed: () {
+                                    _qtyController.clear();
+                                    _onQtyChanged();
+                                  },
+                                )
+                              : null,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: 20.0),
             
             // Tons & Rate per ton rows
@@ -843,13 +998,19 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                                       ),
                                     ],
                                   ),
-                                  const SizedBox(height: 6.0),
                                   Text(
                                     job.unit == 'Tons'
-                                        ? 'Load: ${job.totalTons.toStringAsFixed(0)} Tons @ ₹${job.ratePerTon.toStringAsFixed(0)}/T'
+                                        ? 'Load: ${job.totalTons.toStringAsFixed(3)} Tons @ ₹${job.ratePerTon.toStringAsFixed(0)}/T'
                                         : 'Qty: ${job.totalTons.toStringAsFixed(0)} Pieces @ ₹${job.ratePerTon.toStringAsFixed(2)}/Pc',
                                     style: const TextStyle(color: Colors.white54, fontSize: 11.0),
                                   ),
+                                  if (job.castingName != null) ...[
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      'Casting: ${job.castingName} | Qty: ${job.castingQty} pcs',
+                                      style: const TextStyle(color: Colors.cyanAccent, fontSize: 11.0, fontWeight: FontWeight.w500),
+                                    ),
+                                  ],
                                   Builder(
                                     builder: (context) {
                                       final loadCrew = job.employeeIds.where((id) => widget.payrollService.isEmployeeLoadBasis(id)).toList();
