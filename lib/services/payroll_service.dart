@@ -109,9 +109,11 @@ class PayrollService {
       }
 
       // 3. Designate default Load-Basis Employees
-      // We will designate all "Production" department employees as Load-Basis by default!
+      // Designate "Painter", "Yanmar Line" ("yanmarkline"), "Rework", "Final", and "Avg" departments as Load-Basis by default
+      final loadBasisDepts = {'painter', 'yanmar line', 'yanmarkline', 'rework', 'final', 'avg'};
       for (var emp in employees) {
-        if (emp.department.toLowerCase() == 'production') {
+        final dept = emp.department.toLowerCase().replaceAll(' ', '').trim();
+        if (loadBasisDepts.contains(dept) || dept.contains('yanmar') || dept.contains('painter')) {
           loadBasisEmployeeIds.add(emp.employeeId);
         }
       }
@@ -127,11 +129,16 @@ class PayrollService {
   }
 
   void _prepopulateJobLogs() {
-    final prodEmpIds = employees
-        .where((e) => e.department.toLowerCase() == 'production')
+    final loadBasisDepts = {'painter', 'yanmar line', 'yanmarkline', 'rework', 'final', 'avg'};
+    final loadBasisEmpIds = employees
+        .where((e) {
+          final dept = e.department.toLowerCase().replaceAll(' ', '').trim();
+          return loadBasisDepts.contains(dept) || dept.contains('yanmar') || dept.contains('painter');
+        })
         .map((e) => e.employeeId)
         .toList();
 
+    final prodEmpIds = loadBasisEmpIds; // Keep local name for compatibility with job logs below
     if (prodEmpIds.isEmpty) return;
 
     // Helper to get subset of employees
