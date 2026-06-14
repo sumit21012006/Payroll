@@ -1,14 +1,17 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:file_picker/file_picker.dart';
 import '../services/payroll_service.dart';
 import '../services/excel_service.dart';
 import '../models/employee.dart';
 import '../widgets/glowing_card.dart';
 import '../widgets/attendance_calendar.dart';
+import '../utils/web_download.dart';
 import 'login_screen.dart';
 
 class AdminDashboard extends StatefulWidget {
@@ -962,28 +965,34 @@ class _AdminDashboardState extends State<AdminDashboard> {
 
   void _handleExportExcel(BuildContext context) async {
     try {
-      final bytes = ExcelService.generatePayrollReport(service: widget.payrollService);
+      final bytes = await ExcelService.generatePayrollReport(service: widget.payrollService);
       if (bytes != null) {
         if (kIsWeb) {
-          // Dynamic Web Download helper (simulates download in browsers)
+          downloadFile(bytes, 'Payroll_May_2026_Audit.xlsx');
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Web download compiled successfully!'), backgroundColor: Colors.green),
+            const SnackBar(content: Text('Excel Report downloaded successfully!'), backgroundColor: Colors.green),
           );
         } else {
-          // Desktop / Mobile Saving
-          final Directory? directory = Platform.isWindows
-              ? await getDownloadsDirectory()
-              : await getApplicationDocumentsDirectory();
+          // Desktop / Mobile Saving via Native File Save Dialog
+          final Uint8List uint8Bytes = Uint8List.fromList(bytes);
+          final String? outputFile = await FilePicker.platform.saveFile(
+            dialogTitle: 'Save Payroll Audit Report',
+            fileName: 'Payroll_May_2026_Audit.xlsx',
+            type: FileType.custom,
+            allowedExtensions: ['xlsx'],
+            bytes: uint8Bytes,
+          );
 
-          if (directory != null) {
-            final String filePath = '${directory.path}/Payroll_May_2026_Audit.xlsx';
-            final file = File(filePath);
-            await file.writeAsBytes(bytes);
+          if (outputFile != null) {
+            final file = File(outputFile);
+            // On desktop, write the bytes manually if the plugin didn't write them
+            if (!file.existsSync() || file.lengthSync() == 0) {
+              await file.writeAsBytes(uint8Bytes);
+            }
 
-            // Display completion snackbar
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Successfully exported Excel: $filePath'),
+                content: Text('Successfully saved Excel report: $outputFile'),
                 backgroundColor: Colors.green,
                 duration: const Duration(seconds: 5),
                 action: SnackBarAction(
@@ -994,8 +1003,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
               ),
             );
           } else {
+            // User cancelled the save dialog
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Error: Could not resolve directory to save Excel report.'), backgroundColor: Colors.red),
+              const SnackBar(content: Text('Export cancelled.'), backgroundColor: Colors.orange),
             );
           }
         }

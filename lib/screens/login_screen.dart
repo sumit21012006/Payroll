@@ -208,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 12.0),
                       Text(
-                        'ANTIGRAVITY PAYROLL',
+                        'KFIL SOLAPUR PAYROLL',
                         style: GoogleFonts.outfit(
                           fontSize: 26.0,
                           fontWeight: FontWeight.w900,

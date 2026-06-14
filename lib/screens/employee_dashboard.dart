@@ -6,6 +6,8 @@ import '../models/attendance.dart';
 import '../models/job_log.dart';
 import '../widgets/glowing_card.dart';
 import '../widgets/attendance_calendar.dart';
+import '../services/pdf_service.dart';
+import '../utils/web_download.dart';
 import 'login_screen.dart';
 
 class EmployeeDashboard extends StatelessWidget {
@@ -549,10 +551,14 @@ class EmployeeDashboard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        'NET TAKE-HOME PAY',
-                        style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14.0, fontWeight: FontWeight.bold),
+                      Expanded(
+                        child: Text(
+                          'NET TAKE-HOME PAY',
+                          style: GoogleFonts.outfit(color: Colors.white70, fontSize: 14.0, fontWeight: FontWeight.bold),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(width: 8.0),
                       Text(
                         '₹${calc.netSalary.toStringAsFixed(2)}',
                         style: GoogleFonts.outfit(color: Colors.cyanAccent, fontSize: 18.0, fontWeight: FontWeight.bold),
@@ -569,11 +575,51 @@ class EmployeeDashboard extends StatelessWidget {
               child: const Text('Close', style: TextStyle(color: Colors.white54)),
             ),
             ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Payslip receipt downloaded successfully!'), backgroundColor: Colors.green),
-                );
+              onPressed: () async {
+                try {
+                  final pdfBytes = await PdfService.generatePayslipPdf(
+                    employee: employee,
+                    calc: calc,
+                    workedJobs: employeeJobs,
+                    totalTons: totalTons,
+                    isLoad: isLoad,
+                  );
+                  final result = downloadFile(pdfBytes, 'Payslip_May_2026_${employee.employeeId}.pdf');
+                  if (result is Future) {
+                    final savedPath = await result;
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      if (savedPath != null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Saved to: $savedPath'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Save cancelled or failed.'),
+                            backgroundColor: Colors.orange,
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Payslip receipt downloaded successfully!'), backgroundColor: Colors.green),
+                      );
+                    }
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error generating PDF: $e'), backgroundColor: Colors.red),
+                    );
+                  }
+                }
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.cyan),
               child: const Text('Download PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),

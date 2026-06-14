@@ -16,6 +16,17 @@ class CastingInfo {
   String get displayName => '$code - $name ($weightKg kg)';
 }
 
+class SelectedCasting {
+  final CastingInfo casting;
+  int quantity;
+  late final TextEditingController controller;
+
+  SelectedCasting({required this.casting, this.quantity = 0}) {
+    controller = TextEditingController(text: quantity > 0 ? quantity.toString() : '');
+  }
+}
+
+
 const List<CastingInfo> _defaultCastings = [
   CastingInfo(code: '402', name: '4DI BLOCK', weightKg: 83.9),
   CastingInfo(code: '459', name: 'DHRUV 3DI BLOCK', weightKg: 74.2),
@@ -59,8 +70,8 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   final TextEditingController _tonsController = TextEditingController();
   final TextEditingController _rateController = TextEditingController();
   final TextEditingController _qtyController = TextEditingController();
+  final TextEditingController _dateController = TextEditingController();
   
-  String _selectedDate = '5/1/2026';
   List<String> _selectedEmployeeIds = [];
   String _searchQuery = '';
   String _deptFilter = 'All'; // Default filter to show all crew first
@@ -69,6 +80,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   double _calculatedSplit = 0.0;
 
   CastingInfo? _selectedCasting;
+  List<SelectedCasting> _selectedCastingsList = [];
 
   final List<String> _defaultJobNames = [
     'HE Casting - ₹320/Ton',
@@ -132,9 +144,56 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     }
   }
 
+  void _addCastingToList(CastingInfo casting) {
+    final exists = _selectedCastingsList.any((sc) => sc.casting.code == casting.code);
+    if (!exists) {
+      final newSc = SelectedCasting(casting: casting);
+      newSc.controller.addListener(() {
+        _recalculateTonsAndQtyFromCastings();
+      });
+      setState(() {
+        _selectedCastingsList.add(newSc);
+      });
+      _recalculateTonsAndQtyFromCastings();
+    }
+  }
+
+  void _removeCastingFromList(int index) {
+    final sc = _selectedCastingsList[index];
+    sc.controller.dispose();
+    setState(() {
+      _selectedCastingsList.removeAt(index);
+    });
+    _recalculateTonsAndQtyFromCastings();
+  }
+
+  void _recalculateTonsAndQtyFromCastings() {
+    double totalTons = 0.0;
+    int totalQty = 0;
+    for (var entry in _selectedCastingsList) {
+      final qty = int.tryParse(entry.controller.text) ?? 0;
+      entry.quantity = qty;
+      totalTons += (entry.casting.weightKg * qty) / 1000.0;
+      totalQty += qty;
+    }
+    if (_selectedCastingsList.isNotEmpty) {
+      if (_selectedUnit == 'Tons') {
+        _tonsController.text = totalTons.toStringAsFixed(3);
+      } else {
+        _tonsController.text = totalQty.toString();
+      }
+      _qtyController.text = totalQty.toString();
+    } else {
+      _tonsController.clear();
+      _qtyController.clear();
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    _dateController.text = '${now.month}/${now.day}/${now.year}';
     _selectedJobName = _defaultJobNames.first;
     _updateJobProperties(_selectedJobName);
     _tonsController.addListener(_calculateSplits);
@@ -148,6 +207,10 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     _tonsController.dispose();
     _rateController.dispose();
     _qtyController.dispose();
+    _dateController.dispose();
+    for (var sc in _selectedCastingsList) {
+      sc.controller.dispose();
+    }
     super.dispose();
   }
 
@@ -209,16 +272,36 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
       final rate = double.tryParse(_rateController.text) ?? 0.0;
       final jobName = _isCustomJob ? _jobNameController.text.trim() : _selectedJobName;
       
+      String? finalCastingName;
+      int? finalCastingQty;
+      
+      if (_selectedCastingsList.isNotEmpty) {
+        finalCastingName = _selectedCastingsList
+            .where((sc) => sc.quantity > 0)
+            .map((sc) => '${sc.casting.code} (${sc.quantity} pcs)')
+            .join(', ');
+        if (finalCastingName.isEmpty) {
+          finalCastingName = null;
+        }
+        finalCastingQty = _selectedCastingsList.fold<int>(0, (sum, sc) => sum + sc.quantity);
+        if (finalCastingQty == 0) {
+          finalCastingQty = null;
+        }
+      } else if (_selectedCasting != null) {
+        finalCastingName = _selectedCasting!.displayName;
+        finalCastingQty = int.tryParse(_qtyController.text);
+      }
+
       final newJob = JobLog(
         id: 'JOB-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}',
-        date: _selectedDate,
+        date: _dateController.text.trim(),
         jobName: jobName,
         totalTons: tons,
         ratePerTon: rate,
         employeeIds: List<String>.from(_selectedEmployeeIds),
         unit: _selectedUnit,
-        castingName: _selectedCasting?.displayName,
-        castingQty: int.tryParse(_qtyController.text),
+        castingName: finalCastingName,
+        castingQty: finalCastingQty,
       );
 
       widget.payrollService.addJobLog(newJob);
@@ -235,7 +318,13 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         _jobNameController.clear();
         _tonsController.clear();
         _qtyController.clear();
+        final now = DateTime.now();
+        _dateController.text = '${now.month}/${now.day}/${now.year}';
         _selectedCasting = null;
+        for (var sc in _selectedCastingsList) {
+          sc.controller.dispose();
+        }
+        _selectedCastingsList.clear();
         _selectedEmployeeIds.clear();
         _selectedJobName = _defaultJobNames.first;
         _isCustomJob = false;
@@ -344,9 +433,9 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
     );
   }
 
-  Widget _buildJobLogForm(List<Employee> filteredCrew) {
-    final List<String> availableDates = List.generate(31, (i) => '5/${i + 1}/2026');
 
+
+  Widget _buildJobLogForm(List<Employee> filteredCrew) {
     return GlowingCard(
       margin: EdgeInsets.zero,
       child: Form(
@@ -360,78 +449,116 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
             ),
             const Divider(color: Colors.white12, height: 24.0),
             
-            // Date & Job Name Rows
-            Row(
+            // Job Name (Full width dropdown)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Date', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8.0),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.02),
-                          borderRadius: BorderRadius.circular(10.0),
-                          border: Border.all(color: Colors.white.withOpacity(0.08)),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            dropdownColor: const Color(0xFF1E293B),
-                            isExpanded: true,
-                            value: _selectedDate,
-                            style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                            onChanged: (val) {
-                              if (val != null) setState(() => _selectedDate = val);
-                            },
-                            items: availableDates.map((d) {
-                              return DropdownMenuItem(value: d, child: Text(d));
-                            }).toList(),
-                          ),
-                        ),
-                      ),
-                    ],
+                const Text('Job Name / Description', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8.0),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.02),
+                    borderRadius: BorderRadius.circular(10.0),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      dropdownColor: const Color(0xFF1E293B),
+                      isExpanded: true,
+                      value: _selectedJobName,
+                      style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedJobName = val;
+                            _updateJobProperties(val);
+                            _calculateSplits();
+                          });
+                        }
+                      },
+                      items: _defaultJobNames.map((n) {
+                        return DropdownMenuItem(value: n, child: Text(n));
+                      }).toList(),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 15.0),
-                Expanded(
-                  flex: 7,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Job Name / Description', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8.0),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.02),
-                          borderRadius: BorderRadius.circular(10.0),
-                          border: Border.all(color: Colors.white.withOpacity(0.08)),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            dropdownColor: const Color(0xFF1E293B),
-                            isExpanded: true,
-                            value: _selectedJobName,
-                            style: const TextStyle(color: Colors.white, fontSize: 14.0),
-                            onChanged: (val) {
-                              if (val != null) {
-                                setState(() {
-                                  _selectedJobName = val;
-                                  _updateJobProperties(val);
-                                  _calculateSplits();
-                                });
-                              }
+              ],
+            ),
+            const SizedBox(height: 15.0),
+
+            // Date Selection Field
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Date (M/D/YYYY)', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8.0),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.02),
+                    borderRadius: BorderRadius.circular(10.0),
+                    border: Border.all(color: Colors.white.withOpacity(0.08)),
+                  ),
+                  child: TextFormField(
+                    controller: _dateController,
+                    style: const TextStyle(color: Colors.white, fontSize: 14.0),
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) return 'Required';
+                      final regExp = RegExp(r'^\d{1,2}/\d{1,2}/\d{4}$');
+                      if (!regExp.hasMatch(v.trim())) {
+                        return 'Use format M/D/YYYY (e.g. 5/15/2026)';
+                      }
+                      return null;
+                    },
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 5/1/2026',
+                      hintStyle: const TextStyle(color: Colors.white24, fontSize: 13.0),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 14.0),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.calendar_month_outlined, color: Colors.cyanAccent, size: 18.0),
+                        onPressed: () async {
+                          DateTime initialDate;
+                          try {
+                            final parts = _dateController.text.split('/');
+                            initialDate = DateTime(
+                              int.parse(parts[2]),
+                              int.parse(parts[0]),
+                              int.parse(parts[1]),
+                            );
+                          } catch (_) {
+                            initialDate = DateTime.now();
+                          }
+
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: initialDate,
+                            firstDate: DateTime(2020, 1, 1),
+                            lastDate: DateTime(2035, 12, 31),
+                            builder: (context, child) {
+                              return Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: const ColorScheme.dark(
+                                    primary: Colors.cyanAccent,
+                                    onPrimary: Colors.black,
+                                    surface: const Color(0xFF1E293B),
+                                    onSurface: Colors.white,
+                                  ),
+                                  dialogBackgroundColor: const Color(0xFF151D2A),
+                                ),
+                                child: child!,
+                              );
                             },
-                            items: _defaultJobNames.map((n) {
-                              return DropdownMenuItem(value: n, child: Text(n));
-                            }).toList(),
-                          ),
-                        ),
+                          );
+
+                          if (picked != null) {
+                            setState(() {
+                              _dateController.text = '${picked.month}/${picked.day}/${picked.year}';
+                            });
+                          }
+                        },
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ],
@@ -516,7 +643,7 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
             Row(
               children: [
                 Expanded(
-                  flex: 6,
+                  flex: _selectedCastingsList.isEmpty ? 6 : 10,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -533,20 +660,27 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                           child: DropdownButton<CastingInfo?>(
                             dropdownColor: const Color(0xFF1E293B),
                             isExpanded: true,
-                            hint: const Text('None (Manual Entry Only)', style: TextStyle(color: Colors.white24, fontSize: 13.0)),
-                            value: _selectedCasting,
+                            value: null,
+                            hint: Row(
+                              children: [
+                                Icon(Icons.add_circle_outline, color: Colors.cyanAccent.withOpacity(0.8), size: 16.0),
+                                const SizedBox(width: 8.0),
+                                const Expanded(
+                                  child: Text(
+                                    'Add Casting...',
+                                    style: TextStyle(color: Colors.cyanAccent, fontSize: 13.0),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
                             style: const TextStyle(color: Colors.white, fontSize: 13.0),
                             onChanged: (val) {
-                              setState(() {
-                                _selectedCasting = val;
-                                _onQtyChanged();
-                              });
+                              if (val != null) {
+                                _addCastingToList(val);
+                              }
                             },
                             items: [
-                              const DropdownMenuItem<CastingInfo?>(
-                                value: null,
-                                child: Text('None (Manual Entry Only)', style: TextStyle(color: Colors.white30)),
-                              ),
                               ..._defaultCastings.map((c) {
                                 return DropdownMenuItem<CastingInfo?>(
                                   value: c,
@@ -560,52 +694,134 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 15.0),
-                Expanded(
-                  flex: 4,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Quantity (Pieces)', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 8.0),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: _selectedCasting == null ? Colors.white.withOpacity(0.01) : Colors.white.withOpacity(0.02),
-                          borderRadius: BorderRadius.circular(10.0),
-                          border: Border.all(
-                            color: _selectedCasting == null ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.08),
+                if (_selectedCastingsList.isEmpty) ...[
+                  const SizedBox(width: 15.0),
+                  Expanded(
+                    flex: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Quantity (Pieces)', style: TextStyle(color: Colors.white60, fontSize: 12.0, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 8.0),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: _selectedCasting == null ? Colors.white.withOpacity(0.01) : Colors.white.withOpacity(0.02),
+                            borderRadius: BorderRadius.circular(10.0),
+                            border: Border.all(
+                              color: _selectedCasting == null ? Colors.white.withOpacity(0.03) : Colors.white.withOpacity(0.08),
+                            ),
+                          ),
+                          child: TextFormField(
+                            controller: _qtyController,
+                            keyboardType: TextInputType.number,
+                            enabled: _selectedCasting != null,
+                            style: TextStyle(
+                              color: _selectedCasting == null ? Colors.white30 : Colors.white, 
+                              fontSize: 14.0,
+                            ),
+                            decoration: InputDecoration(
+                              hintText: 'e.g. 150',
+                              hintStyle: const TextStyle(color: Colors.white24, fontSize: 13.0),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              suffixIcon: _selectedCasting != null 
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 16.0, color: Colors.white30),
+                                    onPressed: () {
+                                      _qtyController.clear();
+                                      _onQtyChanged();
+                                    },
+                                  )
+                                : null,
+                            ),
                           ),
                         ),
-                        child: TextFormField(
-                          controller: _qtyController,
-                          keyboardType: TextInputType.number,
-                          enabled: _selectedCasting != null,
-                          style: TextStyle(
-                            color: _selectedCasting == null ? Colors.white30 : Colors.white, 
-                            fontSize: 14.0,
-                          ),
-                          decoration: InputDecoration(
-                            hintText: 'e.g. 150',
-                            hintStyle: const TextStyle(color: Colors.white24, fontSize: 13.0),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 12.0),
-                            suffixIcon: _selectedCasting != null 
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear, size: 16.0, color: Colors.white30),
-                                  onPressed: () {
-                                    _qtyController.clear();
-                                    _onQtyChanged();
-                                  },
-                                )
-                              : null,
-                          ),
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
+            
+            if (_selectedCastingsList.isNotEmpty) ...[
+              const SizedBox(height: 15.0),
+              const Text(
+                'SELECTED CASTINGS & QUANTITIES',
+                style: TextStyle(color: Colors.cyanAccent, fontSize: 11.0, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+              ),
+              const SizedBox(height: 8.0),
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _selectedCastingsList.length,
+                itemBuilder: (context, idx) {
+                  final sc = _selectedCastingsList[idx];
+                  final double castingTons = (sc.casting.weightKg * sc.quantity) / 1000.0;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4.0),
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.02),
+                      borderRadius: BorderRadius.circular(10.0),
+                      border: Border.all(color: Colors.white.withOpacity(0.08)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          flex: 6,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${sc.casting.code} - ${sc.casting.name}',
+                                style: const TextStyle(color: Colors.white, fontSize: 13.0, fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 4.0),
+                              Text(
+                                '${sc.casting.weightKg} kg | ${castingTons.toStringAsFixed(3)} Tons',
+                                style: const TextStyle(color: Colors.white38, fontSize: 11.0),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 15.0),
+                        Expanded(
+                          flex: 3,
+                          child: Container(
+                            height: 38.0,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.02),
+                              borderRadius: BorderRadius.circular(8.0),
+                              border: Border.all(color: Colors.white.withOpacity(0.08)),
+                            ),
+                            child: TextFormField(
+                              controller: sc.controller,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(color: Colors.white, fontSize: 13.0),
+                              textAlign: TextAlign.center,
+                              decoration: const InputDecoration(
+                                hintText: 'Qty',
+                                hintStyle: TextStyle(color: Colors.white24, fontSize: 12.0),
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.symmetric(vertical: 10.0),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8.0),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20.0),
+                          onPressed: () => _removeCastingFromList(idx),
+                          tooltip: 'Remove',
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ],
             const SizedBox(height: 20.0),
             
             // Tons & Rate per ton rows
@@ -867,6 +1083,24 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
   }
 
   Widget _buildPayoutSplitSummary() {
+    final loadCrew = _selectedEmployeeIds.where((id) => widget.payrollService.isEmployeeLoadBasis(id)).toList();
+    final dayCrew = _selectedEmployeeIds.where((id) => !widget.payrollService.isEmployeeLoadBasis(id)).toList();
+
+    double totalDayWagesToDeduct = 0.0;
+    for (var dayEmpId in dayCrew) {
+      final emp = widget.payrollService.employees.firstWhere(
+        (e) => e.employeeId == dayEmpId,
+        orElse: () => Employee(
+          employeeId: dayEmpId,
+          name: '',
+          department: '',
+          salaryPerDay: 636.0,
+          deductionPerDay: 0.0,
+        ),
+      );
+      totalDayWagesToDeduct += emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0;
+    }
+
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
@@ -874,56 +1108,126 @@ class _SupervisorDashboardState extends State<SupervisorDashboard> {
         borderRadius: BorderRadius.circular(10.0),
         border: Border.all(color: Colors.cyan.withOpacity(0.15)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('TOTAL JOB VALUE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4.0),
-                Text(
-                  '₹${_calculatedTotal.toStringAsFixed(0)}',
-                  style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('TOTAL JOB VALUE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4.0),
+                    Text(
+                      '₹${_calculatedTotal.toStringAsFixed(0)}',
+                      style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Container(width: 1.0, height: 35.0, color: Colors.white12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                const Text('CREW SIZE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4.0),
-                Text(
-                  '${_selectedEmployeeIds.length} Workers',
-                  style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              Container(width: 1.0, height: 35.0, color: Colors.white12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text('CREW SIZE', style: TextStyle(color: Colors.white54, fontSize: 10.0, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4.0),
+                    Text(
+                      '${_selectedEmployeeIds.length} Workers',
+                      style: const TextStyle(color: Colors.white, fontSize: 18.0, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-          Container(width: 1.0, height: 35.0, color: Colors.white12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                const Text('INDIVIDUAL SPLIT PAY', style: TextStyle(color: Colors.cyanAccent, fontSize: 10.0, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4.0),
-                Text(
-                  '₹${_calculatedSplit.toStringAsFixed(2)}',
-                  style: const TextStyle(color: Colors.cyanAccent, fontSize: 18.0, fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+              ),
+              Container(width: 1.0, height: 35.0, color: Colors.white12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('INDIVIDUAL SPLIT PAY', style: TextStyle(color: Colors.cyanAccent, fontSize: 10.0, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4.0),
+                    Text(
+                      '₹${_calculatedSplit.toStringAsFixed(2)}',
+                      style: const TextStyle(color: Colors.cyanAccent, fontSize: 18.0, fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
+          if (_selectedEmployeeIds.isNotEmpty) ...[
+            const Divider(color: Colors.white12, height: 24.0),
+            const Text(
+              'PAY DISTRIBUTION BREAKDOWN',
+              style: TextStyle(color: Colors.cyanAccent, fontSize: 10.0, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+            ),
+            const SizedBox(height: 8.0),
+            if (dayCrew.isNotEmpty && loadCrew.isNotEmpty) ...[
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8.0),
+                child: Text(
+                  'Note: Day Basis wages (Total ₹${totalDayWagesToDeduct.toStringAsFixed(0)}) are deducted from Total Job Value before dividing the remaining pool among Load Basis workers.',
+                  style: const TextStyle(color: Colors.white38, fontSize: 11.0, fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
+            Column(
+              children: _selectedEmployeeIds.map((empId) {
+                final emp = widget.payrollService.employees.firstWhere(
+                  (e) => e.employeeId == empId,
+                  orElse: () => Employee(
+                    employeeId: empId,
+                    name: 'Unknown',
+                    department: '',
+                    salaryPerDay: 636.0,
+                    deductionPerDay: 0.0,
+                  ),
+                );
+                final isLoad = widget.payrollService.isEmployeeLoadBasis(empId);
+                final double wage = isLoad 
+                    ? _calculatedSplit 
+                    : (emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0);
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            isLoad ? Icons.fitness_center_outlined : Icons.calendar_today_outlined,
+                            color: isLoad ? Colors.purpleAccent : Colors.cyanAccent,
+                            size: 13.0,
+                          ),
+                          const SizedBox(width: 8.0),
+                          Text(
+                            '${emp.name} (${isLoad ? "Load" : "Day"})',
+                            style: const TextStyle(color: Colors.white70, fontSize: 12.0),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '₹${wage.toStringAsFixed(2)}',
+                        style: TextStyle(
+                          color: isLoad ? Colors.purpleAccent : Colors.cyanAccent,
+                          fontSize: 12.0,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );

@@ -19,7 +19,7 @@ class PayrollApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Antigravity Payroll',
+      title: 'KFIL Solapur Payroll',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
@@ -107,7 +107,7 @@ class _PayrollInitializerState extends State<PayrollInitializer> {
                 ),
                 const SizedBox(height: 24.0),
                 Text(
-                  'ANTIGRAVITY PAYROLL',
+                  'KFIL SOLAPUR PAYROLL',
                   style: GoogleFonts.outfit(
                     fontSize: 24.0,
                     fontWeight: FontWeight.w900,

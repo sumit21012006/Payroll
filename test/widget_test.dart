@@ -10,6 +10,6 @@ void main() {
     await tester.pumpWidget(PayrollApp(payrollService: payrollService));
 
     // Verify that the splash initializer screen is shown.
-    expect(find.text('ANTIGRAVITY PAYROLL'), findsOneWidget);
+    expect(find.text('KFIL SOLAPUR PAYROLL'), findsOneWidget);
   });
 }
