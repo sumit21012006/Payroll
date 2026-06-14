@@ -660,6 +660,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
             final calc = widget.payrollService.calculatePayroll(emp);
             final isLoad = widget.payrollService.isEmployeeLoadBasis(emp.employeeId);
             final empLogs = widget.payrollService.attendanceLogs.where((l) => l.employeeId == emp.employeeId).toList();
+            final employeeJobs = widget.payrollService.jobLogs
+                .where((job) => job.employeeIds.contains(emp.employeeId))
+                .toList();
+
+            double totalTonsLogged = 0.0;
+            for (var job in employeeJobs) {
+              totalTonsLogged += job.totalTons / job.employeeIds.length;
+            }
 
             return Container(
               height: MediaQuery.of(context).size.height * 0.85,
@@ -740,12 +748,19 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     Builder(
                       builder: (context) {
                         final bool isMobile = MediaQuery.of(context).size.width < 600;
-                        final statBoxes = [
-                          _modalStatBox('DAYS WORKED', '${calc.totalDaysLogged} Days', Colors.green),
-                          _modalStatBox('OT HOURS', '${calc.overtimeHours.toStringAsFixed(1)} hrs', Colors.purpleAccent),
-                          _modalStatBox('CUTTINGS', '₹${(calc.lateDeductions + calc.absentDeductions).toStringAsFixed(0)}', Colors.redAccent),
-                          _modalStatBox('NET SALARY', '₹${calc.netSalary.toStringAsFixed(0)}', Colors.cyanAccent, isHighlight: true),
-                        ];
+                        final statBoxes = isLoad
+                            ? [
+                                _modalStatBox('DAYS WORKED', '${calc.totalDaysLogged} Days', Colors.green),
+                                _modalStatBox('LOAD EXECUTED', '${totalTonsLogged.toStringAsFixed(3)} Tons', Colors.purpleAccent),
+                                _modalStatBox('CUTTINGS', '₹${(calc.lateDeductions + calc.absentDeductions).toStringAsFixed(0)}', Colors.redAccent),
+                                _modalStatBox('LOAD BASIS PAY', '₹${calc.netSalary.toStringAsFixed(0)}', Colors.cyanAccent, isHighlight: true),
+                              ]
+                            : [
+                                _modalStatBox('DAYS WORKED', '${calc.totalDaysLogged} Days', Colors.green),
+                                _modalStatBox('OT HOURS', '${calc.overtimeHours.toStringAsFixed(1)} hrs', Colors.purpleAccent),
+                                _modalStatBox('CUTTINGS', '₹${(calc.lateDeductions + calc.absentDeductions).toStringAsFixed(0)}', Colors.redAccent),
+                                _modalStatBox('NET SALARY', '₹${calc.netSalary.toStringAsFixed(0)}', Colors.cyanAccent, isHighlight: true),
+                              ];
 
                         if (isMobile) {
                           return Column(
