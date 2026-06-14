@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:csv/csv.dart';
+import 'package:path_provider/path_provider.dart';
 import '../models/employee.dart';
 import '../models/attendance.dart';
 import '../models/job_log.dart';
@@ -171,8 +175,8 @@ class PayrollService {
         }
       }
 
-      // 4. Prepopulate realistic Supervisor Job Logs for May 2026
-      _prepopulateJobLogs();
+      // 4. Prepopulate realistic Supervisor Job Logs for May 2026 or load from file
+      await _loadJobLogsFromFile();
 
       isInitialized = true;
     } catch (e) {
@@ -331,14 +335,53 @@ class PayrollService {
     return remainingPool / loadBasisCrew.length;
   }
 
+  Future<File> _getJobLogsFile() async {
+    final directory = await getApplicationDocumentsDirectory();
+    return File('${directory.path}/payroll_job_logs.json');
+  }
+
+  Future<void> _saveJobLogsToFile() async {
+    if (kIsWeb) return;
+    try {
+      final file = await _getJobLogsFile();
+      final list = jobLogs.map((j) => j.toJson()).toList();
+      await file.writeAsString(jsonEncode(list));
+    } catch (e) {
+      print("Error saving job logs: $e");
+    }
+  }
+
+  Future<void> _loadJobLogsFromFile() async {
+    if (kIsWeb) {
+      _prepopulateJobLogs();
+      return;
+    }
+    try {
+      final file = await _getJobLogsFile();
+      if (await file.exists()) {
+        final content = await file.readAsString();
+        final List<dynamic> list = jsonDecode(content);
+        jobLogs = list.map((item) => JobLog.fromJson(item)).toList();
+      } else {
+        _prepopulateJobLogs();
+        await _saveJobLogsToFile();
+      }
+    } catch (e) {
+      print("Error loading job logs: $e");
+      _prepopulateJobLogs();
+    }
+  }
+
   // Add new supervisor Job Log
   void addJobLog(JobLog log) {
     jobLogs.add(log);
+    _saveJobLogsToFile();
   }
 
   // Delete job log
   void deleteJobLog(String id) {
     jobLogs.removeWhere((log) => log.id == id);
+    _saveJobLogsToFile();
   }
 
   // Main calculation engine
