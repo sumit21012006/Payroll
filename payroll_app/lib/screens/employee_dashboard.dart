@@ -541,9 +541,20 @@ class EmployeeDashboard extends StatelessWidget {
                     _payslipRow('State Insurance (ESIC - 0.75%)', '₹${calc.esicDeduction.toStringAsFixed(2)}'),
                     _payslipRow('Professional Tax (PT)', '₹${calc.ptDeduction.toStringAsFixed(2)}'),
                     _payslipRow('Other Deduction (Canteen/Mess)', '₹${calc.otherDeduction.toStringAsFixed(2)}'),
+                    if (calc.accountAdvance > 0)
+                      _payslipRow('Account Advance Deduction', '₹${calc.accountAdvance.toStringAsFixed(2)}'),
+                    if (calc.mlwlDeduction > 0)
+                      _payslipRow('Labour Welfare Fund (MLWL)', '₹${calc.mlwlDeduction.toStringAsFixed(2)}'),
                     _payslipRow('TOTAL DEDUCTIONS', '₹${calc.totalDeductions.toStringAsFixed(2)}', isBold: true),
                   ] else ...[
-                    const Text('No biometric cuttings/deductions for Load Basis staff.', style: TextStyle(color: Colors.white24, fontSize: 11.0, fontStyle: FontStyle.italic)),
+                    if (calc.totalDeductions > 0) ...[
+                      if (calc.accountAdvance > 0)
+                        _payslipRow('Account Advance Deduction', '₹${calc.accountAdvance.toStringAsFixed(2)}'),
+                      if (calc.mlwlDeduction > 0)
+                        _payslipRow('Labour Welfare Fund (MLWL)', '₹${calc.mlwlDeduction.toStringAsFixed(2)}'),
+                      _payslipRow('TOTAL DEDUCTIONS', '₹${calc.totalDeductions.toStringAsFixed(2)}', isBold: true),
+                    ] else
+                      const Text('No biometric cuttings/deductions for Load Basis staff.', style: TextStyle(color: Colors.white24, fontSize: 11.0, fontStyle: FontStyle.italic)),
                   ],
                   const Divider(color: Colors.white24, height: 24.0),
                   

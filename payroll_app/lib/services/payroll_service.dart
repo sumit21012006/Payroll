@@ -38,6 +38,8 @@ class PayrollCalculation {
   final double ptDeduction;
   final double otherDeduction;
   final double totalDeductions;
+  final double accountAdvance;
+  final double mlwlDeduction;
 
   PayrollCalculation({
     required this.employee,
@@ -65,6 +67,8 @@ class PayrollCalculation {
     this.ptDeduction = 0.0,
     this.otherDeduction = 0.0,
     this.totalDeductions = 0.0,
+    this.accountAdvance = 0.0,
+    this.mlwlDeduction = 0.0,
   });
 }
 
@@ -75,6 +79,9 @@ class PayrollService {
   
   // Custom load-basis overrides (set of employee IDs designated as load basis)
   Set<String> loadBasisEmployeeIds = {};
+
+  // Active pay cycle month (1-12) for LWF (MLWL) and other bi-annual calculations
+  int activePayCycleMonth = 5; // Default is 5 (May)
 
   // Department-specific configurations: units, default rates, and shift recommendations
   static const Map<String, Map<String, dynamic>> departmentConfigs = {
@@ -457,6 +464,9 @@ class PayrollService {
     double gross = 0.0;
     double net = 0.0;
 
+    final double mlwlDeduction = (activePayCycleMonth == 6 || activePayCycleMonth == 12) ? 25.0 : 0.0;
+    final double accountAdvance = employee.accountAdvance;
+
     if (!isLoadBasis) {
       // Day-basis employee calculations
       final double rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : 636.0;
@@ -501,7 +511,7 @@ class PayrollService {
         otherDeduction = 0.0;
       }
 
-      totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction;
+      totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
       net = gross - totalDeductions;
     } else {
       // Load-basis calculations
@@ -516,9 +526,9 @@ class PayrollService {
       esicDeduction = 0.0;
       ptDeduction = 0.0;
       otherDeduction = 0.0;
-      totalDeductions = 0.0;
+      totalDeductions = accountAdvance + mlwlDeduction;
       
-      net = gross;
+      net = gross - totalDeductions;
     }
 
     return PayrollCalculation(
@@ -549,6 +559,8 @@ class PayrollService {
       ptDeduction: ptDeduction,
       otherDeduction: otherDeduction,
       totalDeductions: totalDeductions,
+      accountAdvance: accountAdvance,
+      mlwlDeduction: mlwlDeduction,
     );
   }
 
@@ -560,6 +572,14 @@ class PayrollService {
       budgets[emp.department] = (budgets[emp.department] ?? 0.0) + calc.netSalary;
     }
     return budgets;
+  }
+
+  // Add new employee
+  void addEmployee(Employee employee, {required bool isLoadBasis}) {
+    employees.add(employee);
+    if (isLoadBasis) {
+      loadBasisEmployeeIds.add(employee.employeeId);
+    }
   }
 
   // Update employee info

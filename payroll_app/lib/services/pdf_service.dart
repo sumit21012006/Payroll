@@ -155,10 +155,22 @@ class PdfService {
                               _detailRow('State Insurance (ESIC)', 'Rs. ${calc.esicDeduction.toStringAsFixed(2)}'),
                               _detailRow('Professional Tax (PT)', 'Rs. ${calc.ptDeduction.toStringAsFixed(2)}'),
                               _detailRow('Other Deduction (Canteen)', 'Rs. ${calc.otherDeduction.toStringAsFixed(2)}'),
+                              if (calc.accountAdvance > 0)
+                                _detailRow('Account Advance Deduction', 'Rs. ${calc.accountAdvance.toStringAsFixed(2)}'),
+                              if (calc.mlwlDeduction > 0)
+                                _detailRow('Labour Welfare Fund (MLWL)', 'Rs. ${calc.mlwlDeduction.toStringAsFixed(2)}'),
                               _detailRow('Total Deductions', 'Rs. ${calc.totalDeductions.toStringAsFixed(2)}', isBold: true),
                             ] else ...[
-                              _detailRow('Deductions', 'No biometric cuttings for Load Basis.'),
-                              _detailRow('Total Deductions', 'Rs. 0.00', isBold: true),
+                              if (calc.totalDeductions > 0) ...[
+                                if (calc.accountAdvance > 0)
+                                  _detailRow('Account Advance Deduction', 'Rs. ${calc.accountAdvance.toStringAsFixed(2)}'),
+                                if (calc.mlwlDeduction > 0)
+                                  _detailRow('Labour Welfare Fund (MLWL)', 'Rs. ${calc.mlwlDeduction.toStringAsFixed(2)}'),
+                                _detailRow('Total Deductions', 'Rs. ${calc.totalDeductions.toStringAsFixed(2)}', isBold: true),
+                              ] else ...[
+                                _detailRow('Deductions', 'No biometric cuttings for Load Basis.'),
+                                _detailRow('Total Deductions', 'Rs. 0.00', isBold: true),
+                              ],
                             ],
                           ],
                         ),

@@ -11,6 +11,14 @@ class Employee {
   final String bankAcc;
   final String punchingCode;
   final String mobileNo;
+  double? _accountAdvance;
+  double? _remainingAdvance;
+
+  double get accountAdvance => _accountAdvance ?? 0.0;
+  set accountAdvance(double val) => _accountAdvance = val;
+
+  double get remainingAdvance => _remainingAdvance ?? 0.0;
+  set remainingAdvance(double val) => _remainingAdvance = val;
 
   Employee({
     required this.employeeId,
@@ -25,7 +33,10 @@ class Employee {
     this.bankAcc = '',
     this.punchingCode = '',
     this.mobileNo = '',
-  });
+    double accountAdvance = 0.0,
+    double remainingAdvance = 0.0,
+  })  : _accountAdvance = accountAdvance,
+        _remainingAdvance = remainingAdvance;
 
   bool get isLoadBasis => salaryPerDay == 0.0;
 
@@ -45,6 +56,8 @@ class Employee {
     final String bankAccVal = row.length > 9 ? row[9].toString().trim() : '';
     final String punchingCodeVal = row.length > 10 ? row[10].toString().trim() : '';
     final String mobileNoVal = row.length > 11 ? row[11].toString().trim() : '';
+    final double accAdv = row.length > 12 ? double.tryParse(row[12].toString()) ?? 0.0 : 0.0;
+    final double remAdv = row.length > 13 ? double.tryParse(row[13].toString()) ?? 0.0 : 0.0;
 
     return Employee(
       employeeId: id,
@@ -59,6 +72,8 @@ class Employee {
       bankAcc: bankAccVal,
       punchingCode: punchingCodeVal,
       mobileNo: mobileNoVal,
+      accountAdvance: accAdv,
+      remainingAdvance: remAdv,
     );
   }
 
@@ -76,6 +91,8 @@ class Employee {
       'bank_acc': bankAcc,
       'punching_code': punchingCode,
       'mobile_no': mobileNo,
+      'account_advance': accountAdvance,
+      'remaining_advance': remainingAdvance,
     };
   }
 }

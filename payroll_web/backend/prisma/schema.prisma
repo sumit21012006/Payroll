@@ -1,0 +1,102 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Employee {
+  employeeId       String      @id
+  name             String
+  department       String
+  salaryPerDay     Float
+  deductionPerDay  Float
+  uan              String      @default("")
+  esic             String      @default("")
+  bankName         String      @default("")
+  ifscCode         String      @default("")
+  bankAcc          String      @default("")
+  punchingCode     String      @default("")
+  mobileNo         String      @default("")
+  accountAdvance   Float       @default(0.0)
+  remainingAdvance Float       @default(0.0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  
+  attendance       Attendance[]
+  jobLogs          JobLogEmployee[]
+  payrollRuns      PayrollRun[]
+}
+
+model Attendance {
+  id          Int      @id @default(autoincrement())
+  employeeId  String
+  date        String   // Format "m/d/yyyy" or standard Date
+  checkIn     String   // Format "HH:mm"
+  checkOut    String   // Format "HH:mm"
+  status      String   // Format "PRESENT", "LATE", "OVERTIME", "HALF_DAY", "ABSENT"
+  hoursWorked Float    @default(0.0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  employee    Employee @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+
+  @@unique([employeeId, date])
+}
+
+model JobLog {
+  id          String            @id
+  date        String            // Format "m/d/yyyy"
+  jobName     String
+  totalTons   Float             // Represents units done (Tons or Pieces)
+  ratePerTon  Float             // Represents rate per unit (Tons or Pieces)
+  unit        String            @default("Tons") // "Tons" or "Pieces"
+  castingName String?
+  castingQty  Int?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  employees   JobLogEmployee[]
+}
+
+model JobLogEmployee {
+  employeeId    String
+  jobLogId      String
+  splitEarnings Float
+
+  employee      Employee @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+  jobLog        JobLog   @relation(fields: [jobLogId], references: [id], onDelete: Cascade)
+
+  @@id([employeeId, jobLogId])
+}
+
+model PayrollRun {
+  id              String   @id @default(uuid())
+  employeeId      String
+  month           Int
+  year            Int
+  basicPay        Float
+  otPay           Float
+  basicDa         Float
+  hra             Float
+  otherAllowance  Float
+  pfDeduction     Float
+  esicDeduction   Float
+  ptDeduction     Float
+  otherDeduction  Float
+  totalDeductions Float
+  accountAdvance  Float
+  mlwlDeduction   Float
+  grossSalary     Float
+  netSalary       Float
+  workedDays      Float
+  overtimeHours   Float
+  jobEarnings     Float
+  createdAt       DateTime @default(now())
+
+  employee        Employee @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
+
+  @@unique([employeeId, month, year])
+}

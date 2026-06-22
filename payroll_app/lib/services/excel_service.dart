@@ -148,6 +148,13 @@ class ExcelService {
     // Update title in cell A5
     sheet.cell(CellIndex.indexByString('A5')).value = TextCellValue(titleText);
 
+    // If it is a bi-annual MLWL month, rename the 'Cupan' column to 'MLWL' in the header row (row index 10)
+    if (service.activePayCycleMonth == 6 || service.activePayCycleMonth == 12) {
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 21, rowIndex: 10)).value = TextCellValue('MLWL');
+    } else {
+      sheet.cell(CellIndex.indexByColumnRow(columnIndex: 21, rowIndex: 10)).value = TextCellValue('Cupan');
+    }
+
     // Helper to get column letter
     String colLetter(int colIndex) {
       final cellId = CellIndex.indexByColumnRow(columnIndex: colIndex, rowIndex: 0).cellId;
@@ -194,11 +201,11 @@ class ExcelService {
         FormulaCellValue('=ROUND(L$excelRow*12%,0)'),
         FormulaCellValue('=IF(O$excelRow<=7500,0,IF(O$excelRow<=10000,175,200))'),
         FormulaCellValue('=ROUND(O$excelRow*0.75%,0)'),
-        null, // Remaining Adv (Dif)
+        emp.remainingAdvance > 0 ? DoubleCellValue(emp.remainingAdvance) : null, // Remaining Adv (Dif)
         null, // Advance Jamadar
         null, // Canteen
-        null, // Cupan
-        null, // Account Adv
+        calc.mlwlDeduction > 0 ? DoubleCellValue(calc.mlwlDeduction) : null, // Cupan / MLWL
+        emp.accountAdvance > 0 ? DoubleCellValue(emp.accountAdvance) : null, // Account Adv
         FormulaCellValue('=SUM(P$excelRow:W$excelRow)'),
         FormulaCellValue('=O$excelRow-X$excelRow'),
         workedDays > 0 ? IntCellValue(500) : null, // Canteen Other / Other Deduction
