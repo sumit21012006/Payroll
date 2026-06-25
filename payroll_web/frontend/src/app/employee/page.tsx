@@ -72,8 +72,8 @@ export default function EmployeeDashboard() {
   const [attendance, setAttendance] = useState<Attendance[]>([]);
   const [payroll, setPayroll] = useState<PayrollRun | null>(null);
   const [jobs, setJobs] = useState<any[]>([]);
-  const [selectedMonth, setSelectedMonth] = useState(5);
-  const [selectedYear, setSelectedYear] = useState(2026);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -177,9 +177,31 @@ export default function EmployeeDashboard() {
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               className="bg-transparent border-none text-slate-800 focus:outline-none cursor-pointer pr-4 font-bold"
             >
-              <option value={5}>May 2026</option>
-              <option value={6}>June 2026</option>
-              <option value={12}>December 2026</option>
+              <option value={1}>Jan</option>
+              <option value={2}>Feb</option>
+              <option value={3}>Mar</option>
+              <option value={4}>Apr</option>
+              <option value={5}>May</option>
+              <option value={6}>Jun</option>
+              <option value={7}>Jul</option>
+              <option value={8}>Aug</option>
+              <option value={9}>Sep</option>
+              <option value={10}>Oct</option>
+              <option value={11}>Nov</option>
+              <option value={12}>Dec</option>
+            </select>
+            <span className="text-slate-300">|</span>
+            <select
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(Number(e.target.value))}
+              className="bg-transparent border-none text-slate-800 focus:outline-none cursor-pointer pr-4 font-bold"
+            >
+              <option value={2025}>2025</option>
+              <option value={2026}>2026</option>
+              <option value={2027}>2027</option>
+              <option value={2028}>2028</option>
+              <option value={2029}>2029</option>
+              <option value={2030}>2030</option>
             </select>
           </div>
 
