@@ -91,7 +91,8 @@ app.get(['/iclock/cdata', '/iclock/cdata.aspx'], (req, res) => {
 
 // 2. ADMS Log Uploads (POST /iclock/cdata)
 app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
-  const { sn, table } = req.query;
+  const sn = (req.query.sn || req.query.SN) as string;
+  const table = (req.query.table || req.query.TABLE) as string;
   const rawText = req.body as string;
 
   console.log(`[ADMS] Log upload received from SN: ${sn}, Table: ${table}`);
