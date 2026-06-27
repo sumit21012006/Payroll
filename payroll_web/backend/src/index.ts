@@ -15,6 +15,12 @@ const prisma = new PrismaClient();
 const app = express();
 const PORT = process.env.PORT || 8080;
 
+// Debug Request Logger
+app.use((req, res, next) => {
+  console.log(`[DEBUG] Incoming Request: ${req.method} ${req.path} from IP: ${req.ip}`);
+  next();
+});
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -74,22 +80,22 @@ app.get('/', (req, res) => {
 // -------------------------------------------------------------
 
 // 1. ADMS Handshake/Registry (GET /iclock/cdata)
-app.get('/iclock/cdata', (req, res) => {
+app.get(['/iclock/cdata', '/iclock/cdata.aspx'], (req, res) => {
   const { SN, options } = req.query;
   console.log(`[ADMS] Handshake request from Serial Number: ${SN}`);
-  
+
   // Respond with registry successful command configuration
   res.setHeader('Content-Type', 'text/plain');
   res.send('registry=ok\r\n');
 });
 
 // 2. ADMS Log Uploads (POST /iclock/cdata)
-app.post('/iclock/cdata', async (req, res) => {
+app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
   const { sn, table } = req.query;
   const rawText = req.body as string;
 
   console.log(`[ADMS] Log upload received from SN: ${sn}, Table: ${table}`);
-  
+
   if (table === 'ATTLOG') {
     try {
       const lines = rawText.split(/\r?\n/).filter(line => line.trim().length > 0);
@@ -135,7 +141,7 @@ app.post('/iclock/cdata', async (req, res) => {
           const checkIn = existingLog.checkIn;
           const checkOut = timeStr;
           const hours = calculateHours(checkIn, checkOut);
-          
+
           let status = 'PRESENT';
           if (hours > 9.0) {
             status = 'OVERTIME';
@@ -154,7 +160,7 @@ app.post('/iclock/cdata', async (req, res) => {
           const checkIn = timeStr;
           const checkOut = '';
           const hours = 0.0;
-          
+
           // Simple rule: check-in after 09:15 is LATE
           const [inHour, inMin] = checkIn.split(':').map(Number);
           const isLate = inHour > 9 || (inHour === 9 && inMin > 15);
@@ -190,7 +196,7 @@ app.post('/iclock/cdata', async (req, res) => {
 });
 
 // 3. ADMS Heartbeat / Command Center (GET /iclock/getrequest)
-app.get('/iclock/getrequest', (req, res) => {
+app.get(['/iclock/getrequest', '/iclock/getrequest.aspx'], (req, res) => {
   // Device polls for command requests here
   res.setHeader('Content-Type', 'text/plain');
   res.send('OK\r\n');
@@ -269,7 +275,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   const loggedWeekdays = monthLogs
     .filter(log => weekdays.includes(log.date))
     .map(log => log.date);
-  
+
   const absentDays = weekdays.length - new Set(loggedWeekdays).size;
 
   // Retrieve Supervisor Job Log Splits for this employee
@@ -323,7 +329,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
 
     // BASIC+DA = workedDays * (15746 / 26)
     basicDa = Math.round(workedDays * (15746.0 / 26.0));
-    
+
     // HRA = 5% of BASIC+DA
     hra = Math.round(basicDa * 0.05);
 
@@ -334,7 +340,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     // Deductions
     pfDeduction = Math.round(basicDa * 0.12);
     esicDeduction = Math.round(grossSalary * 0.0075);
-    
+
     // PT slabs
     if (grossSalary <= 7500.0) {
       ptDeduction = 0.0;
@@ -413,7 +419,7 @@ app.get('/api/attendance', async (req, res) => {
     if (employeeId) {
       filter.employeeId = employeeId as string;
     }
-    
+
     let logs = await prisma.attendance.findMany({
       where: filter,
       orderBy: { date: 'asc' }
@@ -457,7 +463,7 @@ app.post('/api/employees', async (req, res) => {
 // REST Route: Create supervisor Job Log and distribute payouts
 app.post('/api/jobs', async (req, res) => {
   const { id, date, jobName, totalTons, ratePerTon, unit, castingName, castingQty, employeeIds } = req.body;
-  
+
   try {
     const totalPayout = totalTons * ratePerTon;
     const crewEmployees = await prisma.employee.findMany({
@@ -554,7 +560,7 @@ app.post('/api/payroll/calculate', async (req, res) => {
 
     for (const emp of employees) {
       const calc = await calculateEmployeeWages(emp.employeeId, month, year, settings);
-      
+
       const run = await prisma.payrollRun.upsert({
         where: {
           employeeId_month_year: {
@@ -577,7 +583,7 @@ app.post('/api/payroll/calculate', async (req, res) => {
 // REST Route: Get all payroll runs
 app.get('/api/payroll/runs', async (req, res) => {
   const { month, year } = req.query;
-  
+
   try {
     const filter: any = {};
     if (month) filter.month = parseInt(month as string);
@@ -637,20 +643,20 @@ app.get('/api/payroll/export', async (req, res) => {
   if (!month || !year) {
     return res.status(400).json({ error: 'Month and year are required' });
   }
-  
+
   try {
     const m = parseInt(month as string);
     const y = parseInt(year as string);
-    
+
     const list = await prisma.payrollRun.findMany({
       where: { month: m, year: y },
       include: { employee: true },
       orderBy: { employeeId: 'asc' }
     });
-    
+
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Payroll ${MONTH_NAMES[m - 1] || m} ${y}`);
-    
+
     // Setup columns
     worksheet.columns = [
       { header: 'Employee ID', key: 'id', width: 15 },
@@ -672,7 +678,7 @@ app.get('/api/payroll/export', async (req, res) => {
       { header: 'Total Deductions', key: 'deductions', width: 18 },
       { header: 'Net Salary', key: 'net', width: 15 }
     ];
-    
+
     // Style header row
     const headerRow = worksheet.getRow(1);
     headerRow.eachCell((cell) => {
@@ -690,7 +696,7 @@ app.get('/api/payroll/export', async (req, res) => {
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
     headerRow.height = 25;
-    
+
     // Add data rows
     list.forEach((run) => {
       const isLoad = run.employee.salaryPerDay === 0.0;
@@ -714,17 +720,17 @@ app.get('/api/payroll/export', async (req, res) => {
         deductions: run.totalDeductions,
         net: run.netSalary
       });
-      
+
       // Format number format cells
       ['basic', 'otPay', 'jobEarnings', 'gross', 'pf', 'esic', 'pt', 'canteen', 'advance', 'mlwl', 'deductions', 'net'].forEach((colKey) => {
         const cell = row.getCell(colKey);
         cell.numFmt = '#,##0.00';
       });
     });
-    
+
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Payroll_${m}_${y}_Register.xlsx`);
-    
+
     await workbook.xlsx.write(res);
     res.end();
   } catch (err) {
