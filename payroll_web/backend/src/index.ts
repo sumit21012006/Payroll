@@ -26,14 +26,22 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   'http://localhost:3000',
   'http://localhost:3001'
-].filter(Boolean) as string[];
+]
+  .filter(Boolean)
+  .map((url) => url!.trim().replace(/\/$/, '')) as string[];
 
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     // Allow requests with no origin (like mobile apps, curl, or biometric machines)
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    const incomingOrigin = origin.trim().replace(/\/$/, '');
+    if (allowedOrigins.indexOf(incomingOrigin) !== -1) {
       callback(null, true);
     } else {
+      console.warn(`[CORS REJECT] Origin "${origin}" is not in allowed origins:`, allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   }
