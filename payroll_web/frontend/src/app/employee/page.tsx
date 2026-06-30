@@ -126,6 +126,7 @@ export default function EmployeeDashboard() {
 
   const handleLogout = () => {
     localStorage.removeItem('employeeSession');
+    localStorage.removeItem('sessionToken');
     router.push('/login');
   };
 

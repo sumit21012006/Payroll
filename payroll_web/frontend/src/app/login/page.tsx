@@ -18,45 +18,54 @@ export default function LoginPage() {
   const [passcode, setPasscode] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [matchedEmployee, setMatchedEmployee] = useState<Employee | null>(null);
-  const [employeesList, setEmployeesList] = useState<Employee[]>([]);
   const [isDbOnline, setIsDbOnline] = useState(false);
 
-  // Fetch employees on load to match against employee login
+  // Check database online status
   useEffect(() => {
-    fetch(`${API_URL}/api/employees`)
+    fetch(`${API_URL}/`)
       .then(res => {
         if (res.ok) setIsDbOnline(true);
-        return res.json();
-      })
-      .then(data => {
-        if (Array.isArray(data)) {
-          setEmployeesList(data);
-        }
       })
       .catch(err => {
-        console.error('Error fetching employees:', err);
+        console.error('Database connection error:', err);
         setIsDbOnline(false);
       });
   }, []);
 
-  // Employee ID check logic
+  // Employee ID check logic via preview API endpoint (with debouncing & abort controllers)
   useEffect(() => {
     if (selectedRole === 'employee' && employeeId.trim().length >= 4) {
-      const match = employeesList.find(
-        emp => emp.employeeId.toLowerCase() === employeeId.trim().toLowerCase()
-      );
-      if (match) {
-        setMatchedEmployee(match);
-        setErrorMessage('');
-      } else {
-        setMatchedEmployee(null);
-        setErrorMessage('Employee ID not found in database');
-      }
+      const controller = new AbortController();
+      const delayDebounceFn = setTimeout(() => {
+        const id = employeeId.trim();
+        fetch(`${API_URL}/api/auth/employee-preview/${encodeURIComponent(id)}`, {
+          signal: controller.signal
+        })
+          .then(res => {
+            if (!res.ok) throw new Error('Employee not found');
+            return res.json();
+          })
+          .then(data => {
+            setMatchedEmployee(data);
+            setErrorMessage('');
+          })
+          .catch(err => {
+            if (err.name !== 'AbortError') {
+              setMatchedEmployee(null);
+              setErrorMessage('Employee ID not found in database');
+            }
+          });
+      }, 300);
+
+      return () => {
+        clearTimeout(delayDebounceFn);
+        controller.abort();
+      };
     } else {
       setMatchedEmployee(null);
       setErrorMessage('');
     }
-  }, [employeeId, selectedRole, employeesList]);
+  }, [employeeId, selectedRole]);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,23 +73,49 @@ export default function LoginPage() {
 
     if (selectedRole === 'employee') {
       if (matchedEmployee) {
-        localStorage.setItem('employeeSession', JSON.stringify(matchedEmployee));
-        router.push('/employee');
+        // Authenticate employee against backend and get the token
+        fetch(`${API_URL}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ role: 'employee', employeeId: matchedEmployee.employeeId })
+        })
+          .then(async (res) => {
+            const data = await res.json();
+            if (res.ok && data.success) {
+              localStorage.setItem('sessionToken', data.token);
+              localStorage.setItem('employeeSession', JSON.stringify(data.employee));
+              router.push('/employee');
+            } else {
+              setErrorMessage(data.error || 'Authentication failed');
+            }
+          })
+          .catch((err) => {
+            console.error('Employee auth error:', err);
+            setErrorMessage('Failed to connect to authentication server');
+          });
       } else {
         setErrorMessage('Please enter a valid Employee ID');
       }
-    } else if (selectedRole === 'supervisor') {
-      if (passcode.toLowerCase() === 'supervisor' || passcode === '123') {
-        router.push('/supervisor');
-      } else {
-        setErrorMessage('Incorrect Supervisor passcode');
-      }
-    } else if (selectedRole === 'admin') {
-      if (passcode.toLowerCase() === 'admin' || passcode === '123') {
-        router.push('/admin');
-      } else {
-        setErrorMessage('Incorrect Admin passcode');
-      }
+    } else if (selectedRole === 'supervisor' || selectedRole === 'admin') {
+      // Authenticate admin or supervisor against backend
+      fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role: selectedRole, passcode })
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (res.ok && data.success) {
+            localStorage.setItem('sessionToken', data.token);
+            router.push(selectedRole === 'admin' ? '/admin' : '/supervisor');
+          } else {
+            setErrorMessage(data.error || `Incorrect ${selectedRole} passcode`);
+          }
+        })
+        .catch((err) => {
+          console.error('Auth error:', err);
+          setErrorMessage('Failed to connect to authentication server');
+        });
     }
   };
 

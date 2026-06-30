@@ -21,9 +21,53 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors());
+// Restrict CORS origins to secure against unauthorized web origins
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'http://localhost:3000',
+  'http://localhost:3001'
+].filter(Boolean) as string[];
+
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, curl, or biometric machines)
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Token-based API Authentication Middleware
+const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  // Exclude public endpoints and biometric ADMS endpoints
+  if (
+    req.path === '/' ||
+    req.path === '/api/auth/login' ||
+    req.path.startsWith('/api/auth/employee-preview/') ||
+    req.path.startsWith('/iclock/')
+  ) {
+    return next();
+  }
+
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  const systemToken = process.env.API_ACCESS_KEY || 'default-secure-key-2106';
+
+  if (!token || token !== systemToken) {
+    console.warn(`[SECURITY] Unauthorized API access attempt to ${req.path} from IP ${req.ip}`);
+    return res.status(401).json({ error: 'Unauthorized: Access token is missing or invalid.' });
+  }
+
+  next();
+};
+
+app.use(authenticateToken);
 
 // Custom raw text parser for ADMS protocol requests
 app.use((req, res, next) => {
@@ -201,6 +245,71 @@ app.get(['/iclock/getrequest', '/iclock/getrequest.aspx'], (req, res) => {
   // Device polls for command requests here
   res.setHeader('Content-Type', 'text/plain');
   res.send('OK\r\n');
+});
+
+// -------------------------------------------------------------
+// AUTHENTICATION ENDPOINT
+// -------------------------------------------------------------
+app.post('/api/auth/login', async (req, res) => {
+  const { role, passcode, employeeId } = req.body;
+  const adminPass = process.env.ADMIN_PASSCODE || 'admin';
+  const supervisorPass = process.env.SUPERVISOR_PASSCODE || 'supervisor';
+  const systemToken = process.env.API_ACCESS_KEY || 'default-secure-key-2106';
+
+  if (role === 'admin') {
+    if (passcode === adminPass) {
+      return res.json({ success: true, token: systemToken });
+    }
+    return res.status(401).json({ error: 'Incorrect Admin passcode' });
+  }
+
+  if (role === 'supervisor') {
+    if (passcode === supervisorPass) {
+      return res.json({ success: true, token: systemToken });
+    }
+    return res.status(401).json({ error: 'Incorrect Supervisor passcode' });
+  }
+
+  if (role === 'employee') {
+    if (!employeeId) {
+      return res.status(400).json({ error: 'Employee ID is required' });
+    }
+    try {
+      const employee = await prisma.employee.findUnique({
+        where: { employeeId }
+      });
+      if (employee) {
+        return res.json({ success: true, token: systemToken, employee });
+      }
+      return res.status(404).json({ error: 'Employee ID not found in database' });
+    } catch (err) {
+      return res.status(500).json({ error: (err as Error).message });
+    }
+  }
+
+  return res.status(400).json({ error: 'Invalid login role' });
+});
+
+// Employee lookup (preview) route before login (safe, only returns name/dept for verified ID)
+app.get('/api/auth/employee-preview/*', async (req, res) => {
+  const employeeId = (req.params as any)[0];
+  try {
+    const employee = await prisma.employee.findUnique({
+      where: { employeeId },
+      select: {
+        employeeId: true,
+        name: true,
+        department: true
+      }
+    });
+    if (employee) {
+      res.json(employee);
+    } else {
+      res.status(404).json({ error: 'Employee not found' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
 });
 
 // -------------------------------------------------------------

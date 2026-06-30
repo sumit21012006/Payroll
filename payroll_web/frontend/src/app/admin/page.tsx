@@ -64,7 +64,17 @@ interface JobLog {
 
 export default function AdminDashboard() {
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('sessionToken');
+    if (!token) {
+      router.push('/login');
+    }
+  }, [router]);
+
   const handleLogout = () => {
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('employeeSession');
     router.push('/login');
   };
   const [employees, setEmployees] = useState<Employee[]>([]);

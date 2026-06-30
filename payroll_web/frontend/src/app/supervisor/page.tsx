@@ -87,6 +87,14 @@ const MONTH_NAMES = [
 
 export default function SupervisorDashboard() {
   const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('sessionToken');
+    if (!token) {
+      router.push('/login');
+    }
+  }, [router]);
+
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [recentJobs, setRecentJobs] = useState<JobLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -412,6 +420,8 @@ export default function SupervisorDashboard() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('sessionToken');
+    localStorage.removeItem('employeeSession');
     router.push('/login');
   };
 

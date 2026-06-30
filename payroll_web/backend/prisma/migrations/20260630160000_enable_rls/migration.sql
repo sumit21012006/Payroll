@@ -1,0 +1,6 @@
+-- Enable Row-Level Security (RLS) on all tables to lock down Supabase public API access
+ALTER TABLE "Employee" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Attendance" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "JobLog" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "JobLogEmployee" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "PayrollRun" ENABLE ROW LEVEL SECURITY;
