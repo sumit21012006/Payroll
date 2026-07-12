@@ -578,6 +578,20 @@ app.post('/api/employees', async (req, res) => {
   }
 });
 
+// REST Route: Update general employee details
+app.put('/api/employees/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const updated = await prisma.employee.update({
+      where: { employeeId: id },
+      data: req.body
+    });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: (err as Error).message });
+  }
+});
+
 // REST Route: Create supervisor Job Log and distribute payouts
 app.post('/api/jobs', async (req, res) => {
   const { id, date, jobName, totalTons, ratePerTon, unit, castingName, castingQty, employeeIds } = req.body;

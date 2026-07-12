@@ -126,6 +126,24 @@ export default function AdminDashboard() {
   const [addEmpMessage, setAddEmpMessage] = useState('');
   const [isAddingEmp, setIsAddingEmp] = useState(false);
 
+  // Edit Employee State
+  const [showEditEmployeeModal, setShowEditEmployeeModal] = useState(false);
+  const [editEmpName, setEditEmpName] = useState('');
+  const [editEmpDept, setEditEmpDept] = useState('HE');
+  const [editEmpCustomDept, setEditEmpCustomDept] = useState('');
+  const [editEmpMobile, setEditEmpMobile] = useState('');
+  const [editEmpPunchCode, setEditEmpPunchCode] = useState('');
+  const [editEmpBasis, setEditEmpBasis] = useState<'Day Basis' | 'Load Basis'>('Day Basis');
+  const [editEmpRate, setEditEmpRate] = useState('636.0');
+  const [editEmpDeduct, setEditEmpDeduct] = useState('0.0');
+  const [editEmpUan, setEditEmpUan] = useState('');
+  const [editEmpEsic, setEditEmpEsic] = useState('');
+  const [editEmpBankName, setEditEmpBankName] = useState('');
+  const [editEmpBankAcc, setEditEmpBankAcc] = useState('');
+  const [editEmpIfsc, setEditEmpIfsc] = useState('');
+  const [editEmpMessage, setEditEmpMessage] = useState('');
+  const [isEditingEmp, setIsEditingEmp] = useState(false);
+
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settShiftHours, setSettShiftHours] = useState('9.0');
   const [settOtMultiplier, setSettOtMultiplier] = useState('1.5');
@@ -368,6 +386,79 @@ export default function AdminDashboard() {
       setAddEmpMessage('Server request failed');
     } finally {
       setIsAddingEmp(false);
+    }
+  };
+
+  // Open Edit Employee Modal
+  const openEditEmployee = (emp: Employee) => {
+    setSelectedEmployee(emp);
+    setEditEmpName(emp.name);
+    const standardDepts = ['HE', 'FINAL', 'REWORK', 'PAINTER', 'AVG', 'YANMAR LINE'];
+    const matchedDept = standardDepts.includes(emp.department) ? emp.department : 'Other';
+    setEditEmpDept(matchedDept);
+    setEditEmpCustomDept(matchedDept === 'Other' ? emp.department : '');
+    setEditEmpMobile(emp.mobileNo || '');
+    setEditEmpPunchCode(emp.punchingCode || '');
+    const isLoad = emp.salaryPerDay === 0.0;
+    setEditEmpBasis(isLoad ? 'Load Basis' : 'Day Basis');
+    setEditEmpRate(emp.salaryPerDay.toString());
+    setEditEmpDeduct(emp.deductionPerDay.toString());
+    setEditEmpUan(emp.uan || '');
+    setEditEmpEsic(emp.esic || '');
+    setEditEmpBankName(emp.bankName || '');
+    setEditEmpBankAcc(emp.bankAcc || '');
+    setEditEmpIfsc(emp.ifscCode || '');
+    setEditEmpMessage('');
+    setShowEditEmployeeModal(true);
+  };
+
+  // Submit edit employee profile API
+  const handleEditEmployeeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEmployee) return;
+    setEditEmpMessage('');
+    setIsEditingEmp(true);
+
+    const isLoad = editEmpBasis === 'Load Basis';
+    const deptStr = editEmpDept === 'Other' ? editEmpCustomDept.trim().toUpperCase() : editEmpDept;
+
+    const payload = {
+      name: editEmpName.trim(),
+      department: deptStr,
+      salaryPerDay: isLoad ? 0.0 : parseFloat(editEmpRate) || 0.0,
+      deductionPerDay: isLoad ? 0.0 : parseFloat(editEmpDeduct) || 0.0,
+      uan: editEmpUan.trim(),
+      esic: editEmpEsic.trim(),
+      bankName: editEmpBankName.trim(),
+      bankAcc: editEmpBankAcc.trim(),
+      ifscCode: editEmpIfsc.trim(),
+      punchingCode: editEmpPunchCode.trim(),
+      mobileNo: editEmpMobile.trim()
+    };
+
+    try {
+      const res = await fetch(`${API_URL}/api/employees/${selectedEmployee.employeeId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        setEditEmpMessage('Employee updated successfully! Recalculating...');
+        await fetchEmployees();
+        await handleCalculatePayroll();
+        setTimeout(() => {
+          setShowEditEmployeeModal(false);
+          setSelectedEmployee(null);
+          setEditEmpMessage('');
+        }, 1200);
+      } else {
+        const errorData = await res.json();
+        setEditEmpMessage(`Error: ${errorData.error || 'Failed to update employee'}`);
+      }
+    } catch (err) {
+      setEditEmpMessage('Server request failed');
+    } finally {
+      setIsEditingEmp(false);
     }
   };
 
@@ -868,16 +959,27 @@ export default function AdminDashboard() {
                               {calculatedRun ? `₹${calculatedRun.netSalary.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'Not Run'}
                             </td>
                             <td className="px-6 py-4 text-center">
-                              <button
-                                onClick={() => {
-                                  setSelectedEmployee(emp);
-                                  setShowDetailsModal(true);
-                                }}
-                                className="p-1 text-orange-600 hover:bg-orange-50 border border-transparent hover:border-orange-100 rounded-lg transition-colors cursor-pointer"
-                                title="View biometric employee sheet"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                              <div className="flex justify-center gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setSelectedEmployee(emp);
+                                    setShowDetailsModal(true);
+                                  }}
+                                  className="p-1 text-orange-600 hover:bg-orange-50 border border-transparent hover:border-orange-100 rounded-lg transition-colors cursor-pointer"
+                                  title="View biometric employee sheet"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    openEditEmployee(emp);
+                                  }}
+                                  className="p-1 text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-colors cursor-pointer"
+                                  title="Edit employee profile"
+                                >
+                                  <Edit3 className="w-4 h-4" />
+                                </button>
+                              </div>
                             </td>
                           </>
                         ) : (
@@ -1202,6 +1304,118 @@ export default function AdminDashboard() {
                 className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer disabled:opacity-55"
               >
                 {isAddingEmp ? 'Saving profile...' : 'Save Employee Profile'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* EDIT EMPLOYEE MODAL */}
+      {/* ------------------------------------------------------------- */}
+      {showEditEmployeeModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-orange-600" />
+                <span>Edit Employee Profile</span>
+              </h3>
+              <button onClick={() => { setShowEditEmployeeModal(false); setSelectedEmployee(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            <form onSubmit={handleEditEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto font-mono text-xs text-slate-600">
+              <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Primary Info</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Employee ID (Static)</label>
+                  <input type="text" disabled value={selectedEmployee.employeeId} className="w-full h-10 border border-slate-200 bg-slate-50 text-slate-400 rounded-xl px-3 focus:outline-none cursor-not-allowed font-bold" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Full Name *</label>
+                  <input type="text" required value={editEmpName} onChange={(e) => setEditEmpName(e.target.value)} placeholder="e.g. AMIT RATHOD" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-sans" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Department *</label>
+                  <select value={editEmpDept} onChange={(e) => setEditEmpDept(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer">
+                    <option value="HE">HE</option>
+                    <option value="FINAL">FINAL</option>
+                    <option value="REWORK">REWORK</option>
+                    <option value="PAINTER">PAINTER</option>
+                    <option value="AVG">AVG</option>
+                    <option value="YANMAR LINE">YANMAR LINE</option>
+                    <option value="Other">Other (Custom...)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Mobile Number</label>
+                  <input type="text" value={editEmpMobile} onChange={(e) => setEditEmpMobile(e.target.value)} placeholder="Mobile No" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                </div>
+                {editEmpDept === 'Other' && (
+                  <div className="col-span-2 space-y-1.5">
+                    <label className="text-[9px] font-bold text-orange-600 uppercase">Custom Department Name *</label>
+                    <input type="text" required value={editEmpCustomDept} onChange={(e) => setEditEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Biometric Punch Code</label>
+                  <input type="text" value={editEmpPunchCode} onChange={(e) => setEditEmpPunchCode(e.target.value)} placeholder="e.g. FOU190" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Payment Basis *</label>
+                  <select value={editEmpBasis} onChange={(e) => setEditEmpBasis(e.target.value as any)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer">
+                    <option value="Day Basis">Day Basis</option>
+                    <option value="Load Basis">Load Basis</option>
+                  </select>
+                </div>
+                {editEmpBasis === 'Day Basis' && (
+                  <>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Salary Per Day (₹) *</label>
+                      <input type="number" step="any" required value={editEmpRate} onChange={(e) => setEditEmpRate(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Deduction Per Day (₹) *</label>
+                      <input type="number" step="any" required value={editEmpDeduct} onChange={(e) => setEditEmpDeduct(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest pt-2">Statutory & Bank Credentials</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">UAN Number</label>
+                  <input type="text" value={editEmpUan} onChange={(e) => setEditEmpUan(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">ESIC Number</label>
+                  <input type="text" value={editEmpEsic} onChange={(e) => setEditEmpEsic(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Bank Name</label>
+                  <input type="text" value={editEmpBankName} onChange={(e) => setEditEmpBankName(e.target.value)} placeholder="State Bank" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-sans" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">IFSC Code</label>
+                  <input type="text" value={editEmpIfsc} onChange={(e) => setEditEmpIfsc(e.target.value)} placeholder="IFSC" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase">Bank Account Number</label>
+                  <input type="text" value={editEmpBankAcc} onChange={(e) => setEditEmpBankAcc(e.target.value)} placeholder="Acc No" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                </div>
+              </div>
+
+              {editEmpMessage && (
+                <p className={`text-xs font-mono font-bold mt-2 p-3 border rounded-xl ${editEmpMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{editEmpMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={isEditingEmp}
+                className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer disabled:opacity-55"
+              >
+                {isEditingEmp ? 'Saving profile...' : 'Save Employee Profile'}
               </button>
             </form>
           </div>

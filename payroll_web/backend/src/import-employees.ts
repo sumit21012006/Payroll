@@ -73,7 +73,7 @@ async function main() {
         deductionPerDay: 0.0,
         uan: '',
         esic: '',
-        bankName: bankAcc ? 'Associated Bank' : '',
+        bankName: bankAcc ? 'Associated Bank' : '', // Mock bank name if account exists
         ifscCode: ifsc,
         bankAcc: bankAcc,
         punchingCode: punchCode,
