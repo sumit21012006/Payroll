@@ -870,6 +870,111 @@ app.get('/api/payroll/export', async (req, res) => {
   }
 });
 
+// Helper: Parse string date from DB ("m/d/yyyy") to JavaScript Date
+function parseDBDate(dateStr: string): Date {
+  const parts = dateStr.split('/');
+  const month = parseInt(parts[0]) - 1; // 0-indexed in JS Date
+  const day = parseInt(parts[1]);
+  const year = parseInt(parts[2]);
+  return new Date(year, month, day);
+}
+
+// REST Route: Export Biometric Attendance logs for a custom date range to Excel
+app.get('/api/attendance/export', async (req, res) => {
+  const { startDate, endDate } = req.query;
+  if (!startDate || !endDate) {
+    return res.status(400).json({ error: 'startDate and endDate parameters are required.' });
+  }
+
+  try {
+    const start = new Date(startDate as string);
+    const end = new Date(endDate as string);
+    
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+
+    // Fetch all attendance logs including employee relation
+    const allLogs = await prisma.attendance.findMany({
+      include: {
+        employee: true
+      }
+    });
+
+    // Filter by date range in-memory
+    const filteredLogs = allLogs.filter(log => {
+      try {
+        const logDate = parseDBDate(log.date);
+        return logDate >= start && logDate <= end;
+      } catch (_) {
+        return false;
+      }
+    });
+
+    // Sort by Date ascending, then Employee Name ascending
+    filteredLogs.sort((a, b) => {
+      const dateA = parseDBDate(a.date).getTime();
+      const dateB = parseDBDate(b.date).getTime();
+      if (dateA !== dateB) return dateA - dateB;
+      return a.employee.name.localeCompare(b.employee.name);
+    });
+
+    // Create Excel Workbook
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Attendance Logs');
+
+    worksheet.columns = [
+      { header: 'Date', key: 'date', width: 15 },
+      { header: 'Employee ID', key: 'employeeId', width: 15 },
+      { header: 'Employee Name', key: 'name', width: 25 },
+      { header: 'Department', key: 'dept', width: 15 },
+      { header: 'Check-In', key: 'checkIn', width: 12 },
+      { header: 'Check-Out', key: 'checkOut', width: 12 },
+      { header: 'Hours Worked', key: 'hours', width: 15 },
+      { header: 'Status', key: 'status', width: 15 }
+    ];
+
+    // Style header row
+    const headerRow = worksheet.getRow(1);
+    headerRow.eachCell((cell) => {
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1E293B' } // Slate 800
+      };
+      cell.font = {
+        color: { argb: 'FFFFFFFF' },
+        bold: true,
+        name: 'Arial',
+        size: 10
+      };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+    headerRow.height = 25;
+
+    // Add data rows
+    filteredLogs.forEach((log) => {
+      worksheet.addRow({
+        date: log.date,
+        employeeId: log.employeeId,
+        name: log.employee.name,
+        dept: log.employee.department,
+        checkIn: log.checkIn || '-',
+        checkOut: log.checkOut || '-',
+        hours: log.hoursWorked,
+        status: log.status
+      });
+    });
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Attendance_Logs_${startDate}_to_${endDate}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 KFIL Solapur Backend running at http://localhost:${PORT}`);
 });

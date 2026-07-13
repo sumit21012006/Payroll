@@ -144,6 +144,52 @@ export default function AdminDashboard() {
   const [editEmpMessage, setEditEmpMessage] = useState('');
   const [isEditingEmp, setIsEditingEmp] = useState(false);
 
+  // Attendance Export State
+  const [showAttExportModal, setShowAttExportModal] = useState(false);
+  const [attExportStartDate, setAttExportStartDate] = useState(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}-01`;
+  });
+  const [attExportEndDate, setAttExportEndDate] = useState(() => {
+    const today = new Date();
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    const d = String(today.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  });
+
+  const [isExportingAtt, setIsExportingAtt] = useState(false);
+  const [attExportMessage, setAttExportMessage] = useState('');
+
+  const handleDownloadAttendance = async () => {
+    setIsExportingAtt(true);
+    setAttExportMessage('');
+    try {
+      const res = await fetch(`${API_URL}/api/attendance/export?startDate=${attExportStartDate}&endDate=${attExportEndDate}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Attendance_Logs_${attExportStartDate}_to_${attExportEndDate}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setShowAttExportModal(false);
+    } catch (err) {
+      console.error('Error downloading attendance:', err);
+      setAttExportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExportingAtt(false);
+    }
+  };
+
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [settShiftHours, setSettShiftHours] = useState('9.0');
   const [settOtMultiplier, setSettOtMultiplier] = useState('1.5');
@@ -669,6 +715,15 @@ export default function AdminDashboard() {
             title="Export wages register to Excel"
           >
             <Download className="w-4.5 h-4.5" />
+          </button>
+
+          {/* Biometric Attendance Export button */}
+          <button
+            onClick={() => setShowAttExportModal(true)}
+            className="p-2.5 border border-slate-200 hover:border-blue-200 hover:bg-blue-50 rounded-xl transition-all shadow-sm text-slate-500 hover:text-blue-600 cursor-pointer"
+            title="Export biometric attendance logs to Excel"
+          >
+            <Calendar className="w-4.5 h-4.5" />
           </button>
 
           <button 
@@ -1470,6 +1525,71 @@ export default function AdminDashboard() {
                 Save Settings & Recalculate
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ------------------------------------------------------------- */}
+      {/* BIOMETRIC ATTENDANCE EXPORT MODAL */}
+      {/* ------------------------------------------------------------- */}
+      {showAttExportModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-orange-600" />
+                <span>Export Attendance Logs</span>
+              </h3>
+              <button onClick={() => setShowAttExportModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="p-6 space-y-4 font-mono text-xs text-slate-600">
+              <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                Select a custom date range to export all employee check-in/check-out logs downloaded from the biometric devices.
+              </p>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Start Date</label>
+                <input 
+                  type="date" 
+                  value={attExportStartDate} 
+                  onChange={(e) => setAttExportStartDate(e.target.value)} 
+                  className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" 
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">End Date</label>
+                <input 
+                  type="date" 
+                  value={attExportEndDate} 
+                  onChange={(e) => setAttExportEndDate(e.target.value)} 
+                  className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" 
+                />
+              </div>
+
+              {attExportMessage && (
+                <p className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">{attExportMessage}</p>
+              )}
+
+              <button
+                onClick={handleDownloadAttendance}
+                disabled={isExportingAtt}
+                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-55"
+              >
+                {isExportingAtt ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Generating Excel...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    <span>Download Attendance Logs</span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
