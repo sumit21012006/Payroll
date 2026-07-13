@@ -214,7 +214,9 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           const hours = calculateHours(checkIn, checkOut);
 
           let status = 'PRESENT';
-          if (hours > 9.0) {
+          if (hours > 0.0 && hours < 4.0) {
+            status = 'HALF_DAY';
+          } else if (hours > 9.0) {
             status = 'OVERTIME';
           } else {
             // Re-evaluate if they were late on check-in
@@ -867,17 +869,84 @@ app.post('/api/jobs', async (req, res) => {
     const loadBasisCrew = crewEmployees.filter(e => e.salaryPerDay === 0.0);
     const dayBasisCrew = crewEmployees.filter(e => e.salaryPerDay > 0.0);
 
+    // Look up attendance logs for these employees on this date to know hours worked
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        employeeId: { in: employeeIds },
+        date: date
+      }
+    });
+    const attendanceMap = new Map(attendanceRecords.map(r => [r.employeeId, r]));
+
+    // 1. Calculate Day-Basis Crew Deductions (Half-Day aware)
     let totalDayWagesToDeduct = 0.0;
     for (const de of dayBasisCrew) {
-      totalDayWagesToDeduct += de.salaryPerDay > 0 ? de.salaryPerDay : 636.0;
+      const att = attendanceMap.get(de.employeeId);
+      const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : 636.0;
+      const isHalfDay = att ? (att.status === 'HALF_DAY' || att.hoursWorked < 4.0) : false;
+      
+      totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
     }
 
     const remainingPool = totalPayout - totalDayWagesToDeduct;
-    const loadSplit = loadBasisCrew.length > 0 && remainingPool > 0
-      ? remainingPool / loadBasisCrew.length
-      : 0.0;
+    const finalSplits = new Map<string, number>();
 
-    // Create Job Log along with employee relations
+    // Set defaults: all day-basis crew get 0 split
+    for (const de of dayBasisCrew) {
+      finalSplits.set(de.employeeId, 0.0);
+    }
+
+    // 2. Distribute loader split earnings proportionally
+    if (loadBasisCrew.length > 0 && remainingPool > 0) {
+      const totalLoaders = loadBasisCrew.length;
+      const idealShare = remainingPool / totalLoaders;
+
+      // Calculate base splits
+      const loaderInfoList = loadBasisCrew.map(le => {
+        const att = attendanceMap.get(le.employeeId);
+        const hours = att ? att.hoursWorked : 8.0; // default to 8.0/full day if not synced yet
+        const fraction = Math.min(1.0, hours / 8.0);
+        const baseSplit = idealShare * fraction;
+
+        return {
+          employeeId: le.employeeId,
+          hours,
+          baseSplit,
+          isFullTime: hours >= 8.0
+        };
+      });
+
+      const sumBaseSplits = loaderInfoList.reduce((sum, item) => sum + item.baseSplit, 0.0);
+      const surplus = Math.max(0.0, remainingPool - sumBaseSplits);
+
+      const fullTimeLoaders = loaderInfoList.filter(l => l.isFullTime);
+
+      if (fullTimeLoaders.length > 0 && surplus > 0) {
+        // Distribute surplus to full-time workers
+        const extraShare = surplus / fullTimeLoaders.length;
+        for (const l of loaderInfoList) {
+          const finalVal = l.baseSplit + (l.isFullTime ? extraShare : 0.0);
+          finalSplits.set(l.employeeId, finalVal);
+        }
+      } else if (surplus > 0) {
+        // If no loader worked 8 hours or more, divide surplus equally among all loaders
+        const extraShare = surplus / totalLoaders;
+        for (const l of loaderInfoList) {
+          finalSplits.set(l.employeeId, l.baseSplit + extraShare);
+        }
+      } else {
+        // No surplus
+        for (const l of loaderInfoList) {
+          finalSplits.set(l.employeeId, l.baseSplit);
+        }
+      }
+    } else {
+      for (const le of loadBasisCrew) {
+        finalSplits.set(le.employeeId, 0.0);
+      }
+    }
+
+    // Create Job Log along with employee relations using finalSplits map
     const jobLog = await prisma.jobLog.create({
       data: {
         id,
@@ -890,10 +959,9 @@ app.post('/api/jobs', async (req, res) => {
         castingQty,
         employees: {
           create: employeeIds.map((empId: string) => {
-            const isLoad = loadBasisCrew.some(e => e.employeeId === empId);
             return {
               employeeId: empId,
-              splitEarnings: isLoad ? loadSplit : 0.0
+              splitEarnings: finalSplits.get(empId) || 0.0
             };
           })
         }
