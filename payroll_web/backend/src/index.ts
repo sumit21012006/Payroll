@@ -220,13 +220,16 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
             // Re-evaluate if they were late on check-in
             const [inHour, inMin] = checkIn.split(':').map(Number);
             if (inHour >= 5 && inHour <= 11) {
-              const isLate = inHour > 6 || (inHour === 6 && inMin > 15);
+              // Shift A: starts 06:45, late if check-in is after 07:00
+              const isLate = inHour > 7 || (inHour === 7 && inMin > 0);
               if (isLate) status = 'LATE';
-            } else if (inHour >= 14 && inHour <= 18) {
-              const isLate = inHour > 15 || (inHour === 15 && inMin > 15);
+            } else if (inHour >= 13 && inHour <= 18) {
+              // Shift B: starts 14:45, late if check-in is after 15:00
+              const isLate = inHour > 15 || (inHour === 15 && inMin > 0);
               if (isLate) status = 'LATE';
-            } else if (inHour >= 22 || inHour <= 2) {
-              const isLate = (inHour === 23 && inMin > 15) || (inHour >= 0 && inHour <= 2);
+            } else if (inHour >= 21 || inHour <= 2) {
+              // Shift C: starts 22:45, late if check-in is after 23:00 (crossing midnight)
+              const isLate = (inHour === 23 && inMin > 0) || (inHour >= 0 && inHour <= 2);
               if (isLate) status = 'LATE';
             }
           }
@@ -252,13 +255,16 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           let status = 'PRESENT';
           const [inHour, inMin] = checkIn.split(':').map(Number);
           if (inHour >= 5 && inHour <= 11) {
-            const isLate = inHour > 6 || (inHour === 6 && inMin > 15);
+            // Shift A: starts 06:45, late if check-in is after 07:00
+            const isLate = inHour > 7 || (inHour === 7 && inMin > 0);
             if (isLate) status = 'LATE';
-          } else if (inHour >= 14 && inHour <= 18) {
-            const isLate = inHour > 15 || (inHour === 15 && inMin > 15);
+          } else if (inHour >= 13 && inHour <= 18) {
+            // Shift B: starts 14:45, late if check-in is after 15:00
+            const isLate = inHour > 15 || (inHour === 15 && inMin > 0);
             if (isLate) status = 'LATE';
-          } else if (inHour >= 22 || inHour <= 2) {
-            const isLate = (inHour === 23 && inMin > 15) || (inHour >= 0 && inHour <= 2);
+          } else if (inHour >= 21 || inHour <= 2) {
+            // Shift C: starts 22:45, late if check-in is after 23:00 (crossing midnight)
+            const isLate = (inHour === 23 && inMin > 0) || (inHour >= 0 && inHour <= 2);
             if (isLate) status = 'LATE';
           }
 
