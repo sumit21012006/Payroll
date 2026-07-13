@@ -104,7 +104,8 @@ function calculateHours(checkIn: string, checkOut: string): number {
     if (inParts.length >= 2 && outParts.length >= 2) {
       const start = inParts[0] + inParts[1] / 60.0;
       const end = outParts[0] + outParts[1] / 60.0;
-      return end > start ? Number((end - start).toFixed(2)) : 0.0;
+      const diff = end >= start ? (end - start) : (24.0 - start + end);
+      return Number(diff.toFixed(2));
     }
   } catch (_) {
     // Fail-safe
@@ -723,6 +724,56 @@ app.get('/api/attendance', async (req, res) => {
     });
 
     res.json(logs);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// REST Route: Sync pre-processed attendance logs from local eSSL AttendanceLogs table
+app.post('/api/attendance/sync-processed', async (req, res) => {
+  const { logs } = req.body;
+  if (!Array.isArray(logs)) {
+    return res.status(400).json({ error: 'logs parameter must be an array.' });
+  }
+
+  try {
+    let upsertedCount = 0;
+    for (const log of logs) {
+      const { employeeId, date, checkIn, checkOut, status, hoursWorked } = log;
+      if (!employeeId || !date) continue;
+
+      // Find employee to make sure they exist
+      const employee = await prisma.employee.findUnique({
+        where: { employeeId }
+      });
+      if (!employee) continue;
+
+      await prisma.attendance.upsert({
+        where: {
+          employeeId_date: {
+            employeeId,
+            date
+          }
+        },
+        update: {
+          checkIn: checkIn || '',
+          checkOut: checkOut || '',
+          hoursWorked: parseFloat(hoursWorked || 0.0),
+          status: status || 'PRESENT'
+        },
+        create: {
+          employeeId,
+          date,
+          checkIn: checkIn || '',
+          checkOut: checkOut || '',
+          hoursWorked: parseFloat(hoursWorked || 0.0),
+          status: status || 'PRESENT'
+        }
+      });
+      upsertedCount++;
+    }
+
+    res.json({ message: `Successfully synchronized ${upsertedCount} processed attendance records.` });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }
