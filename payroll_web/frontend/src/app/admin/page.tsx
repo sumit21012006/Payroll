@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Users, DollarSign, Cpu, Settings, LogOut, Calculator, 
@@ -78,6 +78,7 @@ export default function AdminDashboard() {
     router.push('/login');
   };
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const autoCalcTracker = useRef<string>('');
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [jobs, setJobs] = useState<JobLog[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
@@ -242,6 +243,14 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setPayrollRuns(data);
+        
+        // Auto-calculate if no records exist for the selected period
+        if (data.length === 0 && !isCalculating && autoCalcTracker.current !== `${selectedMonth}-${selectedYear}`) {
+          autoCalcTracker.current = `${selectedMonth}-${selectedYear}`;
+          setTimeout(() => {
+            handleCalculatePayroll();
+          }, 50);
+        }
       }
     } catch (err) {
       console.error('Error fetching payroll runs:', err);
