@@ -484,6 +484,28 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   let grossSalary = 0.0;
   let netSalary = 0.0;
 
+  // Load Basis Employee idle day fallback calculation
+  let idleFallbackWages = 0.0;
+  let fallbackWorkedDays = 0.0;
+  if (isLoadBasis) {
+    for (const log of monthLogs) {
+      const status = log.status.toUpperCase();
+      // Skip if absent
+      if (status.includes('ABSENT') || log.hoursWorked <= 0.0) {
+        continue;
+      }
+      // Check if loader was assigned to any job on this date
+      const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
+      if (!hasJobOnDate) {
+        // Idle loader! Give fallback day wage
+        const isHalfDay = status.includes('HALF_DAY') || log.hoursWorked < 4.0;
+        const dayWage = isHalfDay ? (636.0 * 0.5) : 636.0;
+        idleFallbackWages += dayWage;
+        fallbackWorkedDays += isHalfDay ? 0.5 : 1.0;
+      }
+    }
+  }
+
   const mlwlDeduction = (month === 6 || month === 12) ? 25.0 : 0.0;
   const accountAdvance = employee.accountAdvance;
 
@@ -528,19 +550,40 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     netSalary = grossSalary - totalDeductions;
   } else {
     // Load Basis Employee
-    basicPay = 0.0;
+    basicPay = idleFallbackWages;
     otPay = 0.0;
-    grossSalary = jobEarnings;
+    grossSalary = basicPay + jobEarnings;
 
-    basicDa = 0.0;
-    hra = 0.0;
-    otherAllowance = 0.0;
-    pfDeduction = 0.0;
-    esicDeduction = 0.0;
-    ptDeduction = 0.0;
-    otherDeduction = 0.0;
+    if (basicPay > 0.0) {
+      // Calculate benefits/deductions since they received standard basic daily salaries for those idle days
+      basicDa = Math.round(fallbackWorkedDays * (15746.0 / 26.0));
+      hra = Math.round(basicDa * 0.05);
+      otherAllowance = grossSalary - basicDa - hra;
+      if (otherAllowance < 0.0) otherAllowance = 0.0;
 
-    totalDeductions = accountAdvance + mlwlDeduction;
+      pfDeduction = Math.round(basicDa * 0.12);
+      esicDeduction = Math.round(grossSalary * 0.0075);
+
+      if (grossSalary <= 7500.0) {
+        ptDeduction = 0.0;
+      } else if (grossSalary <= 10000.0) {
+        ptDeduction = 175.0;
+      } else {
+        ptDeduction = 200.0;
+      }
+
+      otherDeduction = 500.0; // Canteen flat deduction
+    } else {
+      basicDa = 0.0;
+      hra = 0.0;
+      otherAllowance = 0.0;
+      pfDeduction = 0.0;
+      esicDeduction = 0.0;
+      ptDeduction = 0.0;
+      otherDeduction = 0.0;
+    }
+
+    totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
     netSalary = grossSalary - totalDeductions;
   }
 
@@ -649,6 +692,28 @@ function calculateEmployeeWagesInMemory(
   let grossSalary = 0.0;
   let netSalary = 0.0;
 
+  // Load Basis Employee idle day fallback calculation
+  let idleFallbackWages = 0.0;
+  let fallbackWorkedDays = 0.0;
+  if (isLoadBasis) {
+    for (const log of monthLogs) {
+      const status = log.status.toUpperCase();
+      // Skip if absent
+      if (status.includes('ABSENT') || log.hoursWorked <= 0.0) {
+        continue;
+      }
+      // Check if loader was assigned to any job on this date
+      const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
+      if (!hasJobOnDate) {
+        // Idle loader! Give fallback day wage
+        const isHalfDay = status.includes('HALF_DAY') || log.hoursWorked < 4.0;
+        const dayWage = isHalfDay ? (636.0 * 0.5) : 636.0;
+        idleFallbackWages += dayWage;
+        fallbackWorkedDays += isHalfDay ? 0.5 : 1.0;
+      }
+    }
+  }
+
   const mlwlDeduction = (month === 6 || month === 12) ? 25.0 : 0.0;
   const accountAdvance = employee.accountAdvance;
 
@@ -693,19 +758,40 @@ function calculateEmployeeWagesInMemory(
     netSalary = grossSalary - totalDeductions;
   } else {
     // Load Basis Employee
-    basicPay = 0.0;
+    basicPay = idleFallbackWages;
     otPay = 0.0;
-    grossSalary = jobEarnings;
+    grossSalary = basicPay + jobEarnings;
 
-    basicDa = 0.0;
-    hra = 0.0;
-    otherAllowance = 0.0;
-    pfDeduction = 0.0;
-    esicDeduction = 0.0;
-    ptDeduction = 0.0;
-    otherDeduction = 0.0;
+    if (basicPay > 0.0) {
+      // Calculate benefits/deductions since they received standard basic daily salaries for those idle days
+      basicDa = Math.round(fallbackWorkedDays * (15746.0 / 26.0));
+      hra = Math.round(basicDa * 0.05);
+      otherAllowance = grossSalary - basicDa - hra;
+      if (otherAllowance < 0.0) otherAllowance = 0.0;
 
-    totalDeductions = accountAdvance + mlwlDeduction;
+      pfDeduction = Math.round(basicDa * 0.12);
+      esicDeduction = Math.round(grossSalary * 0.0075);
+
+      if (grossSalary <= 7500.0) {
+        ptDeduction = 0.0;
+      } else if (grossSalary <= 10000.0) {
+        ptDeduction = 175.0;
+      } else {
+        ptDeduction = 200.0;
+      }
+
+      otherDeduction = 500.0; // Canteen flat deduction
+    } else {
+      basicDa = 0.0;
+      hra = 0.0;
+      otherAllowance = 0.0;
+      pfDeduction = 0.0;
+      esicDeduction = 0.0;
+      ptDeduction = 0.0;
+      otherDeduction = 0.0;
+    }
+
+    totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
     netSalary = grossSalary - totalDeductions;
   }
 
