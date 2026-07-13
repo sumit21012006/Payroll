@@ -716,23 +716,7 @@ export default function AdminDashboard() {
             </select>
           </div>
 
-          {/* Settings button */}
-          <button
-            onClick={() => setShowSettingsModal(true)}
-            className="p-2.5 border border-slate-200 hover:border-orange-200 hover:bg-orange-50 rounded-xl transition-all shadow-sm text-slate-500 hover:text-orange-600 cursor-pointer"
-            title="Global settings"
-          >
-            <Settings className="w-4.5 h-4.5" />
-          </button>
 
-          {/* Excel Export button */}
-          <button
-            onClick={handleExportExcel}
-            className="p-2.5 border border-slate-200 hover:border-emerald-200 hover:bg-emerald-50 rounded-xl transition-all shadow-sm text-slate-500 hover:text-emerald-600 cursor-pointer"
-            title="Export wages register to Excel"
-          >
-            <Download className="w-4.5 h-4.5" />
-          </button>
 
           {/* Biometric Attendance Export button */}
           <button
