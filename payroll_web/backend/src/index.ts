@@ -1241,11 +1241,11 @@ app.get('/api/jobs/export', async (req, res) => {
     worksheet.mergeCells('A1:AC1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `KFIL SOLAPUR - DAILY OPERATIONS ALLOCATION REPORT (${parsedMonth}/${parsedYear})`;
-    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF1E293B' } };
     titleCell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FFE65100' } // Deep Bauxite Orange
+      fgColor: { argb: 'FF00E5FF' } // Aqua background
     };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     worksheet.getRow(1).height = 40;
@@ -1282,11 +1282,14 @@ app.get('/api/jobs/export', async (req, res) => {
         fgColor: { argb: 'FFF57C00' } // Bright Bauxite Amber
       };
       headerCell.alignment = { horizontal: 'center', vertical: 'middle' };
-      headerCell.border = {
-        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-      };
+      for (let c = 0; c < CARD_WIDTH; c++) {
+        worksheet.getCell(currentRow, startCol + c).border = {
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } }
+        };
+      }
       worksheet.getRow(currentRow).height = 25;
       currentRow++;
 
@@ -1305,16 +1308,16 @@ app.get('/api/jobs/export', async (req, res) => {
         
         currentRow += 3;
 
-        // Apply solid medium orange outer border outline around empty card
+        // Apply thin black outer border outline around empty card
         const boxStartRow = startRow;
         const boxEndRow = currentRow - 1;
         for (let r = boxStartRow; r <= boxEndRow; r++) {
           for (let c = 0; c < CARD_WIDTH; c++) {
             worksheet.getCell(r, startCol + c).border = {
-              left: c === 0 ? { style: 'medium', color: { argb: 'FFF57C00' } } : undefined,
-              right: c === CARD_WIDTH - 1 ? { style: 'medium', color: { argb: 'FFF57C00' } } : undefined,
-              top: r === boxStartRow ? { style: 'medium', color: { argb: 'FFF57C00' } } : undefined,
-              bottom: r === boxEndRow ? { style: 'medium', color: { argb: 'FFF57C00' } } : undefined
+              left: { style: 'thin', color: { argb: 'FF000000' } },
+              right: { style: 'thin', color: { argb: 'FF000000' } },
+              top: { style: 'thin', color: { argb: 'FF000000' } },
+              bottom: { style: 'thin', color: { argb: 'FF000000' } }
             };
           }
         }
@@ -1358,10 +1361,14 @@ app.get('/api/jobs/export', async (req, res) => {
           fgColor: { argb: 'FFEFEBE9' } // Gentle Warm Gray background
         };
         jobTitleCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
-        jobTitleCell.border = {
-          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-          right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
-        };
+        for (let c = 0; c < CARD_WIDTH; c++) {
+          worksheet.getCell(currentRow, startCol + c).border = {
+            top: { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'thin', color: { argb: 'FF000000' } },
+            left: { style: 'thin', color: { argb: 'FF000000' } },
+            right: { style: 'thin', color: { argb: 'FF000000' } }
+          };
+        }
         worksheet.getRow(currentRow).height = 32;
         currentRow++;
 
@@ -1377,10 +1384,10 @@ app.get('/api/jobs/export', async (req, res) => {
             fgColor: { argb: 'FFFFF3E0' } // Pale amber/orange
           };
           cell.border = {
-            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            left: c === 0 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
-            right: c === CARD_WIDTH - 1 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined
+            top: { style: 'thin', color: { argb: 'FF000000' } },
+            bottom: { style: 'thin', color: { argb: 'FF000000' } },
+            left: { style: 'thin', color: { argb: 'FF000000' } },
+            right: { style: 'thin', color: { argb: 'FF000000' } }
           };
         }
         worksheet.getRow(currentRow).height = 18;
@@ -1434,49 +1441,16 @@ app.get('/api/jobs/export', async (req, res) => {
               fgColor: { argb: rowBg }
             };
             cell.border = {
-              bottom: isLastRow ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : { style: 'thin', color: { argb: 'FFF1F5F9' } },
-              left: c === 0 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
-              right: c === CARD_WIDTH - 1 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined
+              top: { style: 'thin', color: { argb: 'FF000000' } },
+              bottom: { style: 'thin', color: { argb: 'FF000000' } },
+              left: { style: 'thin', color: { argb: 'FF000000' } },
+              right: { style: 'thin', color: { argb: 'FF000000' } }
             };
           }
           worksheet.getRow(currentRow).height = 20;
           currentRow++;
         }
 
-        // Card spacer line between jobs only (not after the last job)
-        if (jIdx < dayJobs.length - 1) {
-          currentRow++;
-        }
-      }
-
-      // Apply solid medium orange outer border outline around active card box
-      const boxStartRow = startRow;
-      const boxEndRow = currentRow - 1;
-      for (let r = boxStartRow; r <= boxEndRow; r++) {
-        for (let c = 0; c < CARD_WIDTH; c++) {
-          const cell = worksheet.getCell(r, startCol + c);
-          const currentBorder = cell.border || {};
-
-          cell.border = {
-            ...currentBorder,
-            // Left border outline
-            left: c === 0 
-              ? { style: 'medium', color: { argb: 'FFF57C00' } } 
-              : currentBorder.left || { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            // Right border outline
-            right: c === CARD_WIDTH - 1 
-              ? { style: 'medium', color: { argb: 'FFF57C00' } } 
-              : currentBorder.right || { style: 'thin', color: { argb: 'FFCBD5E1' } },
-            // Top border outline
-            top: r === boxStartRow 
-              ? { style: 'medium', color: { argb: 'FFF57C00' } } 
-              : currentBorder.top,
-            // Bottom border outline
-            bottom: r === boxEndRow 
-              ? { style: 'medium', color: { argb: 'FFF57C00' } } 
-              : currentBorder.bottom
-          };
-        }
       }
 
       if (currentRow > maxRowInWeek) {
