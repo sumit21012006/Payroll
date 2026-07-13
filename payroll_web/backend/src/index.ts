@@ -742,7 +742,7 @@ app.get('/api/employees', async (req, res) => {
   }
 });
 
-// REST Route: Get attendance logs (supports filters by employeeId, month, year)
+// REST Route: Get attendance logs (supports filters by employeeId, month, year) - Rollback templates feature
 app.get('/api/attendance', async (req, res) => {
   const { employeeId, month, year } = req.query;
   try {
