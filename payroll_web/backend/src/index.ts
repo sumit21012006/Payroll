@@ -1241,11 +1241,11 @@ app.get('/api/jobs/export', async (req, res) => {
     worksheet.mergeCells('A1:AC1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `KFIL SOLAPUR - DAILY OPERATIONS ALLOCATION REPORT (${parsedMonth}/${parsedYear})`;
-    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FF1E293B' } };
+    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
     titleCell.fill = {
       type: 'pattern',
       pattern: 'solid',
-      fgColor: { argb: 'FF00E5FF' } // Aqua background
+      fgColor: { argb: 'FF368A9A' } // Teal-Aqua background
     };
     titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
     worksheet.getRow(1).height = 40;
