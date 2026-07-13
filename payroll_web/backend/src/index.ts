@@ -181,29 +181,58 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
         const dateStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
         const timeStr = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
-        // Retrieve existing log for today
-        const existingLog = await prisma.attendance.findUnique({
-          where: {
-            employeeId_date: {
-              employeeId: employee.employeeId,
-              date: dateStr
-            }
-          }
+        // Retrieve most recent log for this employee to pair check-in/check-out sequentially
+        const lastLog = await prisma.attendance.findFirst({
+          where: { employeeId: employee.employeeId },
+          orderBy: { id: 'desc' }
         });
 
-        if (existingLog) {
-          // Update check-out time (second punch becomes check-out, subsequent ones update check-out)
-          const checkIn = existingLog.checkIn;
+        let shouldPair = false;
+        let targetLog = lastLog;
+
+        if (lastLog) {
+          const lastDateParts = lastLog.date.split('/').map(Number);
+          const lastTimeParts = lastLog.checkIn.split(':').map(Number);
+          const lastCheckInDate = new Date(lastDateParts[2], lastDateParts[0] - 1, lastDateParts[1], lastTimeParts[0], lastTimeParts[1], 0);
+
+          const diffMs = dt.getTime() - lastCheckInDate.getTime();
+          const diffHours = diffMs / (1000 * 60 * 60);
+
+          // If last log has no check-out, and the gap is less than 16 hours, we pair it
+          if (lastLog.checkOut === '' && diffHours > 0 && diffHours < 16) {
+            shouldPair = true;
+          }
+          // Double-scanning safeguard: update check-out if same/close shift within 2 hours
+          else if (lastLog.checkOut !== '' && diffHours > 0 && diffHours < 2) {
+            shouldPair = true;
+          }
+        }
+
+        if (shouldPair && targetLog) {
+          const checkIn = targetLog.checkIn;
           const checkOut = timeStr;
           const hours = calculateHours(checkIn, checkOut);
 
           let status = 'PRESENT';
           if (hours > 9.0) {
             status = 'OVERTIME';
+          } else {
+            // Re-evaluate if they were late on check-in
+            const [inHour, inMin] = checkIn.split(':').map(Number);
+            if (inHour >= 5 && inHour <= 11) {
+              const isLate = inHour > 6 || (inHour === 6 && inMin > 15);
+              if (isLate) status = 'LATE';
+            } else if (inHour >= 14 && inHour <= 18) {
+              const isLate = inHour > 15 || (inHour === 15 && inMin > 15);
+              if (isLate) status = 'LATE';
+            } else if (inHour >= 22 || inHour <= 2) {
+              const isLate = (inHour === 23 && inMin > 15) || (inHour >= 0 && inHour <= 2);
+              if (isLate) status = 'LATE';
+            }
           }
 
           await prisma.attendance.update({
-            where: { id: existingLog.id },
+            where: { id: targetLog.id },
             data: {
               checkOut,
               hoursWorked: hours,
@@ -216,10 +245,22 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           const checkOut = '';
           const hours = 0.0;
 
-          // Simple rule: check-in after 09:15 is LATE
+          // Shift-aware Late Rule Configuration:
+          // Shift A starts 06:00 -> Late after 06:15
+          // Shift B starts 15:00 -> Late after 15:15
+          // Shift C starts 23:00 -> Late after 23:15
+          let status = 'PRESENT';
           const [inHour, inMin] = checkIn.split(':').map(Number);
-          const isLate = inHour > 9 || (inHour === 9 && inMin > 15);
-          const status = isLate ? 'LATE' : 'PRESENT';
+          if (inHour >= 5 && inHour <= 11) {
+            const isLate = inHour > 6 || (inHour === 6 && inMin > 15);
+            if (isLate) status = 'LATE';
+          } else if (inHour >= 14 && inHour <= 18) {
+            const isLate = inHour > 15 || (inHour === 15 && inMin > 15);
+            if (isLate) status = 'LATE';
+          } else if (inHour >= 22 || inHour <= 2) {
+            const isLate = (inHour === 23 && inMin > 15) || (inHour >= 0 && inHour <= 2);
+            if (isLate) status = 'LATE';
+          }
 
           await prisma.attendance.create({
             data: {
