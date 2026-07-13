@@ -666,7 +666,15 @@ export default function AdminDashboard() {
             <Sliders className="w-5 h-5 text-orange-600" />
           </div>
           <div>
-            <h1 className="text-md font-bold tracking-tight font-display text-slate-900 uppercase">KFIL ADMIN CORE</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-md font-bold tracking-tight font-display text-slate-900 uppercase">KFIL ADMIN CORE</h1>
+              {isCalculating && (
+                <span className="flex items-center gap-1.5 text-[8px] bg-orange-50 border border-orange-100 text-orange-600 font-mono font-bold px-1.5 py-0.5 rounded-md animate-pulse uppercase tracking-wider">
+                  <RefreshCw className="w-2.5 h-2.5 animate-spin" />
+                  <span>Processing...</span>
+                </span>
+              )}
+            </div>
             <p className="text-[9px] text-orange-600 font-bold uppercase tracking-widest font-mono">Operations Console</p>
           </div>
         </div>
@@ -866,34 +874,7 @@ export default function AdminDashboard() {
           </div>
         </section>
 
-        {/* Calculation Control Banner */}
-        <section className="bg-white border border-slate-200/85 rounded-3xl p-8 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-sm hover:border-orange-500/20 transition-all duration-300">
-          <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-orange-500 to-amber-500" />
-          
-          <div className="space-y-2">
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2 font-display">
-              <Calculator className="w-5 h-5 text-orange-600" />
-              <span>Trigger Wages Processing</span>
-            </h2>
-            <p className="text-xs text-slate-400 max-w-xl leading-relaxed">
-              Run calculations on the biometric attendance logs and supervisor work entries. Computes base pay, overtime, and ESIC/PF deductions.
-            </p>
-            {calcMessage && (
-              <p className="text-xs font-bold text-orange-700 mt-2 bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100 inline-block font-mono">
-                {calcMessage}
-              </p>
-            )}
-          </div>
 
-          <button
-            onClick={handleCalculatePayroll}
-            disabled={isCalculating}
-            className="px-6 h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl flex items-center gap-2 shrink-0 transition-all duration-300 disabled:opacity-55 disabled:cursor-not-allowed cursor-pointer shadow-sm shadow-orange-500/10"
-          >
-            <RefreshCw className={`w-4 h-4 ${isCalculating ? 'animate-spin' : ''}`} />
-            <span>{isCalculating ? 'Processing...' : 'Run Calculations'}</span>
-          </button>
-        </section>
 
         {/* Ledger Section with Tabs */}
         <section className="bg-white border border-slate-200/85 rounded-3xl overflow-hidden shadow-sm">
