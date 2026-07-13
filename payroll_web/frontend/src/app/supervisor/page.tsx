@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Plus, LogOut, ClipboardList, RefreshCw, UserCheck, Search, Trash2, Info, Calendar, Check, ChevronLeft, ChevronRight,
-  Settings, Edit3, X, Layers, DollarSign
+  Settings, Edit3, X, Layers, DollarSign, Download
 } from 'lucide-react';
 import { API_URL } from '@/config';
 
@@ -107,6 +107,13 @@ export default function SupervisorDashboard() {
 
   const [formMessage, setFormMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Operations Export States
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportMonth, setExportMonth] = useState(new Date().getMonth() + 1);
+  const [exportYear, setExportYear] = useState(new Date().getFullYear());
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMessage, setExportMessage] = useState('');
 
   // Set default date on client mount
   useEffect(() => {
@@ -695,6 +702,38 @@ export default function SupervisorDashboard() {
     }
   };
 
+  const handleExportOperationsReport = async () => {
+    setIsExporting(true);
+    setExportMessage('');
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/jobs/export?month=${exportMonth}&year=${exportYear}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Operations_Report_${exportMonth}_${exportYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setShowExportModal(false);
+    } catch (err) {
+      console.error('Error exporting operations report:', err);
+      setExportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-950">
       
@@ -1182,13 +1221,23 @@ export default function SupervisorDashboard() {
                 <h2 className="text-md font-bold text-slate-900 font-display">Recent Jobs Recorded</h2>
                 <p className="text-[9px] text-orange-600 font-bold font-mono uppercase tracking-widest mt-1">Audit Ledger</p>
               </div>
-              <button 
-                onClick={fetchRecentJobs}
-                disabled={isHistoryLoading}
-                className="p-2 border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isHistoryLoading ? 'animate-spin' : ''}`} />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowExportModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50 text-slate-600 hover:text-orange-600 rounded-xl text-xs font-bold transition-all duration-300 shadow-sm cursor-pointer"
+                  title="Export monthly operations calendar report"
+                >
+                  <Download className="w-3.5 h-3.5 text-orange-600" />
+                  <span>Export Report</span>
+                </button>
+                <button 
+                  onClick={fetchRecentJobs}
+                  disabled={isHistoryLoading}
+                  className="p-2 border border-slate-200 hover:bg-slate-50 rounded-xl transition-colors cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 text-slate-500 ${isHistoryLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
             </div>
 
             {isHistoryLoading && recentJobs.length === 0 ? (
@@ -1440,6 +1489,77 @@ export default function SupervisorDashboard() {
 
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* Dynamic Operations Export Modal */}
+      {showExportModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-orange-600" />
+                <span>Export Operations Report</span>
+              </h3>
+              <button onClick={() => setShowExportModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="p-6 space-y-4 font-mono text-xs text-slate-600">
+              <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+                Select a month and year to download a horizontal side-by-side weekly operations calendar report Excel spreadsheet.
+              </p>
+              
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Select Month</label>
+                <select 
+                  value={exportMonth} 
+                  onChange={(e) => setExportMonth(Number(e.target.value))} 
+                  className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer font-bold font-sans"
+                >
+                  <option value={1}>January</option>
+                  <option value={2}>February</option>
+                  <option value={3}>March</option>
+                  <option value={4}>April</option>
+                  <option value={5}>May</option>
+                  <option value={6}>June</option>
+                  <option value={7}>July</option>
+                  <option value={8}>August</option>
+                  <option value={9}>September</option>
+                  <option value={10}>October</option>
+                  <option value={11}>November</option>
+                  <option value={12}>December</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[9px] font-bold text-slate-400 uppercase">Select Year</label>
+                <select 
+                  value={exportYear} 
+                  onChange={(e) => setExportYear(Number(e.target.value))} 
+                  className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer font-bold font-sans"
+                >
+                  <option value={2025}>2025</option>
+                  <option value={2026}>2026</option>
+                  <option value={2027}>2027</option>
+                  <option value={2028}>2028</option>
+                  <option value={2029}>2029</option>
+                  <option value={2030}>2030</option>
+                </select>
+              </div>
+
+              {exportMessage && (
+                <p className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">{exportMessage}</p>
+              )}
+
+              <button
+                onClick={handleExportOperationsReport}
+                disabled={isExporting}
+                className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer disabled:opacity-55"
+              >
+                {isExporting ? 'Generating Report...' : 'Download Excel Calendar'}
+              </button>
+            </div>
           </div>
         </div>
       )}

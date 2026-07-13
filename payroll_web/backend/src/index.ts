@@ -1061,6 +1061,307 @@ app.post('/api/jobs', async (req, res) => {
   }
 });
 
+// REST Route: Export operations logs as Weekly Calendar Excel
+app.get('/api/jobs/export', async (req, res) => {
+  const { month, year } = req.query;
+  if (!month || !year) {
+    return res.status(400).json({ error: 'Month and Year required' });
+  }
+
+  const parsedMonth = parseInt(month as string);
+  const parsedYear = parseInt(year as string);
+
+  try {
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Ops Calendar - ${parsedMonth}_${parsedYear}`);
+
+    // Query job logs including employees and nested employee details
+    const matchPattern = `${parsedMonth}/`;
+    const jobs = await prisma.jobLog.findMany({
+      where: {
+        date: {
+          startsWith: matchPattern
+        }
+      },
+      include: {
+        employees: {
+          include: {
+            employee: true
+          }
+        }
+      },
+      orderBy: {
+        createdAt: 'asc'
+      }
+    });
+
+    // Filter by year in memory
+    const monthJobs = jobs.filter(j => {
+      const parts = j.date.split('/');
+      return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+    });
+
+    // Group jobs by date (e.g., "7/1/2026")
+    const jobsByDate: Record<string, any[]> = {};
+    monthJobs.forEach(job => {
+      if (!jobsByDate[job.date]) {
+        jobsByDate[job.date] = [];
+      }
+      jobsByDate[job.date].push(job);
+    });
+
+    // Generate days of the month (e.g., 1 to 31)
+    const daysInMonth = new Date(parsedYear, parsedMonth, 0).getDate();
+    
+    // Config values
+    const CARD_WIDTH = 4; // Employee ID, Name, Basis, Wage Share
+    const CARD_GAP = 1;   // Spacer column
+
+    // Configure columns for 6 side-by-side days
+    // 6 cards * 5 cols/card = 30 columns.
+    for (let c = 1; c <= 30; c++) {
+      const col = worksheet.getColumn(c);
+      const dayColIndex = (c - 1) % (CARD_WIDTH + CARD_GAP);
+      if (dayColIndex === CARD_WIDTH) {
+        col.width = 3; // Spacer column
+      } else if (dayColIndex === 0) {
+        col.width = 15; // Employee ID
+      } else if (dayColIndex === 1) {
+        col.width = 22; // Employee Name
+      } else if (dayColIndex === 2) {
+        col.width = 14; // Basis / Hours
+      } else {
+        col.width = 16; // Wage Received
+      }
+    }
+
+    // Set page title
+    worksheet.mergeCells('A1:AC1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = `KFIL SOLAPUR - DAILY OPERATIONS ALLOCATION REPORT (${parsedMonth}/${parsedYear})`;
+    titleCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFE65100' } // Deep Bauxite Orange
+    };
+    titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(1).height = 40;
+
+    let startRow = 3;
+    let maxRowInWeek = 3;
+
+    // Process day-by-day (1 to daysInMonth)
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${parsedMonth}/${d}/${parsedYear}`;
+      const dayJobs = jobsByDate[dateStr] || [];
+
+      // Grid index calculations (6 cards per row)
+      const weekIndex = Math.floor((d - 1) / 6);
+      const dayOfWeek = (d - 1) % 6;
+      const startCol = 1 + dayOfWeek * (CARD_WIDTH + CARD_GAP);
+
+      // If starting a new week block, move the startRow down
+      if (dayOfWeek === 0 && d > 1) {
+        startRow = maxRowInWeek + 3; // Leave 2 blank rows
+        maxRowInWeek = startRow;
+      }
+
+      let currentRow = startRow;
+
+      // Draw Date Header (Merged)
+      worksheet.mergeCells(currentRow, startCol, currentRow, startCol + CARD_WIDTH - 1);
+      const headerCell = worksheet.getCell(currentRow, startCol);
+      headerCell.value = `DATE: ${dateStr}`;
+      headerCell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+      headerCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFF57C00' } // Bright Bauxite Amber
+      };
+      headerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+      headerCell.border = {
+        top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+        right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+      };
+      worksheet.getRow(currentRow).height = 25;
+      currentRow++;
+
+      // Placeholder if no jobs
+      if (dayJobs.length === 0) {
+        worksheet.mergeCells(currentRow, startCol, currentRow + 2, startCol + CARD_WIDTH - 1);
+        const emptyCell = worksheet.getCell(currentRow, startCol);
+        emptyCell.value = 'No operations logged.';
+        emptyCell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF94A3B8' } };
+        emptyCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        emptyCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFF8FAFC' }
+        };
+        
+        // Borders
+        for (let r = 0; r < 3; r++) {
+          for (let c = 0; c < CARD_WIDTH; c++) {
+            worksheet.getCell(currentRow + r, startCol + c).border = {
+              left: c === 0 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
+              right: c === CARD_WIDTH - 1 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
+              bottom: r === 2 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined
+            };
+          }
+        }
+
+        currentRow += 3;
+        if (currentRow > maxRowInWeek) {
+          maxRowInWeek = currentRow;
+        }
+        continue;
+      }
+
+      // Track identical job counters for suffixing
+      const jobCounts: Record<string, number> = {};
+      const jobNameCounters: Record<string, number> = {};
+      
+      dayJobs.forEach(job => {
+        jobCounts[job.jobName] = (jobCounts[job.jobName] || 0) + 1;
+      });
+
+      // Render job sections
+      for (const job of dayJobs) {
+        let displayJobName = job.jobName;
+        if (jobCounts[job.jobName] > 1) {
+          const currentCount = (jobNameCounters[job.jobName] || 0) + 1;
+          jobNameCounters[job.jobName] = currentCount;
+          displayJobName = `${job.jobName} - ${currentCount}`;
+        }
+
+        // Job Title Banner (Merged)
+        worksheet.mergeCells(currentRow, startCol, currentRow, startCol + CARD_WIDTH - 1);
+        const jobTitleCell = worksheet.getCell(currentRow, startCol);
+        
+        const castingMeta = job.castingName ? ` (${job.castingName})` : '';
+        const qtyFormatted = job.unit === 'Tons' ? `${job.totalTons.toFixed(2)} Tons` : `${job.totalTons} Pcs`;
+        jobTitleCell.value = `🔨 ${displayJobName}${castingMeta}\n  ${qtyFormatted} @ ₹${job.ratePerTon}/${job.unit === 'Tons' ? 'Ton' : 'Pc'} (Total: ₹${(job.totalTons * job.ratePerTon).toLocaleString('en-IN')})`;
+        
+        jobTitleCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF4E342E' } };
+        jobTitleCell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFEFEBE9' } // Gentle Warm Gray background
+        };
+        jobTitleCell.alignment = { horizontal: 'left', vertical: 'middle', wrapText: true };
+        jobTitleCell.border = {
+          left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+          right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+        };
+        worksheet.getRow(currentRow).height = 32;
+        currentRow++;
+
+        // Subheaders
+        const colHeaders = ['Emp ID', 'Worker Name', 'Basis', 'Split Paid'];
+        for (let c = 0; c < CARD_WIDTH; c++) {
+          const cell = worksheet.getCell(currentRow, startCol + c);
+          cell.value = colHeaders[c];
+          cell.font = { name: 'Segoe UI', size: 8, bold: true, color: { argb: 'FF5D4037' } };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FFFFF3E0' } // Pale amber/orange
+          };
+          cell.border = {
+            top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+            left: c === 0 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
+            right: c === CARD_WIDTH - 1 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined
+          };
+        }
+        worksheet.getRow(currentRow).height = 18;
+        currentRow++;
+
+        // Crew Payout details
+        for (let e = 0; e < job.employees.length; e++) {
+          const rel = job.employees[e];
+          const empObj = rel.employee;
+          const isLoad = empObj.salaryPerDay === 0.0;
+          const isLastRow = e === job.employees.length - 1;
+
+          // Col 0: ID
+          const cellId = worksheet.getCell(currentRow, startCol);
+          cellId.value = empObj.employeeId;
+          cellId.font = { name: 'Segoe UI', size: 8.5, color: { argb: 'FF475569' } };
+          
+          // Col 1: Name
+          const cellName = worksheet.getCell(currentRow, startCol + 1);
+          cellName.value = empObj.name;
+          cellName.font = { name: 'Segoe UI', size: 8.5, color: { argb: 'FF1E293B' } };
+          
+          // Col 2: Basis
+          const cellBasis = worksheet.getCell(currentRow, startCol + 2);
+          cellBasis.value = isLoad ? 'Load Basis' : 'Day Basis';
+          cellBasis.font = { name: 'Segoe UI', size: 8, color: { argb: 'FF64748B' } };
+          
+          // Col 3: Split Earnings
+          const cellWage = worksheet.getCell(currentRow, startCol + 3);
+          cellWage.value = rel.splitEarnings;
+          cellWage.numFormat = '₹#,##0.00';
+          cellWage.font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FFE65100' } };
+
+          const rowBg = e % 2 === 0 ? 'FFFFFFFF' : 'FFFDFEFE';
+          for (let c = 0; c < CARD_WIDTH; c++) {
+            const cell = worksheet.getCell(currentRow, startCol + c);
+            cell.fill = {
+              type: 'pattern',
+              pattern: 'solid',
+              fgColor: { argb: rowBg }
+            };
+            cell.border = {
+              bottom: isLastRow ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : { style: 'thin', color: { argb: 'FFF1F5F9' } },
+              left: c === 0 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
+              right: c === CARD_WIDTH - 1 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined
+            };
+          }
+          worksheet.getRow(currentRow).height = 20;
+          currentRow++;
+        }
+
+        // Card spacer line
+        currentRow++;
+      }
+
+      // Card bottom border
+      const finalCardRow = currentRow - 1;
+      for (let c = 0; c < CARD_WIDTH; c++) {
+        worksheet.getCell(finalCardRow, startCol + c).border = {
+          bottom: { style: 'medium', color: { argb: 'FFF57C00' } },
+          left: c === 0 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined,
+          right: c === CARD_WIDTH - 1 ? { style: 'thin', color: { argb: 'FFCBD5E1' } } : undefined
+        };
+      }
+
+      if (currentRow > maxRowInWeek) {
+        maxRowInWeek = currentRow;
+      }
+    }
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=Operations_Report_${parsedMonth}_${parsedYear}.xlsx`
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // REST Route: Get all job logs (supports filters by month, year)
 app.get('/api/jobs', async (req, res) => {
   const { month, year } = req.query;
