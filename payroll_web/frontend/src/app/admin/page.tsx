@@ -226,7 +226,7 @@ export default function AdminDashboard() {
   // Fetch recent jobs logs
   const fetchJobs = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/jobs`);
+      const res = await fetch(`${API_URL}/api/jobs?month=${selectedMonth}&year=${selectedYear}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         setJobs(data);

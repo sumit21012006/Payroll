@@ -811,10 +811,30 @@ app.post('/api/jobs', async (req, res) => {
   }
 });
 
-// REST Route: Get all job logs
+// REST Route: Get all job logs (supports filters by month, year)
 app.get('/api/jobs', async (req, res) => {
+  const { month, year } = req.query;
   try {
+    const filter: any = {};
+
+    // Database-level filtering using string prefix/suffix matching (e.g. "7/" and "/2026")
+    if (month && year) {
+      filter.date = {
+        startsWith: `${month}/`,
+        endsWith: `/${year}`
+      };
+    } else if (month) {
+      filter.date = {
+        startsWith: `${month}/`
+      };
+    } else if (year) {
+      filter.date = {
+        endsWith: `/${year}`
+      };
+    }
+
     const list = await prisma.jobLog.findMany({
+      where: filter,
       include: {
         employees: {
           include: {

@@ -44,6 +44,7 @@ model Attendance {
   employee    Employee @relation(fields: [employeeId], references: [employeeId], onDelete: Cascade)
 
   @@unique([employeeId, date])
+  @@index([date])
 }
 
 model JobLog {
@@ -59,6 +60,7 @@ model JobLog {
   updatedAt   DateTime          @updatedAt
 
   employees   JobLogEmployee[]
+  @@index([date])
 }
 
 model JobLogEmployee {
