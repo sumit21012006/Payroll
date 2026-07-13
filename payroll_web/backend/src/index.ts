@@ -1390,9 +1390,14 @@ app.get('/api/jobs/export', async (req, res) => {
           
           // Col 3: Split Earnings
           const cellWage = worksheet.getCell(currentRow, startCol + 3);
-          cellWage.value = rel.splitEarnings;
-          cellWage.numFormat = '₹#,##0.00';
-          cellWage.font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FFE65100' } };
+          if (isLoad) {
+            cellWage.value = rel.splitEarnings;
+            cellWage.numFormat = '₹#,##0.00';
+            cellWage.font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FFE65100' } };
+          } else {
+            cellWage.value = '₹0.00 (Day Sal.)';
+            cellWage.font = { name: 'Segoe UI', size: 8, italic: true, color: { argb: 'FF64748B' } };
+          }
 
           const rowBg = e % 2 === 0 ? 'FFFFFFFF' : 'FFFDFEFE';
           for (let c = 0; c < CARD_WIDTH; c++) {
