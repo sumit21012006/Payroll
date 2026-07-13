@@ -56,6 +56,7 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
   // Exclude public endpoints and biometric ADMS endpoints
   if (
     req.path === '/' ||
+    req.path === '/favicon.ico' ||
     req.path === '/api/auth/login' ||
     req.path.startsWith('/api/auth/employee-preview/') ||
     req.path.startsWith('/iclock/')
