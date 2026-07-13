@@ -1182,6 +1182,21 @@ app.get('/api/jobs/export', async (req, res) => {
       }
     });
 
+    // Fetch all attendance logs for the month/year to check for Day-Basis half-day flags
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        date: {
+          startsWith: matchPattern
+        }
+      }
+    });
+
+    // Group attendance by employeeId + date for O(1) lookups
+    const attendanceMap = new Map<string, any>();
+    attendanceRecords.forEach(r => {
+      attendanceMap.set(`${r.employeeId}_${r.date}`, r);
+    });
+
     // Filter by year in memory
     const monthJobs = jobs.filter(j => {
       const parts = j.date.split('/');
@@ -1346,7 +1361,7 @@ app.get('/api/jobs/export', async (req, res) => {
         currentRow++;
 
         // Subheaders
-        const colHeaders = ['Emp ID', 'Worker Name', 'Basis', 'Split Paid'];
+        const colHeaders = ['Emp ID', 'Worker Name', 'Basis', 'Wage Paid'];
         for (let c = 0; c < CARD_WIDTH; c++) {
           const cell = worksheet.getCell(currentRow, startCol + c);
           cell.value = colHeaders[c];
@@ -1395,8 +1410,14 @@ app.get('/api/jobs/export', async (req, res) => {
             cellWage.numFormat = '₹#,##0.00';
             cellWage.font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FFE65100' } };
           } else {
-            cellWage.value = '₹0.00 (Day Sal.)';
-            cellWage.font = { name: 'Segoe UI', size: 8, italic: true, color: { argb: 'FF64748B' } };
+            const baseRate = empObj.salaryPerDay > 0 ? empObj.salaryPerDay : 636.0;
+            const att = attendanceMap.get(`${empObj.employeeId}_${job.date}`);
+            const isHalfDay = att ? (att.status === 'HALF_DAY' || att.hoursWorked < 4.0) : false;
+            const finalWage = isHalfDay ? (baseRate * 0.5) : baseRate;
+
+            cellWage.value = finalWage;
+            cellWage.numFormat = '₹#,##0.00';
+            cellWage.font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FF475569' } };
           }
 
           const rowBg = e % 2 === 0 ? 'FFFFFFFF' : 'FFFDFEFE';
