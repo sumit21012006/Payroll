@@ -518,6 +518,168 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   };
 }
 
+// Optimized In-Memory Calculation Engine matching calculateEmployeeWages
+function calculateEmployeeWagesInMemory(
+  employee: any, 
+  attendanceLogs: any[], 
+  jobAllocations: any[], 
+  month: number, 
+  year: number, 
+  settings?: any
+) {
+  const isLoadBasis = employee.salaryPerDay === 0.0;
+  const shiftHours = settings?.shiftHours ? parseFloat(settings.shiftHours) : 9.0;
+
+  // Retrieve attendance records for the month and year
+  const monthLogs = attendanceLogs.filter(log => {
+    const parts = log.date.split('/');
+    return parts.length === 3 && parseInt(parts[0]) === month && parseInt(parts[2]) === year;
+  });
+
+  let presentDays = 0;
+  let lateDays = 0;
+  let overtimeDays = 0;
+  let halfDays = 0;
+  let overtimeHours = 0.0;
+
+  for (const log of monthLogs) {
+    const status = log.status.toUpperCase();
+    if (status.includes('PRESENT')) {
+      presentDays++;
+    } else if (status.includes('LATE')) {
+      lateDays++;
+    } else if (status.includes('OVERTIME')) {
+      overtimeDays++;
+    } else if (status.includes('HALF_DAY')) {
+      halfDays++;
+    }
+
+    if (log.hoursWorked > shiftHours) {
+      overtimeHours += (log.hoursWorked - shiftHours);
+    } else if (status.includes('OVERTIME') && log.hoursWorked > 0.0) {
+      overtimeHours += log.hoursWorked;
+    }
+  }
+
+  // Calculate missing weekdays as absent days (excl. weekends)
+  const weekdays: string[] = [];
+  const daysInMonth = new Date(year, month - 0, 0).getDate();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateObj = new Date(year, month - 1, d);
+    if (dateObj.getDay() !== 0 && dateObj.getDay() !== 6) { // Exclude Sat (6) and Sun (0)
+      weekdays.push(`${month}/${d}/${year}`);
+    }
+  }
+
+  const loggedWeekdays = monthLogs
+    .filter(log => weekdays.includes(log.date))
+    .map(log => log.date);
+
+  const absentDays = weekdays.length - new Set(loggedWeekdays).size;
+
+  // Retrieve Supervisor Job Log Splits for this employee from pre-fetched allocations
+  const yearJobs = jobAllocations.filter(ja => {
+    const parts = ja.jobLog.date.split('/');
+    return parts.length === 3 && parseInt(parts[0]) === month && parseInt(parts[2]) === year;
+  });
+
+  const jobEarnings = yearJobs.reduce((sum, item) => sum + item.splitEarnings, 0.0);
+
+  // Initialize values
+  let basicPay = 0.0;
+  let otPay = 0.0;
+  let basicDa = 0.0;
+  let hra = 0.0;
+  let otherAllowance = 0.0;
+  let pfDeduction = 0.0;
+  let esicDeduction = 0.0;
+  let ptDeduction = 0.0;
+  let otherDeduction = 0.0;
+  let totalDeductions = 0.0;
+  let grossSalary = 0.0;
+  let netSalary = 0.0;
+
+  const mlwlDeduction = (month === 6 || month === 12) ? 25.0 : 0.0;
+  const accountAdvance = employee.accountAdvance;
+
+  if (!isLoadBasis) {
+    const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : 636.0;
+    const workedDays = (presentDays + lateDays) + (halfDays * 0.5);
+    const otDays = overtimeDays;
+
+    basicPay = workedDays * rate;
+    otPay = otDays * rate;
+    grossSalary = basicPay + otPay + jobEarnings;
+
+    // BASIC+DA = workedDays * (15746 / 26)
+    basicDa = Math.round(workedDays * (15746.0 / 26.0));
+
+    // HRA = 5% of BASIC+DA
+    hra = Math.round(basicDa * 0.05);
+
+    // Other allowance = Gross - BASIC+DA - HRA
+    otherAllowance = grossSalary - basicDa - hra;
+    if (otherAllowance < 0.0) otherAllowance = 0.0;
+
+    // Deductions
+    pfDeduction = Math.round(basicDa * 0.12);
+    esicDeduction = Math.round(grossSalary * 0.0075);
+
+    // PT slabs
+    if (grossSalary <= 7500.0) {
+      ptDeduction = 0.0;
+    } else if (grossSalary <= 10000.0) {
+      ptDeduction = 175.0;
+    } else {
+      ptDeduction = 200.0;
+    }
+
+    // Canteen flat deduction
+    if (grossSalary > 0.0) {
+      otherDeduction = 500.0;
+    }
+
+    totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
+    netSalary = grossSalary - totalDeductions;
+  } else {
+    // Load Basis Employee
+    basicPay = 0.0;
+    otPay = 0.0;
+    grossSalary = jobEarnings;
+
+    basicDa = 0.0;
+    hra = 0.0;
+    otherAllowance = 0.0;
+    pfDeduction = 0.0;
+    esicDeduction = 0.0;
+    ptDeduction = 0.0;
+    otherDeduction = 0.0;
+
+    totalDeductions = accountAdvance + mlwlDeduction;
+    netSalary = grossSalary - totalDeductions;
+  }
+
+  return {
+    basicPay,
+    otPay,
+    basicDa,
+    hra,
+    otherAllowance,
+    pfDeduction,
+    esicDeduction,
+    ptDeduction,
+    otherDeduction,
+    totalDeductions,
+    accountAdvance,
+    mlwlDeduction,
+    grossSalary,
+    netSalary: netSalary < 0 ? 0.0 : netSalary,
+    workedDays: !isLoadBasis ? ((presentDays + lateDays) + (halfDays * 0.5)) : 0.0,
+    overtimeHours,
+    jobEarnings
+  };
+}
+
 // REST Route: Get all employees
 app.get('/api/employees', async (req, res) => {
   try {
@@ -687,28 +849,113 @@ app.post('/api/payroll/calculate', async (req, res) => {
   const { month, year, settings } = req.body;
   if (!month || !year) return res.status(400).json({ error: 'Month and Year required' });
 
+  const parsedMonth = parseInt(month);
+  const parsedYear = parseInt(year);
+
   try {
+    const startTime = Date.now();
+
+    // 1. Fetch all employees in one query
     const employees = await prisma.employee.findMany();
-    const runs = [];
 
-    for (const emp of employees) {
-      const calc = await calculateEmployeeWages(emp.employeeId, month, year, settings);
+    // 2. Fetch all attendance logs for this month/year in one query
+    const matchPattern = `${parsedMonth}/`;
+    const allAttendance = await prisma.attendance.findMany({
+      where: {
+        date: {
+          startsWith: matchPattern
+        }
+      }
+    });
 
-      const run = await prisma.payrollRun.upsert({
-        where: {
-          employeeId_month_year: {
-            employeeId: emp.employeeId,
-            month,
-            year
+    // Filter by year in memory
+    const monthLogs = allAttendance.filter(log => {
+      const parts = log.date.split('/');
+      return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+    });
+
+    // Group attendance logs by employeeId for O(1) lookups
+    const attendanceByEmployee: Record<string, any[]> = {};
+    monthLogs.forEach(log => {
+      if (!attendanceByEmployee[log.employeeId]) {
+        attendanceByEmployee[log.employeeId] = [];
+      }
+      attendanceByEmployee[log.employeeId].push(log);
+    });
+
+    // 3. Fetch all job allocations for this month/year in one query
+    const allJobAllocations = await prisma.jobLogEmployee.findMany({
+      where: {
+        jobLog: {
+          date: {
+            startsWith: matchPattern
           }
-        },
-        update: calc,
-        create: calc
+        }
+      },
+      include: {
+        jobLog: true
+      }
+    });
+
+    // Filter by year in memory
+    const yearJobs = allJobAllocations.filter(ja => {
+      const parts = ja.jobLog.date.split('/');
+      return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+    });
+
+    // Group job allocations by employeeId for O(1) lookups
+    const jobsByEmployee: Record<string, any[]> = {};
+    yearJobs.forEach(ja => {
+      if (!jobsByEmployee[ja.employeeId]) {
+        jobsByEmployee[ja.employeeId] = [];
+      }
+      jobsByEmployee[ja.employeeId].push(ja);
+    });
+
+    const runs: any[] = [];
+
+    // 4. Compute payroll runs in-memory (0 database queries inside loop!)
+    for (const emp of employees) {
+      const empAttendance = attendanceByEmployee[emp.employeeId] || [];
+      const empJobs = jobsByEmployee[emp.employeeId] || [];
+      
+      const calc = calculateEmployeeWagesInMemory(emp, empAttendance, empJobs, parsedMonth, parsedYear, settings);
+      
+      runs.push({
+        employeeId: emp.employeeId,
+        month: parsedMonth,
+        year: parsedYear,
+        ...calc
       });
-      runs.push(run);
     }
-    res.json({ message: `Successfully computed payroll for ${runs.length} employees.`, data: runs });
+
+    // 5. Bulk write to database in a single transaction (Delete old, insert new)
+    await prisma.$transaction([
+      prisma.payrollRun.deleteMany({
+        where: {
+          month: parsedMonth,
+          year: parsedYear
+        }
+      }),
+      prisma.payrollRun.createMany({
+        data: runs
+      })
+    ]);
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`[CALCULATE] Finished bulk payroll calculation in ${duration}s for ${runs.length} employees.`);
+    
+    // Fetch the inserted runs to return them
+    const savedRuns = await prisma.payrollRun.findMany({
+      where: {
+        month: parsedMonth,
+        year: parsedYear
+      }
+    });
+
+    res.json({ message: `Successfully computed payroll for ${savedRuns.length} employees in ${duration}s.`, data: savedRuns });
   } catch (err) {
+    console.error('[CALCULATE] Error in payroll calculation:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
