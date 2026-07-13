@@ -96,6 +96,7 @@ export default function SupervisorDashboard() {
   }, [router]);
 
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
   const [recentJobs, setRecentJobs] = useState<JobLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
@@ -162,6 +163,33 @@ export default function SupervisorDashboard() {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  // Fetch monthly attendance logs for the supervisor
+  const fetchAttendanceLogs = async (month: number, year: number) => {
+    try {
+      const res = await fetch(`${API_URL}/api/attendance?month=${month}&year=${year}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        setAttendanceLogs(data);
+      }
+    } catch (err) {
+      console.error('Error fetching attendance logs:', err);
+    }
+  };
+
+  // Sync attendance logs when date changes
+  useEffect(() => {
+    if (date) {
+      const parts = date.split('/');
+      if (parts.length === 3) {
+        const m = parseInt(parts[0]);
+        const y = parseInt(parts[2]);
+        if (!isNaN(m) && !isNaN(y)) {
+          fetchAttendanceLogs(m, y);
+        }
+      }
+    }
+  }, [date]);
 
   // Fetch active employee list
   const fetchEmployees = async () => {
@@ -294,8 +322,76 @@ export default function SupervisorDashboard() {
     const loadCrew = crewEmployees.filter(emp => emp.salaryPerDay === 0.0);
     const dayCrew = crewEmployees.filter(emp => emp.salaryPerDay > 0.0);
 
-    const totalDayWagesToDeduct = dayCrew.reduce((sum, de) => sum + (de.salaryPerDay > 0 ? de.salaryPerDay : 636.0), 0.0);
+    // Map to find attendance hours for the current selected date
+    const attendanceMap = new Map(
+      attendanceLogs
+        .filter(log => log.date === date)
+        .map(log => [log.employeeId, log])
+    );
+
+    // 1. Calculate Day-Basis Crew Deductions (Half-Day aware)
+    let totalDayWagesToDeduct = 0.0;
+    for (const de of dayCrew) {
+      const att = attendanceMap.get(de.employeeId);
+      const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : 636.0;
+      const isHalfDay = att ? (att.status === 'HALF_DAY' || att.hoursWorked < 4.0) : false;
+      totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
+    }
+
     const remainingPool = totalJobValue - totalDayWagesToDeduct;
+    const finalSplits = new Map<string, number>();
+
+    // Set defaults: all day-basis crew get 0 split
+    for (const de of dayCrew) {
+      finalSplits.set(de.employeeId, 0.0);
+    }
+
+    // 2. Distribute loader splits proportionally
+    if (loadCrew.length > 0 && remainingPool > 0) {
+      const totalLoaders = loadCrew.length;
+      const idealShare = remainingPool / totalLoaders;
+
+      const loaderInfoList = loadCrew.map(le => {
+        const att = attendanceMap.get(le.employeeId);
+        const hours = att ? att.hoursWorked : 8.0; // default to 8.0/full day if not synced yet
+        const fraction = Math.min(1.0, hours / 8.0);
+        const baseSplit = idealShare * fraction;
+
+        return {
+          employeeId: le.employeeId,
+          hours,
+          baseSplit,
+          isFullTime: hours >= 8.0
+        };
+      });
+
+      const sumBaseSplits = loaderInfoList.reduce((sum, item) => sum + item.baseSplit, 0.0);
+      const surplus = Math.max(0.0, remainingPool - sumBaseSplits);
+
+      const fullTimeLoaders = loaderInfoList.filter(l => l.isFullTime);
+
+      if (fullTimeLoaders.length > 0 && surplus > 0) {
+        const extraShare = surplus / fullTimeLoaders.length;
+        for (const l of loaderInfoList) {
+          finalSplits.set(l.employeeId, l.baseSplit + (l.isFullTime ? extraShare : 0.0));
+        }
+      } else if (surplus > 0) {
+        const extraShare = surplus / totalLoaders;
+        for (const l of loaderInfoList) {
+          finalSplits.set(l.employeeId, l.baseSplit + extraShare);
+        }
+      } else {
+        for (const l of loaderInfoList) {
+          finalSplits.set(l.employeeId, l.baseSplit);
+        }
+      }
+    } else {
+      for (const le of loadCrew) {
+        finalSplits.set(le.employeeId, 0.0);
+      }
+    }
+
+    // Display loader split as average of loader split values or just ideal splits for header
     const individualSplitPay = loadCrew.length > 0 && remainingPool > 0
       ? remainingPool / loadCrew.length
       : 0.0;
@@ -309,15 +405,20 @@ export default function SupervisorDashboard() {
       totalDayWagesToDeduct,
       crewBreakdown: crewEmployees.map(emp => {
         const isLoad = emp.salaryPerDay === 0.0;
+        const att = attendanceMap.get(emp.employeeId);
+        const hours = att ? att.hoursWorked : 8.0;
         return {
           employeeId: emp.employeeId,
           name: emp.name,
           isLoad,
-          wage: isLoad ? individualSplitPay : (emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0)
+          hours,
+          wage: isLoad ? (finalSplits.get(emp.employeeId) || 0.0) : (
+            (emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0) * (att && (att.status === 'HALF_DAY' || att.hoursWorked < 4.0) ? 0.5 : 1.0)
+          )
         };
       })
     };
-  }, [totalTons, ratePerTon, selectedCrew, employees]);
+  }, [totalTons, ratePerTon, selectedCrew, employees, date, attendanceLogs]);
 
   // Log job operation submit
   const handleSubmitJob = async (e: React.FormEvent) => {
@@ -828,7 +929,33 @@ export default function SupervisorDashboard() {
                         >
                           <div className="min-w-0 flex-1">
                             <p className="text-xs font-bold text-slate-800 truncate font-sans">{emp.name}</p>
-                            <p className="text-[9px] text-slate-400 font-mono font-bold">{emp.employeeId} | {emp.department} Department</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[9px] text-slate-400 font-mono font-bold">
+                                {emp.employeeId} | {emp.department}
+                              </span>
+                              {(() => {
+                                const log = attendanceLogs.find(l => l.employeeId === emp.employeeId && l.date === date);
+                                if (log) {
+                                  const hours = log.hoursWorked;
+                                  const isHalf = log.status === 'HALF_DAY' || hours < 4.0;
+                                  return (
+                                    <span className={`text-[8px] px-1 py-0.2 rounded font-mono font-bold leading-none ${
+                                      isHalf 
+                                        ? 'bg-rose-50 text-rose-600 border border-rose-100' 
+                                        : 'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                                    }`}>
+                                      {hours.toFixed(1)} hrs {isHalf ? '(Half)' : '(Full)'}
+                                    </span>
+                                  );
+                                } else {
+                                  return (
+                                    <span className="text-[8px] bg-slate-100 text-slate-400 border border-slate-200 px-1.5 py-0.5 rounded font-mono font-bold leading-none">
+                                      No Punch (Default 8h)
+                                    </span>
+                                  );
+                                }
+                              })()}
+                            </div>
                           </div>
                           
                           <div className="flex items-center gap-3">
@@ -881,8 +1008,11 @@ export default function SupervisorDashboard() {
                     <div className="max-h-36 overflow-y-auto space-y-1.5 pr-2">
                       {splitCalculations.crewBreakdown.map(worker => (
                         <div key={worker.employeeId} className="flex justify-between items-center font-sans text-xs">
-                          <span className="text-slate-600 font-medium">
-                            {worker.name} ({worker.isLoad ? 'Load' : 'Day'})
+                          <span className="text-slate-600 font-medium flex items-center gap-1.5">
+                            <span>{worker.name}</span>
+                            <span className="text-[8px] font-bold px-1 py-0.5 rounded bg-slate-100 text-slate-500 font-mono">
+                              {worker.isLoad ? 'Load' : 'Day'} • {worker.hours.toFixed(1)}h
+                            </span>
                           </span>
                           <span className={`font-mono font-bold ${worker.isLoad ? 'text-orange-600' : 'text-slate-700'}`}>
                             ₹{worker.wage.toFixed(1)}
