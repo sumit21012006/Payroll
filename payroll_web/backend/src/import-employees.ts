@@ -28,6 +28,8 @@ async function main() {
   await prisma.jobLog.deleteMany({});
   await prisma.attendance.deleteMany({});
   await prisma.employee.deleteMany({});
+  await prisma.casting.deleteMany({});
+  await prisma.jobTemplate.deleteMany({});
   console.log('Database cleared successfully.');
 
   // 2. Open and Read Employee_List.xlsx
@@ -85,6 +87,54 @@ async function main() {
 
     seededCount++;
   }
+
+  // 4. Seed castings
+  console.log('Seeding default castings specifications...');
+  const defaultCastings = [
+    { code: '402', name: '4DI BLOCK', weightKg: 83.9 },
+    { code: '459', name: 'DHRUV 3DI BLOCK', weightKg: 74.2 },
+    { code: '745', name: 'DHRUV 4DI BLOCK', weightKg: 89.5 },
+    { code: '4011', name: 'D25 REIMAGINE', weightKg: 86.6 },
+    { code: '715', name: 'D25LCV', weightKg: 90.4 },
+    { code: '466', name: 'P-15 CYL BLOCK', weightKg: 46.4 },
+    { code: '467', name: 'ZD30 UPPER BLK', weightKg: 74.7 },
+    { code: '475', name: 'MHWAK REG', weightKg: 69.2 },
+    { code: '717', name: 'W109', weightKg: 72.0 },
+    { code: '718', name: 'D09 2CB', weightKg: 42.5 },
+    { code: '730', name: '3D15', weightKg: 55.6 },
+    { code: '731', name: '4D15', weightKg: 62.7 },
+    { code: '748', name: 'UPP BLK', weightKg: 53.4 },
+    { code: '476', name: '2CB TURBO CHARGER', weightKg: 42.0 },
+    { code: '719', name: 'HINO BLOCK', weightKg: 104.1 },
+    { code: '732', name: 'YANMAR BLOCK', weightKg: 40.8 },
+    { code: '729', name: '3R 1190 CYL BLOCK', weightKg: 106.4 },
+    { code: '4029', name: '3R 550 BLOCK', weightKg: 54.9 },
+    { code: '4026', name: 'EICHER -483', weightKg: 110.9 },
+    { code: '4046', name: 'EICHER TITAN BLOCK', weightKg: 87.0 },
+    { code: '495', name: 'EICHER 3CB', weightKg: 80.5 },
+    { code: '711', name: 'EICHER 4CB', weightKg: 96.3 },
+    { code: '4022', name: 'EICHER 110 HP', weightKg: 110.3 },
+    { code: '4068', name: 'ISUZU', weightKg: 73.0 }
+  ];
+
+  await prisma.casting.createMany({
+    data: defaultCastings
+  });
+
+  // 5. Seed job templates
+  console.log('Seeding default job templates...');
+  const defaultTemplates = [
+    { name: 'HE Casting', rate: 320.0, unit: 'Tons' },
+    { name: 'Final Quality Inspection', rate: 220.0, unit: 'Tons' },
+    { name: 'Rework Sorting', rate: 4.90, unit: 'Pieces' },
+    { name: 'Painting Job', rate: 6.00, unit: 'Pieces' },
+    { name: 'AVG Inspection', rate: 5.00, unit: 'Pieces' },
+    { name: 'Yanmark Line Assembly', rate: 28.00, unit: 'Pieces' }
+  ];
+
+  await prisma.jobTemplate.createMany({
+    data: defaultTemplates
+  });
 
   console.log(`\n✅ Database seed completed successfully!`);
   console.log(`Total Employees seeded: ${seededCount}`);

@@ -3,7 +3,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
-  Plus, LogOut, ClipboardList, RefreshCw, UserCheck, Search, Trash2, Info, Calendar, Check, ChevronLeft, ChevronRight
+  Plus, LogOut, ClipboardList, RefreshCw, UserCheck, Search, Trash2, Info, Calendar, Check, ChevronLeft, ChevronRight,
+  Settings, Edit3, X, Layers, DollarSign
 } from 'lucide-react';
 import { API_URL } from '@/config';
 
@@ -43,43 +44,6 @@ interface SelectedCasting {
   quantity: number;
 }
 
-const DEFAULT_JOB_NAMES = [
-  'HE Casting - ₹320/Ton',
-  'Final Quality Inspection - ₹220/Ton',
-  'Rework Sorting - ₹4.90/Piece',
-  'Painting Job - ₹6.00/Piece',
-  'AVG Inspection - ₹5.00/Piece',
-  'Yanmark Line Assembly - ₹28.00/Piece',
-  'Other (Write Custom Name)...'
-];
-
-const DEFAULT_CASTINGS: CastingInfo[] = [
-  { code: '402', name: '4DI BLOCK', weightKg: 83.9 },
-  { code: '459', name: 'DHRUV 3DI BLOCK', weightKg: 74.2 },
-  { code: '745', name: 'DHRUV 4DI BLOCK', weightKg: 89.5 },
-  { code: '4011', name: 'D25 REIMAGINE', weightKg: 86.6 },
-  { code: '715', name: 'D25LCV', weightKg: 90.4 },
-  { code: '466', name: 'P-15 CYL BLOCK', weightKg: 46.4 },
-  { code: '467', name: 'ZD30 UPPER BLK', weightKg: 74.7 },
-  { code: '475', name: 'MHWAK REG', weightKg: 69.2 },
-  { code: '717', name: 'W109', weightKg: 72.0 },
-  { code: '718', name: 'D09 2CB', weightKg: 42.5 },
-  { code: '730', name: '3D15', weightKg: 55.6 },
-  { code: '731', name: '4D15', weightKg: 62.7 },
-  { code: '748', name: 'UPP BLK', weightKg: 53.4 },
-  { code: '476', name: '2CB TURBO CHARGER', weightKg: 42.0 },
-  { code: '719', name: 'HINO BLOCK', weightKg: 104.1 },
-  { code: '732', name: 'YANMAR BLOCK', weightKg: 40.8 },
-  { code: '729', name: '3R 1190 CYL BLOCK', weightKg: 106.4 },
-  { code: '4029', name: '3R 550 BLOCK', weightKg: 54.9 },
-  { code: '4026', name: 'EICHER -483', weightKg: 110.9 },
-  { code: '4046', name: 'EICHER TITAN BLOCK', weightKg: 87.0 },
-  { code: '495', name: 'EICHER 3CB', weightKg: 80.5 },
-  { code: '711', name: 'EICHER 4CB', weightKg: 96.3 },
-  { code: '4022', name: 'EICHER 110 HP', weightKg: 110.3 },
-  { code: '4068', name: 'ISUZU', weightKg: 73.0 },
-];
-
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -98,6 +62,21 @@ export default function SupervisorDashboard() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
   const [recentJobs, setRecentJobs] = useState<JobLog[]>([]);
+  const [castingsList, setCastingsList] = useState<CastingInfo[]>([]);
+  const [jobTemplates, setJobTemplates] = useState<any[]>([]);
+
+  // Management Modal states
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [castCode, setCastCode] = useState('');
+  const [castName, setCastName] = useState('');
+  const [castWeight, setCastWeight] = useState('');
+  const [castMessage, setCastMessage] = useState('');
+  const [jobTemplateId, setJobTemplateId] = useState('');
+  const [jobNameInput, setJobNameInput] = useState('');
+  const [jobRateInput, setJobRateInput] = useState('');
+  const [jobUnitInput, setJobUnitInput] = useState('Tons');
+  const [jobMessage, setJobMessage] = useState('');
+
   const [isLoading, setIsLoading] = useState(true);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
@@ -167,7 +146,10 @@ export default function SupervisorDashboard() {
   // Fetch monthly attendance logs for the supervisor
   const fetchAttendanceLogs = async (month: number, year: number) => {
     try {
-      const res = await fetch(`${API_URL}/api/attendance?month=${month}&year=${year}`);
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/attendance?month=${month}&year=${year}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setAttendanceLogs(data);
@@ -194,7 +176,10 @@ export default function SupervisorDashboard() {
   // Fetch active employee list
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/employees`);
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/employees`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setEmployees(data);
@@ -208,7 +193,10 @@ export default function SupervisorDashboard() {
   const fetchRecentJobs = async () => {
     setIsHistoryLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/jobs`);
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/jobs`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setRecentJobs(data);
@@ -220,15 +208,50 @@ export default function SupervisorDashboard() {
     }
   };
 
+  // Fetch bauxite templates and castings
+  const fetchTemplates = async () => {
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const headers = { 'Authorization': `Bearer ${token}` };
+      
+      const cRes = await fetch(`${API_URL}/api/castings`, { headers });
+      const cData = await cRes.json();
+      if (Array.isArray(cData)) {
+        setCastingsList(cData);
+      }
+
+      const tRes = await fetch(`${API_URL}/api/job-templates`, { headers });
+      const tData = await tRes.json();
+      if (Array.isArray(tData)) {
+        setJobTemplates(tData);
+        if (tData.length > 0) {
+          const first = tData[0];
+          setSelectedJobName(`${first.name} - ₹${first.rate}/${first.unit === 'Tons' ? 'Ton' : 'Piece'}`);
+          setUnit(first.unit);
+          setRatePerTon(first.rate.toString());
+          setCrewRecommendation(`${first.name}: Per ${first.unit === 'Tons' ? 'Ton' : 'Piece'} - ₹${first.rate}/-`);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching templates:', err);
+    }
+  };
+
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       await fetchEmployees();
       await fetchRecentJobs();
+      await fetchTemplates();
       setIsLoading(false);
     };
     loadData();
   }, []);
+
+  const jobOptionsList = useMemo(() => {
+    const list = jobTemplates.map(j => `${j.name} - ₹${j.rate}/${j.unit === 'Tons' ? 'Ton' : 'Piece'}`);
+    return [...list, 'Other (Write Custom Name)...'];
+  }, [jobTemplates]);
 
   // Listen to Job Name selection to update properties
   const handleJobNameChange = (val: string) => {
@@ -240,30 +263,11 @@ export default function SupervisorDashboard() {
       setCrewRecommendation('Custom Job - Enter Rate and Qty manually');
     } else {
       setIsCustomJob(false);
-      if (val.startsWith('HE Casting')) {
-        setUnit('Tons');
-        setRatePerTon('320.0');
-        setCrewRecommendation('HE Casting: Per Ton - ₹320/-');
-      } else if (val.startsWith('Final Quality')) {
-        setUnit('Tons');
-        setRatePerTon('220.0');
-        setCrewRecommendation('Final Inspection: Per Ton - ₹220/-');
-      } else if (val.startsWith('Rework Sorting')) {
-        setUnit('Pieces');
-        setRatePerTon('4.90');
-        setCrewRecommendation('Rework: Per Piece - ₹4.90/- (Standard Crew: 2 Employees)');
-      } else if (val.startsWith('Painting Job')) {
-        setUnit('Pieces');
-        setRatePerTon('6.00');
-        setCrewRecommendation('Painter: Per Piece - ₹6/- (Standard Crew: 3 Shifts, 3 Employees per shift)');
-      } else if (val.startsWith('AVG Inspection')) {
-        setUnit('Pieces');
-        setRatePerTon('5.00');
-        setCrewRecommendation('AVG: Per Piece - ₹5/- (Standard Crew: 2 Shifts, 1 Employee per shift)');
-      } else if (val.startsWith('Yanmark Line')) {
-        setUnit('Pieces');
-        setRatePerTon('28.00');
-        setCrewRecommendation('Yanmark: Per Piece - ₹28/- (Standard Crew: 1 Shift, 3 Employees)');
+      const matched = jobTemplates.find(j => `${j.name} - ₹${j.rate}/${j.unit === 'Tons' ? 'Ton' : 'Piece'}` === val);
+      if (matched) {
+        setUnit(matched.unit);
+        setRatePerTon(matched.rate.toString());
+        setCrewRecommendation(`${matched.name}: Per ${matched.unit === 'Tons' ? 'Ton' : 'Piece'} - ₹${matched.rate}/-`);
       }
     }
   };
@@ -271,7 +275,7 @@ export default function SupervisorDashboard() {
   // Add a casting to the list
   const handleAddCasting = (castingCode: string) => {
     if (!castingCode) return;
-    const casting = DEFAULT_CASTINGS.find(c => c.code === castingCode);
+    const casting = castingsList.find(c => c.code === castingCode);
     if (!casting) return;
     
     const exists = selectedCastings.some(sc => sc.casting.code === castingCode);
@@ -591,6 +595,106 @@ export default function SupervisorDashboard() {
     setShowCalendar(false);
   };
 
+  const handleAddCastingTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCastMessage('');
+    if (!castCode || !castName || !castWeight) {
+      setCastMessage('All fields are required.');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/castings`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ code: castCode.trim(), name: castName.trim(), weightKg: parseFloat(castWeight) })
+      });
+      if (res.ok) {
+        setCastMessage('Casting saved!');
+        setCastCode('');
+        setCastName('');
+        setCastWeight('');
+        await fetchTemplates();
+      } else {
+        setCastMessage('Failed to save casting.');
+      }
+    } catch (err) {
+      setCastMessage('Request error.');
+    }
+  };
+
+  const handleDeleteCastingTemplate = async (code: string) => {
+    if (!confirm(`Delete Casting ${code}?`)) return;
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/castings/${code}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        await fetchTemplates();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleAddJobTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setJobMessage('');
+    if (!jobNameInput || !jobRateInput) {
+      setJobMessage('All fields are required.');
+      return;
+    }
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/job-templates`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ 
+          id: jobTemplateId || undefined, 
+          name: jobNameInput.trim(), 
+          rate: parseFloat(jobRateInput), 
+          unit: jobUnitInput 
+        })
+      });
+      if (res.ok) {
+        setJobMessage('Job template saved!');
+        setJobTemplateId('');
+        setJobNameInput('');
+        setJobRateInput('');
+        setJobUnitInput('Tons');
+        await fetchTemplates();
+      } else {
+        setJobMessage('Failed to save template.');
+      }
+    } catch (err) {
+      setJobMessage('Request error.');
+    }
+  };
+
+  const handleDeleteJobTemplate = async (id: string, name: string) => {
+    if (!confirm(`Delete Job template "${name}"?`)) return;
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/job-templates/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        await fetchTemplates();
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-950">
       
@@ -606,13 +710,24 @@ export default function SupervisorDashboard() {
           </div>
         </div>
 
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-rose-600 shadow-sm cursor-pointer"
-        >
-          <LogOut className="w-4 h-4" />
-          <span>Logout</span>
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            type="button"
+            onClick={() => setShowManageModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-600 hover:text-orange-600 shadow-sm cursor-pointer"
+          >
+            <Settings className="w-4 h-4 text-orange-600" />
+            <span>Manage Job Rates</span>
+          </button>
+          
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-rose-600 shadow-sm cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout</span>
+          </button>
+        </div>
       </header>
 
       {/* Content Grid */}
@@ -740,7 +855,7 @@ export default function SupervisorDashboard() {
                     onChange={(e) => handleJobNameChange(e.target.value)}
                     className="w-full h-11 bg-slate-50/50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-4 text-slate-800 focus:outline-none cursor-pointer font-bold font-sans text-xs"
                   >
-                    {DEFAULT_JOB_NAMES.map(name => (
+                    {jobOptionsList.map(name => (
                       <option key={name} value={name}>{name}</option>
                     ))}
                   </select>
@@ -792,7 +907,7 @@ export default function SupervisorDashboard() {
                       className="w-full h-11 bg-slate-50/50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-4 text-slate-800 focus:outline-none cursor-pointer"
                     >
                       <option value="" disabled>-- Select a Casting model to add to list --</option>
-                      {DEFAULT_CASTINGS.map(c => (
+                      {castingsList.map(c => (
                         <option key={c.code} value={c.code}>{c.code} - {c.name} ({c.weightKg} kg)</option>
                       ))}
                     </select>
@@ -1147,6 +1262,187 @@ export default function SupervisorDashboard() {
             )}
           </div>
         </section>
+
+      {/* Dynamic Templates & Castings Management Modal */}
+      {showManageModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+            
+            {/* Modal Header */}
+            <div className="bg-slate-50 border-b border-slate-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings className="w-5 h-5 text-orange-600 animate-spin" style={{ animationDuration: '3s' }} />
+                <h3 className="font-extrabold text-slate-800 text-sm tracking-wide font-mono uppercase">Manage Job Rates & Castings specifications</h3>
+              </div>
+              <button 
+                onClick={() => setShowManageModal(false)}
+                className="p-1 hover:bg-slate-200 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8 max-h-[80vh] overflow-y-auto">
+              
+              {/* LEFT COLUMN: CASTING SPECIFICATIONS */}
+              <div className="space-y-6">
+                <div className="bg-orange-50/30 border border-orange-100/60 rounded-2xl p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
+                    <Layers className="w-4 h-4 text-orange-600" />
+                    <span>Add New Casting Model</span>
+                  </h4>
+                  <form onSubmit={handleAddCastingTemplate} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Casting Code *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. 402"
+                        value={castCode}
+                        onChange={e => setCastCode(e.target.value)}
+                        className="w-full h-9 bg-white border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-2.5 focus:outline-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Model Name *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. 4DI BLOCK"
+                        value={castName}
+                        onChange={e => setCastName(e.target.value)}
+                        className="w-full h-9 bg-white border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-2.5 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Weight in Kg *</label>
+                      <input 
+                        type="number" 
+                        step="any"
+                        required 
+                        placeholder="e.g. 83.9"
+                        value={castWeight}
+                        onChange={e => setCastWeight(e.target.value)}
+                        className="w-full h-9 bg-white border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-2.5 focus:outline-none font-bold"
+                      />
+                    </div>
+                    <div className="sm:col-span-3 flex justify-between items-center mt-1">
+                      <span className="text-[9px] text-rose-500 font-bold font-mono">{castMessage}</span>
+                      <button 
+                        type="submit" 
+                        className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-mono text-[9px] font-bold uppercase rounded-lg cursor-pointer transition-colors shadow-sm"
+                      >
+                        Save Casting
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-60 overflow-y-auto divide-y divide-slate-100">
+                  <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest px-4 py-2 bg-slate-50 border-b border-slate-100 font-mono">Registered Castings ({castingsList.length})</p>
+                  {castingsList.map(c => (
+                    <div key={c.code} className="flex justify-between items-center px-4 py-2 text-xs font-mono">
+                      <div className="min-w-0 flex-1">
+                        <span className="font-extrabold text-orange-600">{c.code}</span>
+                        <span className="ml-2 font-sans font-bold text-slate-700">{c.name}</span>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-extrabold text-slate-500">{c.weightKg.toFixed(1)} kg</span>
+                        <button 
+                          onClick={() => handleDeleteCastingTemplate(c.code)}
+                          className="p-1 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Casting"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN: JOB OPERATION TEMPLATES & RATES */}
+              <div className="space-y-6">
+                <div className="bg-orange-50/30 border border-orange-100/60 rounded-2xl p-5 space-y-4">
+                  <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest font-mono flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-orange-600" />
+                    <span>Add New Job Operation & Rate</span>
+                  </h4>
+                  <form onSubmit={handleAddJobTemplate} className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                    <div className="space-y-1 sm:col-span-2">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Operation Title *</label>
+                      <input 
+                        type="text" 
+                        required 
+                        placeholder="e.g. Painting Job"
+                        value={jobNameInput}
+                        onChange={e => setJobNameInput(e.target.value)}
+                        className="w-full h-9 bg-white border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-2.5 focus:outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Rate (₹) *</label>
+                      <input 
+                        type="number" 
+                        step="any"
+                        required 
+                        placeholder="e.g. 6.00"
+                        value={jobRateInput}
+                        onChange={e => setJobRateInput(e.target.value)}
+                        className="w-full h-9 bg-white border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-2.5 focus:outline-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:col-span-3">
+                      <label className="text-[9px] font-bold text-slate-400 uppercase">Unit Type *</label>
+                      <select 
+                        value={jobUnitInput}
+                        onChange={e => setJobUnitInput(e.target.value)}
+                        className="w-full h-9 bg-white border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-lg px-2 focus:outline-none cursor-pointer font-bold font-sans"
+                      >
+                        <option value="Tons">Per Ton</option>
+                        <option value="Pieces">Per Piece</option>
+                      </select>
+                    </div>
+                    <div className="sm:col-span-3 flex justify-between items-center mt-1">
+                      <span className="text-[9px] text-rose-500 font-bold font-mono">{jobMessage}</span>
+                      <button 
+                        type="submit" 
+                        className="px-3.5 py-1.5 bg-orange-600 hover:bg-orange-700 text-white font-mono text-[9px] font-bold uppercase rounded-lg cursor-pointer transition-colors shadow-sm"
+                      >
+                        Save Rate Template
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl overflow-hidden bg-white max-h-60 overflow-y-auto divide-y divide-slate-100">
+                  <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest px-4 py-2 bg-slate-50 border-b border-slate-100 font-mono">Job Rates catalogue ({jobTemplates.length})</p>
+                  {jobTemplates.map(j => (
+                    <div key={j.id} className="flex justify-between items-center px-4 py-2 text-xs font-mono">
+                      <div className="min-w-0 flex-1 font-bold font-sans text-slate-700">
+                        {j.name}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0 font-mono">
+                        <span className="font-extrabold text-slate-500">₹{j.rate.toFixed(2)} / {j.unit === 'Tons' ? 'Ton' : 'Piece'}</span>
+                        <button 
+                          onClick={() => handleDeleteJobTemplate(j.id, j.name)}
+                          className="p-1 hover:bg-rose-50 text-rose-600 rounded-lg transition-colors cursor-pointer"
+                          title="Delete Job Template"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+      )}
 
       </main>
     </div>

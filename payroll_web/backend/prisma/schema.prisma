@@ -102,3 +102,20 @@ model PayrollRun {
 
   @@unique([employeeId, month, year])
 }
+
+model Casting {
+  code      String   @id
+  name      String
+  weightKg  Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model JobTemplate {
+  id        String   @id @default(uuid())
+  name      String
+  rate      Float
+  unit      String   @default("Tons") // "Tons" or "Pieces"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

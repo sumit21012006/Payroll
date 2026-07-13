@@ -730,6 +730,90 @@ function calculateEmployeeWagesInMemory(
   };
 }
 
+// REST CRUD Routes: Castings specifications
+app.get('/api/castings', async (req, res) => {
+  try {
+    const list = await prisma.casting.findMany({
+      orderBy: { code: 'asc' }
+    });
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post('/api/castings', async (req, res) => {
+  const { code, name, weightKg } = req.body;
+  if (!code || !name || weightKg == null) {
+    return res.status(400).json({ error: 'Code, name, and weightKg are required.' });
+  }
+  try {
+    const record = await prisma.casting.upsert({
+      where: { code },
+      update: { name, weightKg: parseFloat(weightKg) },
+      create: { code, name, weightKg: parseFloat(weightKg) }
+    });
+    res.json(record);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete('/api/castings/:code', async (req, res) => {
+  const { code } = req.params;
+  try {
+    await prisma.casting.delete({ where: { code } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// REST CRUD Routes: Job templates standard rates
+app.get('/api/job-templates', async (req, res) => {
+  try {
+    const list = await prisma.jobTemplate.findMany({
+      orderBy: { name: 'asc' }
+    });
+    res.json(list);
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.post('/api/job-templates', async (req, res) => {
+  const { id, name, rate, unit } = req.body;
+  if (!name || rate == null) {
+    return res.status(400).json({ error: 'Name and rate are required.' });
+  }
+  try {
+    if (id) {
+      const record = await prisma.jobTemplate.update({
+        where: { id },
+        data: { name, rate: parseFloat(rate), unit }
+      });
+      return res.json(record);
+    } else {
+      const record = await prisma.jobTemplate.create({
+        data: { name, rate: parseFloat(rate), unit }
+      });
+      return res.json(record);
+    }
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+app.delete('/api/job-templates/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    await prisma.jobTemplate.delete({ where: { id } });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 // REST Route: Get all employees
 app.get('/api/employees', async (req, res) => {
   try {
