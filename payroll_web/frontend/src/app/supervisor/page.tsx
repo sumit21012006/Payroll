@@ -526,15 +526,26 @@ export default function SupervisorDashboard() {
     router.push('/login');
   };
 
-  // Filter employees based on search & department
+  // Filter employees based on search, department, and attendance (exclude absent workers)
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = deptFilter === 'All' || emp.department === deptFilter;
-      return matchesSearch && matchesDept;
+
+      // Filter out absent employees on the selected date
+      const log = attendanceLogs.find(l => l.employeeId === emp.employeeId && l.date === date);
+      const isAbsent = log ? (log.status === 'ABSENT' || log.hoursWorked === 0.0) : false;
+
+      return matchesSearch && matchesDept && !isAbsent;
     });
-  }, [employees, searchQuery, deptFilter]);
+  }, [employees, searchQuery, deptFilter, date, attendanceLogs]);
+
+  // Clean up selectedCrew if selected employees are marked absent (filtered out)
+  useEffect(() => {
+    const validIds = filteredEmployees.map(e => e.employeeId);
+    setSelectedCrew(prev => prev.filter(id => validIds.includes(id)));
+  }, [filteredEmployees]);
 
   // Unique departments for filtering
   const uniqueDepartments = useMemo(() => {
