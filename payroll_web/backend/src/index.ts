@@ -36,7 +36,7 @@ const corsOptions: cors.CorsOptions = {
     if (!origin) {
       return callback(null, true);
     }
-    
+
     const incomingOrigin = origin.trim().replace(/\/$/, '');
     if (allowedOrigins.indexOf(incomingOrigin) !== -1) {
       callback(null, true);
@@ -520,11 +520,11 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
 
 // Optimized In-Memory Calculation Engine matching calculateEmployeeWages
 function calculateEmployeeWagesInMemory(
-  employee: any, 
-  attendanceLogs: any[], 
-  jobAllocations: any[], 
-  month: number, 
-  year: number, 
+  employee: any,
+  attendanceLogs: any[],
+  jobAllocations: any[],
+  month: number,
+  year: number,
   settings?: any
 ) {
   const isLoadBasis = employee.salaryPerDay === 0.0;
@@ -701,27 +701,26 @@ app.get('/api/attendance', async (req, res) => {
       filter.employeeId = employeeId as string;
     }
 
-    let logs = await prisma.attendance.findMany({
+    // Database-level filtering using string prefix/suffix matching (e.g. "7/" and "/2026")
+    if (month && year) {
+      filter.date = {
+        startsWith: `${month}/`,
+        endsWith: `/${year}`
+      };
+    } else if (month) {
+      filter.date = {
+        startsWith: `${month}/`
+      };
+    } else if (year) {
+      filter.date = {
+        endsWith: `/${year}`
+      };
+    }
+
+    const logs = await prisma.attendance.findMany({
       where: filter,
       orderBy: { date: 'asc' }
     });
-
-    if (month || year) {
-      logs = logs.filter(log => {
-        const parts = log.date.split('/');
-        if (parts.length !== 3) return false;
-        const m = parseInt(parts[0]);
-        const y = parseInt(parts[2]);
-        let matches = true;
-        if (month) {
-          matches = matches && m === parseInt(month as string);
-        }
-        if (year) {
-          matches = matches && y === parseInt(year as string);
-        }
-        return matches;
-      });
-    }
 
     res.json(logs);
   } catch (err) {
@@ -918,9 +917,9 @@ app.post('/api/payroll/calculate', async (req, res) => {
     for (const emp of employees) {
       const empAttendance = attendanceByEmployee[emp.employeeId] || [];
       const empJobs = jobsByEmployee[emp.employeeId] || [];
-      
+
       const calc = calculateEmployeeWagesInMemory(emp, empAttendance, empJobs, parsedMonth, parsedYear, settings);
-      
+
       runs.push({
         employeeId: emp.employeeId,
         month: parsedMonth,
@@ -944,7 +943,7 @@ app.post('/api/payroll/calculate', async (req, res) => {
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(2);
     console.log(`[CALCULATE] Finished bulk payroll calculation in ${duration}s for ${runs.length} employees.`);
-    
+
     // Fetch the inserted runs to return them
     const savedRuns = await prisma.payrollRun.findMany({
       where: {
@@ -1137,7 +1136,7 @@ app.get('/api/attendance/export', async (req, res) => {
   try {
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
-    
+
     start.setHours(0, 0, 0, 0);
     end.setHours(23, 59, 59, 999);
 
