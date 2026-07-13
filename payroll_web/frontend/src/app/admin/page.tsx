@@ -191,24 +191,9 @@ export default function AdminDashboard() {
     }
   };
 
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [settShiftHours, setSettShiftHours] = useState('9.0');
-  const [settOtMultiplier, setSettOtMultiplier] = useState('1.5');
-  const [settGraceMin, setSettGraceMin] = useState('15.0');
-  const [settAllowedLeaves, setSettAllowedLeaves] = useState('2');
-  const [settDefaultRate, setSettDefaultRate] = useState('15.0');
 
   const [isCalculating, setIsCalculating] = useState(false);
   const [calcMessage, setCalcMessage] = useState('');
-
-  // Load custom settings from localStorage on mount
-  useEffect(() => {
-    setSettShiftHours(localStorage.getItem('settings_shiftHours') || '9.0');
-    setSettOtMultiplier(localStorage.getItem('settings_otMultiplier') || '1.5');
-    setSettGraceMin(localStorage.getItem('settings_graceMin') || '15.0');
-    setSettAllowedLeaves(localStorage.getItem('settings_allowedLeaves') || '2');
-    setSettDefaultRate(localStorage.getItem('settings_defaultRate') || '15.0');
-  }, []);
 
   // Fetch initial workforce databases
   const fetchEmployees = async () => {
@@ -317,10 +302,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Trigger Excel download
-  const handleExportExcel = () => {
-    window.open(`${API_URL}/api/payroll/export?month=${selectedMonth}&year=${selectedYear}`, '_blank');
-  };
+
 
   // Toggle Pay Basis API (salaryPerDay = 0.0 for Load basis, or rate input for Day basis)
   const handleTogglePayBasis = async (empId: string, currentlyLoad: boolean) => {
@@ -517,19 +499,7 @@ export default function AdminDashboard() {
     }
   };
 
-  // Save Settings to Local Storage
-  const handleSaveSettings = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('settings_shiftHours', settShiftHours);
-    localStorage.setItem('settings_otMultiplier', settOtMultiplier);
-    localStorage.setItem('settings_graceMin', settGraceMin);
-    localStorage.setItem('settings_allowedLeaves', settAllowedLeaves);
-    localStorage.setItem('settings_defaultRate', settDefaultRate);
-    
-    setShowSettingsModal(false);
-    alert('Settings saved successfully! Recalculating payroll variables...');
-    handleCalculatePayroll();
-  };
+
 
   // Open Edit Advances Modal
   const openEditAdvance = (emp: Employee) => {
@@ -1451,57 +1421,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* ------------------------------------------------------------- */}
-      {/* GLOBAL SETTINGS MODAL */}
-      {/* ------------------------------------------------------------- */}
-      {showSettingsModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
-                <Settings className="w-5 h-5 text-orange-600" />
-                <span>Global Calculation Settings</span>
-              </h3>
-              <button onClick={() => setShowSettingsModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
-            </div>
 
-            <form onSubmit={handleSaveSettings} className="p-6 space-y-4 font-mono text-xs text-slate-600">
-              
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Standard Shift Duration (Hours)</label>
-                <input type="number" step="any" required value={settShiftHours} onChange={(e) => setSettShiftHours(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Overtime Pay Multiplier</label>
-                <input type="number" step="any" required value={settOtMultiplier} onChange={(e) => setSettOtMultiplier(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Lateness Grace Period (Minutes)</label>
-                <input type="number" step="any" required value={settGraceMin} onChange={(e) => setSettGraceMin(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Allowed Monthly Paid Leaves</label>
-                <input type="number" required value={settAllowedLeaves} onChange={(e) => setSettAllowedLeaves(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Default Rate per Ton (₹)</label>
-                <input type="number" step="any" required value={settDefaultRate} onChange={(e) => setSettDefaultRate(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
-              </div>
-
-              <button
-                type="submit"
-                className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer"
-              >
-                Save Settings & Recalculate
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* ------------------------------------------------------------- */}
       {/* BIOMETRIC ATTENDANCE EXPORT MODAL */}
