@@ -135,28 +135,16 @@ export default function LoginPage() {
   };
 
   return (
-    <main className={`min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden transition-colors duration-300 ${theme === 'dark' ? 'bg-zinc-950 text-slate-100' : 'bg-slate-50 text-slate-900'
-      }`}>
+    <main className="min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden bg-zinc-950 text-slate-100">
 
       <div
-        className={`absolute inset-0 bg-cover bg-center transition-all duration-500 ${
-          theme === 'dark' ? 'opacity-50 brightness-50' : 'opacity-50 brightness-110'
-        }`}
+        className="absolute inset-0 bg-cover bg-center opacity-50 brightness-50"
         style={{ backgroundImage: 'url("/industrial_background.jpg")' }}
       />
 
       {/* Background glows */}
-      {theme === 'dark' ? (
-        <>
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none" />
-        </>
-      ) : (
-        <>
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-rose-500/5 rounded-full blur-[100px] pointer-events-none" />
-        </>
-      )}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none" />
 
       {/* Floating Theme Toggler Button */}
       <button
@@ -313,7 +301,7 @@ export default function LoginPage() {
               ? (theme === 'dark'
                 ? 'bg-zinc-950/45 text-zinc-600 border border-zinc-900 cursor-not-allowed'
                 : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed')
-              : 'bg-indigo-650 hover:bg-indigo-700 active:bg-indigo-850 shadow-md shadow-indigo-500/10 border border-indigo-500/20 hover:scale-[1.01]'
+              : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-md shadow-indigo-500/10 border border-indigo-500/20 hover:scale-[1.01]'
               }`}
           >
             <span>Authorize & Sign In</span>
