@@ -104,6 +104,7 @@ export default function SupervisorDashboard() {
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
+  const [shiftFilter, setShiftFilter] = useState('Shift A');
 
   const [formMessage, setFormMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -537,20 +538,40 @@ export default function SupervisorDashboard() {
     router.push('/login');
   };
 
-  // Filter employees based on search, department, and attendance (exclude absent workers)
+  // Filter employees: must have checked in & checked out, and match search, department, and selected shift
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = deptFilter === 'All' || emp.department === deptFilter;
 
-      // Filter out absent employees on the selected date
+      // Find attendance log for this employee on this date
       const log = attendanceLogs.find(l => l.employeeId === emp.employeeId && l.date === date);
-      const isAbsent = log ? (log.status === 'ABSENT' || (log.checkOut !== '' && log.hoursWorked === 0.0)) : false;
 
-      return matchesSearch && matchesDept && !isAbsent;
+      // Enforce: Must have checked in and checked out
+      if (!log || !log.checkIn || log.checkIn === '' || !log.checkOut || log.checkOut === '') {
+        return false;
+      }
+
+      // Enforce: Match selected shift based on check-in time
+      const parts = log.checkIn.split(':').map(Number);
+      if (parts.length < 2) return false;
+      const hour = parts[0];
+      
+      let empShift = '';
+      if (hour >= 5 && hour <= 11) {
+        empShift = 'Shift A';
+      } else if (hour >= 13 && hour <= 18) {
+        empShift = 'Shift B';
+      } else if (hour >= 21 || hour <= 2) {
+        empShift = 'Shift C';
+      }
+
+      const matchesShift = empShift === shiftFilter;
+
+      return matchesSearch && matchesDept && matchesShift;
     });
-  }, [employees, searchQuery, deptFilter, date, attendanceLogs]);
+  }, [employees, searchQuery, deptFilter, shiftFilter, date, attendanceLogs]);
 
   // Clean up selectedCrew if selected employees are marked absent (filtered out)
   useEffect(() => {
@@ -1060,6 +1081,15 @@ export default function SupervisorDashboard() {
                       className="w-full h-10 bg-slate-50/50 border border-slate-200 rounded-xl pl-9 pr-4 text-slate-800 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20"
                     />
                   </div>
+                  <select
+                    value={shiftFilter}
+                    onChange={(e) => setShiftFilter(e.target.value)}
+                    className="w-32 h-10 bg-slate-50/50 border border-slate-200 rounded-xl px-2 focus:outline-none cursor-pointer font-bold text-orange-600 border-orange-200 hover:border-orange-300"
+                  >
+                    <option value="Shift A">Shift A</option>
+                    <option value="Shift B">Shift B</option>
+                    <option value="Shift C">Shift C</option>
+                  </select>
                   <select
                     value={deptFilter}
                     onChange={(e) => setDeptFilter(e.target.value)}
