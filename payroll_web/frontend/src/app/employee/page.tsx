@@ -408,6 +408,21 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
 }) {
   const [selectedDayDetails, setSelectedDayDetails] = useState<any | null>(null);
 
+  const getShiftFromTime = (checkInStr: string) => {
+    if (!checkInStr) return 'N/A';
+    const parts = checkInStr.split(':').map(Number);
+    if (parts.length < 2 || isNaN(parts[0])) return 'N/A';
+    const hour = parts[0];
+    if (hour >= 5 && hour <= 11) {
+      return 'Shift A';
+    } else if (hour >= 13 && hour <= 18) {
+      return 'Shift B';
+    } else if (hour >= 21 || hour <= 2) {
+      return 'Shift C';
+    }
+    return 'General Shift';
+  };
+
   const monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
@@ -575,6 +590,7 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
                   {selectedDayDetails.log && (
                     <>
                       <div className="flex justify-between"><span>Check In:</span> <strong className="text-slate-700">{selectedDayDetails.log.checkIn}</strong></div>
+                      <div className="flex justify-between"><span>Shift:</span> <strong className="text-indigo-650">{getShiftFromTime(selectedDayDetails.log.checkIn)}</strong></div>
                       <div className="flex justify-between"><span>Check Out:</span> <strong className="text-slate-700">{selectedDayDetails.log.checkOut || 'Active'}</strong></div>
                       <div className="flex justify-between"><span>Hours Worked:</span> <strong className="text-slate-700">{selectedDayDetails.log.hoursWorked.toFixed(2)} hrs</strong></div>
                     </>
