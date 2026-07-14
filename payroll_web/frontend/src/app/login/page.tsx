@@ -136,22 +136,22 @@ export default function LoginPage() {
 
   return (
     <main className={`min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden transition-colors duration-300 ${
-      theme === 'dark' ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+      theme === 'dark' ? 'bg-zinc-950 text-slate-100' : 'bg-slate-50 text-slate-900'
     }`}>
       
-      {/* Background Industrial Image Overlay */}
+      {/* Background Industrial Image Overlay with increased transparency */}
       <div 
         className={`absolute inset-0 bg-cover bg-center transition-all duration-500 ${
-          theme === 'dark' ? 'opacity-40 brightness-50' : 'opacity-25 brightness-110'
+          theme === 'dark' ? 'opacity-20 brightness-50' : 'opacity-12 brightness-110'
         }`}
         style={{ backgroundImage: 'url("/industrial_background.jpg")' }}
       />
       
-      {/* Cosmic background glows */}
+      {/* Background glows */}
       {theme === 'dark' ? (
         <>
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-500/10 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none" />
+          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-zinc-700/5 rounded-full blur-[120px] pointer-events-none" />
         </>
       ) : (
         <>
@@ -166,7 +166,7 @@ export default function LoginPage() {
         type="button"
         className={`absolute top-6 right-6 p-2.5 rounded-xl border transition-all shadow-xs cursor-pointer z-20 ${
           theme === 'dark' 
-            ? 'bg-slate-900/60 border-slate-800 text-amber-400 hover:bg-slate-800/60' 
+            ? 'bg-zinc-900/60 border-zinc-800 text-amber-400 hover:bg-zinc-800/60' 
             : 'bg-white/80 border-slate-200 text-slate-650 hover:bg-slate-100'
         }`}
         title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
@@ -174,9 +174,10 @@ export default function LoginPage() {
         {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </button>
       
+      {/* Greyish login box */}
       <div className={`w-full max-w-[420px] p-8 border rounded-2xl shadow-2xl relative z-10 space-y-6 transition-all duration-300 ${
         theme === 'dark' 
-          ? 'bg-slate-900/70 border-slate-800 shadow-slate-950/50' 
+          ? 'bg-zinc-900/75 border-zinc-800/80 shadow-zinc-950/50' 
           : 'bg-white/80 border-slate-200 shadow-slate-200/50'
       }`}>
         
@@ -184,20 +185,20 @@ export default function LoginPage() {
         <div className="flex justify-between items-start">
           <div className="flex items-center gap-2.5">
             <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shadow-inner ${
-              theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-indigo-50 border-indigo-100'
+              theme === 'dark' ? 'bg-zinc-800/50 border-zinc-700/50' : 'bg-indigo-50 border-indigo-100'
             }`}>
-              <Fingerprint className={`w-5 h-5 ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`} />
+              <Fingerprint className={`w-5 h-5 ${theme === 'dark' ? 'text-zinc-400' : 'text-indigo-600'}`} />
             </div>
             <div>
               <h1 className={`text-sm font-black tracking-widest leading-tight ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>FOUNDTECH</h1>
-              <p className={`text-[9px] font-mono font-bold uppercase tracking-widest leading-none ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>ENGINEERING</p>
+              <p className={`text-[9px] font-mono font-bold uppercase tracking-widest leading-none ${theme === 'dark' ? 'text-zinc-400' : 'text-indigo-600'}`}>ENGINEERING</p>
             </div>
           </div>
           
           {/* Database Status Dot */}
           <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[9px] font-bold uppercase tracking-wider ${
             theme === 'dark'
-              ? (isDbOnline ? 'border-emerald-500/20 text-emerald-400 bg-slate-950/40' : 'border-rose-500/20 text-rose-400 bg-slate-950/40')
+              ? (isDbOnline ? 'border-emerald-500/20 text-emerald-400 bg-zinc-950/40' : 'border-rose-500/20 text-rose-400 bg-zinc-950/40')
               : (isDbOnline ? 'border-emerald-200 text-emerald-600 bg-emerald-50' : 'border-rose-200 text-rose-600 bg-rose-50')
           }`}>
             <span className={`w-1.5 h-1.5 rounded-full ${
@@ -211,7 +212,7 @@ export default function LoginPage() {
 
         <div className="space-y-1 text-center">
           <h2 className={`text-base font-bold tracking-tight ${theme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Biometric Payroll Portal</h2>
-          <p className={`${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'} text-[11px]`}>Authorize credentials to access payroll registry.</p>
+          <p className={`${theme === 'dark' ? 'text-zinc-400' : 'text-slate-500'} text-[11px]`}>Authorize credentials to access payroll registry.</p>
         </div>
 
         {/* Form Card */}
@@ -219,7 +220,7 @@ export default function LoginPage() {
           
           {/* Role Tabs */}
           <div className={`flex p-0.5 rounded-xl border ${
-            theme === 'dark' ? 'bg-slate-950/60 border-slate-800/80' : 'bg-slate-100 border-slate-200'
+            theme === 'dark' ? 'bg-zinc-950/60 border-zinc-800/80' : 'bg-slate-100 border-slate-200'
           }`}>
             {(['employee', 'supervisor', 'admin'] as const).map((role) => (
               <button
@@ -235,9 +236,9 @@ export default function LoginPage() {
                 className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                   selectedRole === role
                     ? (theme === 'dark'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-500/10 border border-indigo-500/20 font-black'
+                      ? 'bg-zinc-800 text-white border border-zinc-700 font-black'
                       : 'bg-white text-indigo-600 shadow-xs border border-slate-200 font-black')
-                    : (theme === 'dark' ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')
+                    : (theme === 'dark' ? 'text-zinc-450 hover:text-zinc-300' : 'text-slate-500 hover:text-slate-700')
                 }`}
               >
                 {role}
@@ -248,7 +249,7 @@ export default function LoginPage() {
           {/* Input fields */}
           {selectedRole === 'employee' ? (
             <div className="space-y-2">
-              <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Employee Badge ID</label>
+              <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-450' : 'text-slate-500'}`}>Employee Badge ID</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Fingerprint className="w-4 h-4" />
@@ -261,7 +262,7 @@ export default function LoginPage() {
                   placeholder="e.g. KFIL/L1-406"
                   className={`w-full h-10 border rounded-lg pl-10 pr-4 text-xs focus:outline-none transition-all ${
                     theme === 'dark' 
-                      ? 'bg-slate-950/50 border-slate-850 text-white placeholder:text-slate-600 focus:border-indigo-500 focus:ring-indigo-500/20' 
+                      ? 'bg-zinc-950/50 border-zinc-850 text-white placeholder:text-zinc-600 focus:border-indigo-505 focus:ring-indigo-505/20' 
                       : 'bg-white border-slate-300 text-slate-850 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/10'
                   }`}
                 />
@@ -270,15 +271,15 @@ export default function LoginPage() {
               {/* Profile match card */}
               {matchedEmployee && (
                 <div className={`flex items-center gap-3 border rounded-xl p-3 mt-3 ${
-                  theme === 'dark' ? 'bg-slate-950/40 border-slate-800' : 'bg-slate-50 border-slate-200'
+                  theme === 'dark' ? 'bg-zinc-950/40 border-zinc-800' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border ${
-                    theme === 'dark' ? 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400' : 'bg-indigo-50 border-indigo-100 text-indigo-750'
+                    theme === 'dark' ? 'bg-zinc-800/50 border-zinc-700 text-zinc-400' : 'bg-indigo-50 border-indigo-100 text-indigo-750'
                   }`}>
                     {matchedEmployee.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-slate-200' : 'text-slate-850'}`}>{matchedEmployee.name}</p>
+                    <p className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-zinc-200' : 'text-slate-850'}`}>{matchedEmployee.name}</p>
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">{matchedEmployee.department} Department</p>
                   </div>
                   <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0 animate-in zoom-in duration-200" />
@@ -287,7 +288,7 @@ export default function LoginPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>Security Passcode</label>
+              <label className={`text-[10px] font-bold uppercase tracking-wider ${theme === 'dark' ? 'text-zinc-450' : 'text-slate-500'}`}>Security Passcode</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
                   <Lock className="w-4 h-4" />
@@ -300,7 +301,7 @@ export default function LoginPage() {
                   placeholder={`Enter ${selectedRole} passcode`}
                   className={`w-full h-10 border rounded-lg pl-10 pr-4 text-xs focus:outline-none transition-all ${
                     theme === 'dark' 
-                      ? 'bg-slate-950/50 border-slate-850 text-white placeholder:text-slate-600 focus:border-indigo-500 focus:ring-indigo-500/20' 
+                      ? 'bg-zinc-950/50 border-zinc-850 text-white placeholder:text-zinc-650 focus:border-indigo-505 focus:ring-indigo-505/20' 
                       : 'bg-white border-slate-300 text-slate-850 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/10'
                   }`}
                 />
@@ -325,9 +326,9 @@ export default function LoginPage() {
             className={`w-full h-10 rounded-lg flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-white transition-all duration-150 cursor-pointer ${
               selectedRole === 'employee' && !matchedEmployee
                 ? (theme === 'dark' 
-                  ? 'bg-slate-950/40 text-slate-600 border border-slate-900 cursor-not-allowed' 
+                  ? 'bg-zinc-950/45 text-zinc-600 border border-zinc-900 cursor-not-allowed' 
                   : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed')
-                : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-850 shadow-md shadow-indigo-500/10 border border-indigo-500/20 hover:scale-[1.01]'
+                : 'bg-indigo-650 hover:bg-indigo-700 active:bg-indigo-850 shadow-md shadow-indigo-500/10 border border-indigo-500/20 hover:scale-[1.01]'
             }`}
           >
             <span>Authorize & Sign In</span>
@@ -337,15 +338,15 @@ export default function LoginPage() {
 
         {/* Cheatsheet Panel */}
         <div className={`text-[10px] leading-relaxed p-4 border rounded-xl space-y-1 ${
-          theme === 'dark' ? 'bg-slate-950/30 border-slate-850 text-slate-450' : 'bg-slate-50 border-slate-200 text-slate-500'
+          theme === 'dark' ? 'bg-zinc-950/30 border-zinc-850 text-zinc-450' : 'bg-slate-50 border-slate-200 text-slate-500'
         }`}>
-          <p className={`font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>Demo Credentials:</p>
-          <p>Admin passcode: <strong className={theme === 'dark' ? 'text-slate-350' : 'text-slate-700'}>"admin"</strong> | Supervisor: <strong className={theme === 'dark' ? 'text-slate-350' : 'text-slate-700'}>"supervisor"</strong></p>
-          <p>Employees: Badge ID <strong className={theme === 'dark' ? 'text-slate-350' : 'text-slate-700'}>"KFIL/L1-406"</strong> or <strong className={theme === 'dark' ? 'text-slate-350' : 'text-slate-700'}>"KFIL/L1-410"</strong></p>
+          <p className={`font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-zinc-400' : 'text-indigo-600'}`}>Demo Credentials:</p>
+          <p>Admin passcode: <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"admin"</strong> | Supervisor: <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"supervisor"</strong></p>
+          <p>Employees: Badge ID <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"KFIL/L1-406"</strong> or <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"KFIL/L1-410"</strong></p>
         </div>
 
         {/* Footer */}
-        <p className={`text-[8px] font-mono uppercase tracking-widest text-center ${theme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
+        <p className={`text-[8px] font-mono uppercase tracking-widest text-center ${theme === 'dark' ? 'text-zinc-550' : 'text-slate-400'}`}>
           © 2026 FOUNDTECH ENGINEERING
         </p>
 
