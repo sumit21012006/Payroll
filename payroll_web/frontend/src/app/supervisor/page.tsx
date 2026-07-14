@@ -548,8 +548,8 @@ export default function SupervisorDashboard() {
       // Find attendance log for this employee on this date
       const log = attendanceLogs.find(l => l.employeeId === emp.employeeId && l.date === date);
 
-      // Enforce: Must have checked in and checked out
-      if (!log || !log.checkIn || log.checkIn === '' || !log.checkOut || log.checkOut === '') {
+      // Enforce: Must have checked in and checked out (with at least 1 hour of work to filter out morning double-swipes)
+      if (!log || !log.checkIn || log.checkIn === '' || !log.checkOut || log.checkOut === '' || log.hoursWorked < 1.0) {
         return false;
       }
 
