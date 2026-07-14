@@ -171,11 +171,11 @@ export default function LoginPage() {
         {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
       </button>
 
-      {/* Greyish login box */}
-      <div className={`w-full max-w-[420px] p-8 border rounded-2xl shadow-2xl relative z-10 space-y-6 transition-all duration-300 ${theme === 'dark'
-        ? 'bg-zinc-900/75 border-zinc-800/80 shadow-zinc-950/50'
-        : 'bg-white/80 border-slate-200 shadow-slate-200/50'
-        }`}>
+      <div className={`w-full max-w-[420px] p-8 border rounded-2xl shadow-2xl relative z-10 space-y-6 transition-all duration-300 ${
+        theme === 'dark' 
+          ? 'bg-zinc-900 border-zinc-800 shadow-zinc-950/50' 
+          : 'bg-white border-slate-200 shadow-slate-200/50'
+      }`}>
 
         {/* Card Header & Brand */}
         <div className="flex justify-between items-start">
