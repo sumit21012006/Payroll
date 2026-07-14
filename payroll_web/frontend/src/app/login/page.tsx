@@ -138,7 +138,7 @@ export default function LoginPage() {
     <main className="min-h-screen w-full flex items-center justify-center font-sans relative overflow-hidden bg-zinc-950 text-slate-100">
 
       <div
-        className="absolute inset-0 bg-cover bg-center opacity-50 brightness-50"
+        className="absolute inset-0 bg-cover bg-center opacity-70 brightness-50"
         style={{ backgroundImage: 'url("/industrial_background.jpg")' }}
       />
 
