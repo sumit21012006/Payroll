@@ -835,26 +835,26 @@ export default function AdminDashboard() {
           
           {/* Tab Switcher Headers */}
           <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
-            <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200/60 w-full md:w-80">
+            <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200/60 w-full md:w-[380px] h-10">
               <button
                 onClick={() => setActiveTab('profiles')}
-                className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                   activeTab === 'profiles'
                     ? 'bg-white text-orange-600 shadow-sm border border-slate-200/60 font-black'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
-                👥 Workforce Profiles
+                Workforce Profiles
               </button>
               <button
                 onClick={() => setActiveTab('deductions')}
-                className={`flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
+                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
                   activeTab === 'deductions'
                     ? 'bg-white text-orange-600 shadow-sm border border-slate-200/60 font-black'
                     : 'text-slate-400 hover:text-slate-600'
                 }`}
               >
-                💰 Advances & Deductions
+                Advances & Deductions
               </button>
             </div>
 
@@ -943,7 +943,7 @@ export default function AdminDashboard() {
                         {activeTab === 'profiles' ? (
                           <>
                             <td className="px-6 py-4 text-center">
-                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold ${
+                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${
                                 isLoad 
                                   ? 'bg-slate-100 text-slate-655 border border-slate-205' 
                                   : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
