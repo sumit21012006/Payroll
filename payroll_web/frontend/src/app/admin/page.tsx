@@ -1469,7 +1469,7 @@ export default function AdminDashboard() {
               <button
                 onClick={handleDownloadAttendance}
                 disabled={isExportingAtt}
-                className="w-full h-10 bg-emerald-650 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full h-10 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isExportingAtt ? (
                   <>
