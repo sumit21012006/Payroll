@@ -198,12 +198,12 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           const diffMs = dt.getTime() - lastCheckInDate.getTime();
           const diffHours = diffMs / (1000 * 60 * 60);
 
-          // If last log has no check-out, and the gap is less than 16 hours, we pair it
-          if (lastLog.checkOut === '' && diffHours > 0 && diffHours < 16) {
+          // If last log has no check-out, and the gap is less than 16 hours (and at least 5 minutes), we pair it
+          if (lastLog.checkOut === '' && diffHours > 0.083 && diffHours < 16) {
             shouldPair = true;
           }
           // Double-scanning safeguard: update check-out if same/close shift within 2 hours
-          else if (lastLog.checkOut !== '' && diffHours > 0 && diffHours < 2) {
+          else if (lastLog.checkOut !== '' && diffHours > 0.083 && diffHours < 2) {
             shouldPair = true;
           }
         }
