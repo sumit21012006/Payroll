@@ -155,24 +155,24 @@ export default function EmployeeDashboard() {
   if (!employee) return null;
 
   return (
-    <div className="min-h-screen bg-slate-50/50 text-slate-800 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-950 print:bg-white print:text-black">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900 print:bg-white print:text-black">
       
       {/* Header */}
-      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-xl px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm print:hidden">
+      <header className="border-b border-slate-200 bg-white px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-xs print:hidden">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-orange-50 border border-orange-100 flex items-center justify-center shadow-sm">
-            <User className="w-5 h-5 text-orange-600" />
+          <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center shadow-xs">
+            <User className="w-5 h-5 text-indigo-600" />
           </div>
           <div>
-            <h1 className="text-md font-bold tracking-tight font-display text-slate-900 uppercase">Employee Portal</h1>
-            <p className="text-[9px] text-orange-600 font-bold uppercase tracking-widest font-mono">KFIL SOLAPUR</p>
+            <h1 className="text-sm font-bold tracking-tight text-slate-900 font-display">KFIL EMPLOYEE PORTAL</h1>
+            <p className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase">Employee Dashboard</p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           {/* Active Period Dropdowns */}
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-mono">
-            <Calendar className="w-4 h-4 text-orange-600" />
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg text-xs font-sans">
+            <Calendar className="w-4 h-4 text-slate-400" />
             <select 
               value={selectedMonth} 
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
@@ -208,17 +208,17 @@ export default function EmployeeDashboard() {
 
           <button 
             onClick={handlePrint}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-orange-300 hover:bg-orange-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-orange-600 shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 rounded-lg text-xs font-semibold transition-colors text-slate-700 shadow-xs cursor-pointer"
           >
-            <Printer className="w-4 h-4" />
+            <Printer className="w-4 h-4 text-slate-400" />
             <span>Print Payslip</span>
           </button>
           
           <button 
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-rose-600 shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-rose-50 rounded-lg text-xs font-semibold transition-colors text-slate-600 hover:text-rose-600 shadow-xs cursor-pointer"
           >
-            <LogOut className="w-4 h-4" />
+            <LogOut className="w-4 h-4 text-slate-400 hover:text-rose-500" />
             <span>Logout</span>
           </button>
         </div>
@@ -231,56 +231,53 @@ export default function EmployeeDashboard() {
         <section className="md:col-span-2 space-y-6">
           
           {/* Profile Card */}
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 relative overflow-hidden shadow-sm hover:border-orange-500/20 transition-all duration-300 print:border-none print:bg-transparent print:p-0 print:rounded-none print:overflow-visible">
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-orange-500 print:hidden" />
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm print:border-none print:bg-transparent print:p-0 print:rounded-none print:overflow-visible">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 print:text-black">Employee Profile</h2>
             
-            <h2 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest font-mono mb-4 print:text-black">EMPLOYEE PROFILE</h2>
-            
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 font-mono text-xs text-slate-600">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-xs text-slate-600">
               <div>
-                <p className="text-slate-400 uppercase text-[9px] font-bold">Full Name</p>
+                <p className="text-slate-400 uppercase text-[10px] font-semibold">Full Name</p>
                 <p className="text-sm font-bold mt-1 text-slate-900 print:text-black font-sans">{employee.name}</p>
               </div>
               <div>
-                <p className="text-slate-400 uppercase text-[9px] font-bold">Employee ID</p>
+                <p className="text-slate-400 uppercase text-[10px] font-semibold">Employee ID</p>
                 <p className="text-sm font-bold mt-1 text-slate-900 print:text-black">{employee.employeeId}</p>
               </div>
               <div>
-                <p className="text-slate-400 uppercase text-[9px] font-bold">Department</p>
+                <p className="text-slate-400 uppercase text-[10px] font-semibold">Department</p>
                 <p className="text-sm font-bold mt-1 text-slate-900 print:text-black font-sans">{employee.department}</p>
               </div>
               <div>
-                <p className="text-slate-400 uppercase text-[9px] font-bold">Bank Name</p>
+                <p className="text-slate-400 uppercase text-[10px] font-semibold">Bank Name</p>
                 <p className="text-slate-800 mt-1 print:text-black font-sans">{employee.bankName || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-slate-400 uppercase text-[9px] font-bold">Account Number</p>
+                <p className="text-slate-400 uppercase text-[10px] font-semibold">Account Number</p>
                 <p className="text-slate-800 mt-1 print:text-black">{employee.bankAcc || 'N/A'}</p>
               </div>
               <div>
-                <p className="text-slate-400 uppercase text-[9px] font-bold">IFSC Code</p>
+                <p className="text-slate-400 uppercase text-[10px] font-semibold">IFSC Code</p>
                 <p className="text-slate-800 mt-1 print:text-black">{employee.ifscCode || 'N/A'}</p>
               </div>
             </div>
           </div>
 
           {/* Load basis jobs logged record section */}
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-6 relative overflow-hidden shadow-sm hover:border-orange-500/20 transition-all duration-300 print:hidden">
-            <div className="absolute top-0 left-0 w-full h-[3px] bg-orange-500" />
-            <h2 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest font-mono mb-4">
-              🍇 Loading Jobs History (This Month)
+          <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm print:hidden">
+            <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4">
+              Loading Jobs History (This Month)
             </h2>
             {workedJobsThisMonth.length === 0 ? (
-              <p className="text-xs text-slate-400 italic font-mono">No supervisor loading jobs recorded for this period.</p>
+              <p className="text-xs text-slate-400 italic font-sans">No loading jobs recorded for this period.</p>
             ) : (
-              <div className="space-y-3 font-mono text-xs max-h-60 overflow-y-auto pr-1">
+              <div className="space-y-3 text-xs max-h-60 overflow-y-auto pr-1">
                 {workedJobsThisMonth.map(job => {
                   const mySplit = job.employees.find((je: any) => je.employeeId === employee.employeeId)?.splitEarnings || 0.0;
                   return (
-                    <div key={job.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-100 rounded-xl hover:border-orange-200 transition-colors">
+                    <div key={job.id} className="flex justify-between items-center p-3 bg-slate-50 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
                       <div>
                         <p className="font-bold text-slate-800 font-sans">{job.jobName}</p>
-                        <p className="text-[9px] text-slate-400 mt-0.5">Date: {job.date} | Tons: {job.totalTons} | Crew: {job.employees.length}</p>
+                        <p className="text-[10px] text-slate-500 mt-0.5">Date: {job.date} | Tons: {job.totalTons} | Crew: {job.employees.length}</p>
                       </div>
                       <span className="text-emerald-600 font-bold">₹{mySplit.toFixed(2)}</span>
                     </div>
@@ -291,22 +288,22 @@ export default function EmployeeDashboard() {
           </div>
 
           {/* Payslip Panel */}
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-8 relative overflow-hidden shadow-sm hover:border-orange-500/20 transition-all duration-300 print:border-none print:bg-transparent print:p-0 print:rounded-none print:overflow-visible">
-            <h2 className="text-[10px] font-bold text-orange-600 uppercase tracking-widest font-mono mb-6 print:text-black print:text-center print:text-sm print:font-bold">
+          <div className="bg-white border border-slate-200 rounded-xl p-8 shadow-sm print:border-none print:bg-transparent print:p-0 print:rounded-none print:overflow-visible">
+            <h2 className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-6 print:text-black print:text-center print:text-sm print:font-bold">
               WAGES PAYSLIP REGISTER | {MONTH_NAMES[selectedMonth - 1]?.toUpperCase()} {selectedYear}
             </h2>
             
             {isLoading ? (
-              <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
-                <RefreshCw className="w-6 h-6 text-orange-500 animate-spin" />
-                <p className="text-xs font-mono uppercase tracking-widest text-orange-500">Fetching Payslip...</p>
+              <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
+                <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin" />
+                <p className="text-xs font-semibold text-indigo-650">Fetching Payslip...</p>
               </div>
             ) : payroll ? (
-              <div className="space-y-8 font-mono text-xs text-slate-600">
+              <div className="space-y-8 text-xs text-slate-650">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Earnings Column */}
                   <div className="space-y-4">
-                    <h3 className="text-[10px] font-bold text-emerald-600 border-b border-slate-200 pb-2 uppercase tracking-widest print:text-black print:border-black/20">EARNINGS</h3>
+                    <h3 className="text-xs font-bold text-emerald-600 border-b border-slate-200 pb-2 uppercase tracking-wider print:text-black print:border-black/20">EARNINGS</h3>
                     <div className="space-y-2.5">
                       <div className="flex justify-between">
                         <span className="text-slate-400 print:text-slate-600">Basic Pay</span>
@@ -339,7 +336,7 @@ export default function EmployeeDashboard() {
 
                   {/* Deductions Column */}
                   <div className="space-y-4">
-                    <h3 className="text-[10px] font-bold text-rose-600 border-b border-slate-200 pb-2 uppercase tracking-widest print:text-black print:border-black/20">DEDUCTIONS</h3>
+                    <h3 className="text-xs font-bold text-rose-600 border-b border-slate-200 pb-2 uppercase tracking-wider print:text-black print:border-black/20">DEDUCTIONS</h3>
                     <div className="space-y-2.5">
                       <div className="flex justify-between">
                         <span className="text-slate-400 print:text-slate-600">Provident Fund (PF - 12%)</span>
@@ -372,14 +369,14 @@ export default function EmployeeDashboard() {
                 </div>
 
                 {/* Net Pay Box */}
-                <div className="bg-slate-50 p-4 border border-slate-200 rounded-2xl flex items-center justify-between print:border-none print:bg-slate-100">
+                <div className="bg-slate-50 p-4 border border-slate-200 rounded-lg flex items-center justify-between print:border-none print:bg-slate-100">
                   <span className="text-xs font-bold text-slate-500 print:text-black">NET TAKE-HOME WAGES</span>
-                  <span className="text-lg font-bold text-orange-600 print:text-black">₹{payroll.netSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span className="text-lg font-bold text-indigo-600 print:text-black">₹{payroll.netSalary.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
               </div>
             ) : (
-              <div className="p-12 text-center text-slate-400 border border-slate-200 border-dashed rounded-3xl flex flex-col items-center justify-center gap-3">
-                <AlertCircle className="w-8 h-8 text-amber-500" />
+              <div className="p-12 text-center text-slate-400 border border-slate-200 border-dashed rounded-lg flex flex-col items-center justify-center gap-2">
+                <AlertCircle className="w-8 h-8 text-amber-500 shrink-0" />
                 <p className="text-sm font-semibold">Wages for the selected pay cycle have not been finalized yet.</p>
               </div>
             )}
@@ -455,14 +452,13 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
   };
 
   return (
-    <div className="space-y-4 border border-slate-200/80 bg-white p-6 rounded-3xl font-mono text-xs relative overflow-hidden shadow-sm hover:border-orange-500/20 transition-all duration-300">
-      <div className="absolute top-0 left-0 w-full h-[3px] bg-orange-500" />
+    <div className="space-y-4 border border-slate-200 bg-white p-6 rounded-xl text-xs relative overflow-hidden shadow-sm">
       
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200/60 pb-3 mt-1">
-        <h4 className="text-[10px] font-black text-orange-600 uppercase tracking-widest">
-          📅 Attendance Grid
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+          Attendance Grid
         </h4>
-        <div className="flex flex-wrap gap-2 text-[8px] font-bold text-slate-400 uppercase tracking-wider">
+        <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-450 uppercase tracking-wider">
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500 inline-block" />P</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500 inline-block" />L</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-purple-500 inline-block" />OT</span>
@@ -491,36 +487,36 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
           const workedJobs = empJobsMap[dateStr] || [];
           const hasJob = workedJobs.length > 0;
 
-          let cellClass = "bg-slate-100/50 text-slate-400 border-slate-100";
+          let cellClass = "bg-slate-50 text-slate-400 border-slate-200";
           let badgeText = "";
           let textColor = "text-slate-400";
 
           if (log) {
             const status = log.status.toUpperCase();
             if (status.includes('PRESENT')) {
-              cellClass = "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm";
+              cellClass = "bg-emerald-50 text-emerald-700 border-emerald-250 shadow-2xs";
               textColor = "text-emerald-700";
               badgeText = "P";
             } else if (status.includes('LATE')) {
-              cellClass = "bg-amber-50 text-amber-700 border-amber-200 shadow-sm";
+              cellClass = "bg-amber-50 text-amber-700 border-amber-250 shadow-2xs";
               textColor = "text-amber-700";
               badgeText = "L";
             } else if (status.includes('OVERTIME')) {
-              cellClass = "bg-purple-50 text-purple-700 border-purple-200 shadow-sm";
+              cellClass = "bg-purple-50 text-purple-700 border-purple-250 shadow-2xs";
               textColor = "text-purple-700";
               badgeText = "OT";
             } else if (status.includes('HALF_DAY')) {
-              cellClass = "bg-cyan-50 text-cyan-700 border-cyan-200 shadow-sm";
+              cellClass = "bg-cyan-50 text-cyan-700 border-cyan-250 shadow-2xs";
               textColor = "text-cyan-700";
               badgeText = "H";
             }
           } else if (!isWeekend) {
-            cellClass = "bg-rose-50 text-rose-700 border-rose-200 shadow-sm";
+            cellClass = "bg-rose-50 text-rose-700 border-rose-250 shadow-2xs";
             textColor = "text-rose-700";
             badgeText = "A";
           } else {
-            cellClass = "bg-slate-100/20 text-slate-300 border-slate-100/40";
-            textColor = "text-slate-300";
+            cellClass = "bg-slate-50 text-slate-350 border-slate-150";
+            textColor = "text-slate-450";
           }
 
           return (
@@ -528,16 +524,16 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
               type="button"
               key={`day-${dayNum}`}
               onClick={() => setSelectedDayDetails({ dayNum, log, workedJobs, isWeekend })}
-              className={`h-11 border rounded-xl flex flex-col justify-between p-1 text-left relative transition-all hover:scale-105 active:scale-95 cursor-pointer ${cellClass} ${
-                hasJob ? 'ring-1 ring-cyan-500/50 border-cyan-400 bg-cyan-50/20' : ''
+              className={`h-11 border rounded-lg flex flex-col justify-between p-1 text-left relative transition-all hover:scale-102 cursor-pointer ${cellClass} ${
+                hasJob ? 'ring-1 ring-indigo-500/50 border-indigo-400 bg-indigo-50/10' : ''
               }`}
             >
-              <span className={`text-[9px] font-bold ${textColor}`}>{dayNum}</span>
+              <span className={`text-[10px] font-bold ${textColor}`}>{dayNum}</span>
               
               <div className="flex items-center justify-between w-full mt-auto">
-                <span className="text-[8px] font-extrabold tracking-tighter opacity-80">{badgeText}</span>
+                <span className="text-[9px] font-bold opacity-80">{badgeText}</span>
                 {hasJob && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" title="Load jobs logged" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" title="Load jobs logged" />
                 )}
               </div>
             </button>
@@ -546,10 +542,10 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
       </div>
 
       {selectedDayDetails && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <h5 className="font-bold text-slate-950 font-sans">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h5 className="font-bold text-slate-900 font-sans">
                 Date: {monthNames[month - 1]} {selectedDayDetails.dayNum}, {year}
               </h5>
               <button 
@@ -560,10 +556,10 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
                 ✕
               </button>
             </div>
-            <div className="p-5 space-y-4 font-mono text-xs text-slate-600">
+            <div className="p-5 space-y-4 text-xs text-slate-600">
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Biometric Time Clock</p>
-                <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl space-y-1.5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Biometric Time Clock</p>
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg space-y-1.5">
                   <div className="flex justify-between">
                     <span>Status:</span> 
                     <strong className={`font-bold ${
@@ -587,26 +583,26 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
               </div>
 
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-cyan-600 uppercase tracking-widest">Supervisor Loading Jobs</p>
+                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Supervisor Loading Jobs</p>
                 {selectedDayDetails.workedJobs.length === 0 ? (
-                  <p className="text-[10px] text-slate-400 italic bg-slate-50/50 p-2 rounded-xl border border-slate-100">No loading jobs recorded on this day.</p>
+                  <p className="text-[10px] text-slate-450 italic bg-slate-50 p-2 rounded-lg border border-slate-200">No loading jobs recorded on this day.</p>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {selectedDayDetails.workedJobs.map((job: any) => (
-                      <div key={job.id} className="bg-cyan-50/20 border border-cyan-100 p-2.5 rounded-xl space-y-1">
+                      <div key={job.id} className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
                         <div className="font-bold text-slate-800 font-sans truncate">{job.jobName}</div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Tonnage:</span> <span className="text-slate-600">{job.totalTons} {job.unit}</span>
+                          <span>Tonnage:</span> <span className="text-slate-650">{job.totalTons} {job.unit}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Rate per Unit:</span> <span className="text-slate-600">₹{job.ratePerTon}</span>
+                          <span>Rate per Unit:</span> <span className="text-slate-650">₹{job.ratePerTon}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Crew Size:</span> <span className="text-slate-600">{job.employees.length} members</span>
+                          <span>Crew Size:</span> <span className="text-slate-650">{job.employees.length} members</span>
                         </div>
-                        <div className="flex justify-between text-[10px] border-t border-cyan-100/60 pt-1 mt-1 font-bold">
-                          <span className="text-cyan-700">Split Earnings:</span> 
-                          <span className="text-cyan-700">₹{getJobSplit(job).toFixed(2)}</span>
+                        <div className="flex justify-between text-[10px] border-t border-slate-200 pt-1 mt-1 font-bold">
+                          <span className="text-indigo-600">Split Earnings:</span> 
+                          <span className="text-indigo-600">₹{getJobSplit(job).toFixed(2)}</span>
                         </div>
                       </div>
                     ))}
@@ -617,7 +613,7 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
               <button
                 type="button"
                 onClick={() => setSelectedDayDetails(null)}
-                className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase text-[10px] rounded-xl transition-colors cursor-pointer"
+                className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase text-[10px] rounded-lg transition-colors cursor-pointer"
               >
                 Close
               </button>

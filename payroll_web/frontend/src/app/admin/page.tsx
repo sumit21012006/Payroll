@@ -896,26 +896,26 @@ export default function AdminDashboard() {
           </div>
 
           {isLoading ? (
-            <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
-              <RefreshCw className="w-7 h-7 text-orange-500 animate-spin" />
-              <p className="text-xs font-mono uppercase tracking-widest text-orange-500">Syncing database entries...</p>
+            <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
+              <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" />
+              <p className="text-xs font-semibold text-indigo-650">Syncing database entries...</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse font-mono text-xs text-slate-600">
+              <table className="w-full text-left border-collapse text-xs text-slate-655 font-sans">
                 <thead>
-                  <tr className="border-b border-slate-200 text-[9px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50/20">
-                    <th onClick={() => handleSort('id')} className="px-6 py-4 cursor-pointer hover:text-slate-600">ID {sortField === 'id' && (sortAscending ? '▲' : '▼')}</th>
-                    <th onClick={() => handleSort('name')} className="px-6 py-4 cursor-pointer hover:text-slate-600">Name {sortField === 'name' && (sortAscending ? '▲' : '▼')}</th>
+                  <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-450 bg-slate-50">
+                    <th onClick={() => handleSort('id')} className="px-6 py-4 cursor-pointer hover:text-slate-900 select-none">ID {sortField === 'id' && (sortAscending ? '▲' : '▼')}</th>
+                    <th onClick={() => handleSort('name')} className="px-6 py-4 cursor-pointer hover:text-slate-900 select-none">Name {sortField === 'name' && (sortAscending ? '▲' : '▼')}</th>
                     <th className="px-6 py-4">Department</th>
                     
                     {activeTab === 'profiles' ? (
                       <>
                         <th className="px-6 py-4 text-center">Basis</th>
-                        <th onClick={() => handleSort('workedDays')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-600">Days worked {sortField === 'workedDays' && (sortAscending ? '▲' : '▼')}</th>
-                        <th onClick={() => handleSort('overtimeHours')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-600">OT Hours {sortField === 'overtimeHours' && (sortAscending ? '▲' : '▼')}</th>
-                        <th onClick={() => handleSort('totalDeductions')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-600">Deductions {sortField === 'totalDeductions' && (sortAscending ? '▲' : '▼')}</th>
-                        <th onClick={() => handleSort('netSalary')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-600">Net Wage {sortField === 'netSalary' && (sortAscending ? '▲' : '▼')}</th>
+                        <th onClick={() => handleSort('workedDays')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-900 select-none">Days worked {sortField === 'workedDays' && (sortAscending ? '▲' : '▼')}</th>
+                        <th onClick={() => handleSort('overtimeHours')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-900 select-none">OT Hours {sortField === 'overtimeHours' && (sortAscending ? '▲' : '▼')}</th>
+                        <th onClick={() => handleSort('totalDeductions')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-900 select-none">Deductions {sortField === 'totalDeductions' && (sortAscending ? '▲' : '▼')}</th>
+                        <th onClick={() => handleSort('netSalary')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-900 select-none">Net Wage {sortField === 'netSalary' && (sortAscending ? '▲' : '▼')}</th>
                         <th className="px-6 py-4 text-center">Actions</th>
                       </>
                     ) : (
@@ -923,7 +923,7 @@ export default function AdminDashboard() {
                         <th className="px-6 py-4 text-right">Account Adv</th>
                         <th className="px-6 py-4 text-right">Remaining Adv</th>
                         <th className="px-6 py-4 text-right">MLWL (LWF)</th>
-                        <th onClick={() => handleSort('netSalary')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-600">Net Wage {sortField === 'netSalary' && (sortAscending ? '▲' : '▼')}</th>
+                        <th onClick={() => handleSort('netSalary')} className="px-6 py-4 text-right cursor-pointer hover:text-slate-900 select-none">Net Wage {sortField === 'netSalary' && (sortAscending ? '▲' : '▼')}</th>
                         <th className="px-6 py-4 text-center">Actions</th>
                       </>
                     )}
@@ -935,26 +935,26 @@ export default function AdminDashboard() {
                     const calculatedRun = payrollRuns.find(r => r.employeeId === emp.employeeId);
                     
                     return (
-                      <tr key={emp.employeeId} className="hover:bg-slate-50/30 transition-colors">
+                      <tr key={emp.employeeId} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 font-bold text-slate-400">{emp.employeeId}</td>
-                        <td className="px-6 py-4 text-slate-800 font-bold font-sans">{emp.name}</td>
-                        <td className="px-6 py-4 text-slate-500">{emp.department}</td>
+                        <td className="px-6 py-4 text-slate-900 font-bold font-sans">{emp.name}</td>
+                        <td className="px-6 py-4 text-slate-500 font-sans">{emp.department}</td>
                         
                         {activeTab === 'profiles' ? (
                           <>
                             <td className="px-6 py-4 text-center">
-                              <span className={`px-2 py-0.5 rounded text-[8px] font-extrabold ${
+                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold ${
                                 isLoad 
-                                  ? 'bg-slate-100 text-slate-600 border border-slate-200' 
-                                  : 'bg-orange-50 text-orange-600 border border-orange-100'
+                                  ? 'bg-slate-100 text-slate-655 border border-slate-205' 
+                                  : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
                               }`}>
                                 {isLoad ? 'LOAD BASIS' : 'DAY BASIS'}
                               </span>
                             </td>
                             <td className="px-6 py-4 text-right text-slate-500">{calculatedRun ? `${calculatedRun.workedDays} Days` : '-'}</td>
                             <td className="px-6 py-4 text-right text-slate-500">{calculatedRun ? `${calculatedRun.overtimeHours.toFixed(1)} hrs` : '-'}</td>
-                            <td className="px-6 py-4 text-right text-rose-500 font-medium">{calculatedRun ? `₹${calculatedRun.totalDeductions.toFixed(0)}` : '-'}</td>
-                            <td className="px-6 py-4 text-right text-emerald-600 font-bold">
+                            <td className="px-6 py-4 text-right text-rose-500 font-medium font-sans">{calculatedRun ? `₹${calculatedRun.totalDeductions.toFixed(0)}` : '-'}</td>
+                            <td className="px-6 py-4 text-right text-emerald-600 font-bold font-sans">
                               {calculatedRun ? `₹${calculatedRun.netSalary.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'Not Run'}
                             </td>
                             <td className="px-6 py-4 text-center">
@@ -964,7 +964,7 @@ export default function AdminDashboard() {
                                     setSelectedEmployee(emp);
                                     setShowDetailsModal(true);
                                   }}
-                                  className="p-1 text-orange-600 hover:bg-orange-50 border border-transparent hover:border-orange-100 rounded-lg transition-colors cursor-pointer"
+                                  className="p-1.5 text-slate-450 hover:text-indigo-650 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                                   title="View biometric employee sheet"
                                 >
                                   <Eye className="w-4 h-4" />
@@ -973,7 +973,7 @@ export default function AdminDashboard() {
                                   onClick={() => {
                                     openEditEmployee(emp);
                                   }}
-                                  className="p-1 text-blue-600 hover:bg-blue-50 border border-transparent hover:border-blue-100 rounded-lg transition-colors cursor-pointer"
+                                  className="p-1.5 text-slate-450 hover:text-indigo-650 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                                   title="Edit employee profile"
                                 >
                                   <Edit3 className="w-4 h-4" />
@@ -983,18 +983,18 @@ export default function AdminDashboard() {
                           </>
                         ) : (
                           <>
-                            <td className="px-6 py-4 text-right text-slate-500">₹{emp.accountAdvance.toFixed(0)}</td>
-                            <td className="px-6 py-4 text-right text-slate-500">₹{emp.remainingAdvance.toFixed(0)}</td>
-                            <td className="px-6 py-4 text-right text-rose-500">
+                            <td className="px-6 py-4 text-right text-slate-500 font-sans">₹{emp.accountAdvance.toFixed(0)}</td>
+                            <td className="px-6 py-4 text-right text-slate-500 font-sans">₹{emp.remainingAdvance.toFixed(0)}</td>
+                            <td className="px-6 py-4 text-right text-rose-500 font-sans">
                               {calculatedRun && calculatedRun.mlwlDeduction > 0 ? `₹${calculatedRun.mlwlDeduction.toFixed(0)}` : '₹0'}
                             </td>
-                            <td className="px-6 py-4 text-right text-emerald-600 font-bold">
+                            <td className="px-6 py-4 text-right text-emerald-600 font-bold font-sans">
                               {calculatedRun ? `₹${calculatedRun.netSalary.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` : 'Not Run'}
                             </td>
                             <td className="px-6 py-4 text-center">
                               <button
                                 onClick={() => openEditAdvance(emp)}
-                                className="p-1.5 text-amber-600 hover:bg-amber-50 border border-transparent hover:border-amber-100 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-slate-450 hover:text-indigo-650 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                                 title="Edit Advances"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -1017,11 +1017,11 @@ export default function AdminDashboard() {
       {/* DETAILED EMPLOYEE PROFILE SHEET MODAL */}
       {/* ------------------------------------------------------------- */}
       {showDetailsModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
-                <Users className="w-5 h-5 text-orange-600" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
                 <span>Employee Biometric & Wages Sheet</span>
               </h3>
               <button 
@@ -1035,55 +1035,55 @@ export default function AdminDashboard() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto">
+            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto text-xs text-slate-655 font-sans">
               
               {/* Header profile details */}
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0">
-                  <h4 className="text-md font-bold text-slate-900 font-sans truncate">{selectedEmployee.name}</h4>
-                  <p className="text-xs text-slate-400 font-mono font-bold mt-0.5">{selectedEmployee.employeeId} | {selectedEmployee.department} Dept</p>
+                  <h4 className="text-sm font-bold text-slate-900 font-sans truncate">{selectedEmployee.name}</h4>
+                  <p className="text-xs text-slate-500 font-semibold mt-0.5">{selectedEmployee.employeeId} | {selectedEmployee.department} Dept</p>
                 </div>
                 
                 {/* Pay Basis toggle input */}
-                <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl p-1 shrink-0 font-mono text-[9px] font-bold">
-                  <span className={`px-2 py-1 rounded-lg transition-all ${selectedEmployee.salaryPerDay > 0 ? 'bg-orange-600 text-white font-black' : 'text-slate-400'}`}>DAY</span>
+                <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg p-1 shrink-0 text-[10px] font-bold">
+                  <span className={`px-2 py-1 rounded transition-all ${selectedEmployee.salaryPerDay > 0 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400'}`}>DAY</span>
                   <button
                     onClick={() => handleTogglePayBasis(selectedEmployee.employeeId, selectedEmployee.salaryPerDay === 0.0)}
                     className={`w-11 h-6 rounded-full p-0.5 transition-all relative ${
-                      selectedEmployee.salaryPerDay === 0.0 ? 'bg-orange-600' : 'bg-slate-200'
+                      selectedEmployee.salaryPerDay === 0.0 ? 'bg-indigo-600' : 'bg-slate-200'
                     }`}
                   >
                     <div 
-                      className={`w-5 h-5 rounded-full bg-white shadow-sm transition-all transform ${
+                      className={`w-5 h-5 rounded-full bg-white shadow-xs transition-all transform ${
                         selectedEmployee.salaryPerDay === 0.0 ? 'translate-x-5' : 'translate-x-0'
                       }`}
                     />
                   </button>
-                  <span className={`px-2 py-1 rounded-lg transition-all ${selectedEmployee.salaryPerDay === 0.0 ? 'bg-orange-600 text-white font-black' : 'text-slate-400'}`}>LOAD</span>
+                  <span className={`px-2 py-1 rounded transition-all ${selectedEmployee.salaryPerDay === 0.0 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400'}`}>LOAD</span>
                 </div>
               </div>
 
               {/* Statutory details box */}
-              <div className="border border-slate-100 bg-slate-50/50 p-4 rounded-2xl font-mono text-xs text-slate-600 space-y-2">
-                <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Statutory & Bank Credentials</p>
-                <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 pt-2.5">
+              <div className="border border-slate-200 bg-slate-50 p-4 rounded-lg text-slate-650 space-y-2">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Statutory & Bank Credentials</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-200 pt-2.5">
                   <div>
-                    <span className="text-slate-400">UAN:</span> <strong className="text-slate-700">{selectedEmployee.uan || 'N/A'}</strong>
+                    <span className="text-slate-400 font-semibold">UAN:</span> <strong className="text-slate-700">{selectedEmployee.uan || 'N/A'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">ESIC:</span> <strong className="text-slate-700">{selectedEmployee.esic || 'N/A'}</strong>
+                    <span className="text-slate-400 font-semibold">ESIC:</span> <strong className="text-slate-700">{selectedEmployee.esic || 'N/A'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">Bank:</span> <strong className="text-slate-700 font-sans">{selectedEmployee.bankName || 'N/A'}</strong>
+                    <span className="text-slate-400 font-semibold">Bank:</span> <strong className="text-slate-700 font-sans">{selectedEmployee.bankName || 'N/A'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">Account:</span> <strong className="text-slate-700">{selectedEmployee.bankAcc || 'N/A'}</strong>
+                    <span className="text-slate-400 font-semibold">Account:</span> <strong className="text-slate-700">{selectedEmployee.bankAcc || 'N/A'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">IFSC:</span> <strong className="text-slate-700">{selectedEmployee.ifscCode || 'N/A'}</strong>
+                    <span className="text-slate-400 font-semibold">IFSC:</span> <strong className="text-slate-700">{selectedEmployee.ifscCode || 'N/A'}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-400">Punch Code:</span> <strong className="text-slate-700">{selectedEmployee.punchingCode || 'N/A'}</strong>
+                    <span className="text-slate-400 font-semibold">Punch Code:</span> <strong className="text-slate-700">{selectedEmployee.punchingCode || 'N/A'}</strong>
                   </div>
                 </div>
               </div>
@@ -1091,35 +1091,35 @@ export default function AdminDashboard() {
               {/* Interactive wage breakdown calculation values */}
               {(() => {
                 const run = payrollRuns.find(r => r.employeeId === selectedEmployee.employeeId);
-                if (!run) return <p className="text-xs font-mono text-slate-400 italic">No wage logs run for this employee in selected period.</p>;
+                if (!run) return <p className="text-xs text-slate-400 italic">No wage logs run for this employee in selected period.</p>;
                 return (
-                  <div className="space-y-4 font-mono text-xs text-slate-600">
+                  <div className="space-y-4 text-xs text-slate-650">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <p className="text-[9px] font-black text-emerald-600 border-b border-emerald-100 pb-1 uppercase tracking-widest">Earnings</p>
-                        <div className="space-y-1.5 text-[11px]">
-                          <div className="flex justify-between"><span>Basic Pay:</span> <strong>₹{run.basicPay.toFixed(1)}</strong></div>
-                          <div className="flex justify-between"><span>Overtime:</span> <strong>₹{run.otPay.toFixed(1)}</strong></div>
-                          <div className="flex justify-between"><span>Job splits:</span> <strong>₹{run.jobEarnings.toFixed(1)}</strong></div>
+                        <p className="text-[10px] font-bold text-emerald-600 border-b border-emerald-100 pb-1 uppercase tracking-wider">Earnings</p>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between"><span>Basic Pay:</span> <strong className="text-slate-700">₹{run.basicPay.toFixed(1)}</strong></div>
+                          <div className="flex justify-between"><span>Overtime:</span> <strong className="text-slate-700">₹{run.otPay.toFixed(1)}</strong></div>
+                          <div className="flex justify-between"><span>Job splits:</span> <strong className="text-slate-700">₹{run.jobEarnings.toFixed(1)}</strong></div>
                           <div className="flex justify-between border-t border-slate-100 pt-1 font-bold text-slate-800">
                             <span>Gross Pay:</span> <span>₹{run.grossSalary.toFixed(1)}</span>
                           </div>
                         </div>
                       </div>
                       <div className="space-y-2">
-                        <p className="text-[9px] font-black text-rose-500 border-b border-rose-100 pb-1 uppercase tracking-widest">Deductions</p>
-                        <div className="space-y-1.5 text-[11px]">
-                          <div className="flex justify-between"><span>Provident Fund:</span> <strong>₹{run.pfDeduction.toFixed(1)}</strong></div>
-                          <div className="flex justify-between"><span>State Insur:</span> <strong>₹{run.esicDeduction.toFixed(1)}</strong></div>
-                          <div className="flex justify-between"><span>Prof Tax:</span> <strong>₹{run.ptDeduction.toFixed(1)}</strong></div>
-                          <div className="flex justify-between"><span>Advance paid:</span> <strong>₹{run.accountAdvance.toFixed(1)}</strong></div>
+                        <p className="text-[10px] font-bold text-rose-500 border-b border-rose-100 pb-1 uppercase tracking-wider">Deductions</p>
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between"><span>Provident Fund:</span> <strong className="text-slate-700">₹{run.pfDeduction.toFixed(1)}</strong></div>
+                          <div className="flex justify-between"><span>State Insur:</span> <strong className="text-slate-700">₹{run.esicDeduction.toFixed(1)}</strong></div>
+                          <div className="flex justify-between"><span>Prof Tax:</span> <strong className="text-slate-700">₹{run.ptDeduction.toFixed(1)}</strong></div>
+                          <div className="flex justify-between"><span>Advance paid:</span> <strong className="text-slate-700">₹{run.accountAdvance.toFixed(1)}</strong></div>
                           <div className="flex justify-between border-t border-slate-100 pt-1 font-bold text-rose-600">
                             <span>Total Deduct:</span> <span>₹{run.totalDeductions.toFixed(1)}</span>
                           </div>
                         </div>
                       </div>
                     </div>
-                    <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3.5 flex justify-between items-center text-xs font-bold">
+                    <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3.5 flex justify-between items-center text-xs font-bold">
                       <span className="text-emerald-700">NET TAKE-HOME WAGES:</span>
                       <span className="text-emerald-700 text-sm">₹{run.netSalary.toLocaleString('en-IN', { minimumFractionDigits: 1 })}</span>
                     </div>
@@ -1144,51 +1144,51 @@ export default function AdminDashboard() {
       {/* EDIT ADVANCES MODAL */}
       {/* ------------------------------------------------------------- */}
       {showAdvanceModal && employeeForAdvance && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
-                <Landmark className="w-5 h-5 text-orange-600" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-indigo-600" />
                 <span>Edit Advances & Deductions</span>
               </h3>
               <button onClick={() => { setShowAdvanceModal(false); setEmployeeForAdvance(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
             
-            <form onSubmit={handleSaveAdvances} className="p-6 space-y-4">
-              <p className="text-xs text-slate-500 font-mono">Employee: <strong>{employeeForAdvance.name}</strong> ({employeeForAdvance.employeeId})</p>
+            <form onSubmit={handleSaveAdvances} className="p-6 space-y-4 text-xs text-slate-655 font-sans">
+              <p>Employee: <strong className="text-slate-800">{employeeForAdvance.name}</strong> ({employeeForAdvance.employeeId})</p>
               
-              <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Account Advance (₹)</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Advance (₹)</label>
                 <input
                   type="number"
                   step="any"
                   required
                   value={advFormAcc}
                   onChange={(e) => setAdvFormAcc(e.target.value)}
-                  className="w-full h-11 bg-slate-50/50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-4 text-slate-850 font-bold focus:outline-none"
+                  className="w-full h-10 bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-4 text-slate-800 font-bold focus:outline-none"
                 />
               </div>
 
-              <div className="space-y-1.5 font-mono text-xs">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Remaining Advance Ledger (₹)</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Remaining Advance Ledger (₹)</label>
                 <input
                   type="number"
                   step="any"
                   required
                   value={advFormRem}
                   onChange={(e) => setAdvFormRem(e.target.value)}
-                  className="w-full h-11 bg-slate-50/50 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-4 text-slate-850 font-bold focus:outline-none"
+                  className="w-full h-10 bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-4 text-slate-800 font-bold focus:outline-none"
                 />
               </div>
 
               {advMessage && (
-                <p className={`text-xs font-mono font-bold mt-2 p-3 border rounded-xl ${advMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{advMessage}</p>
+                <p className={`text-xs font-semibold mt-2 p-3 border rounded-lg ${advMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{advMessage}</p>
               )}
 
               <button
                 type="submit"
                 disabled={isSavingAdv}
-                className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer disabled:opacity-55"
+                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isSavingAdv ? 'Saving changes...' : 'Save Advances Ledger'}
               </button>
@@ -1201,30 +1201,30 @@ export default function AdminDashboard() {
       {/* ADD NEW EMPLOYEE MODAL */}
       {/* ------------------------------------------------------------- */}
       {showAddEmployeeModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
-                <Plus className="w-5 h-5 text-orange-600" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Plus className="w-5 h-5 text-indigo-600" />
                 <span>Add New Employee Profile</span>
               </h3>
               <button onClick={() => setShowAddEmployeeModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <form onSubmit={handleAddEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto font-mono text-xs text-slate-600">
-              <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Primary Info</p>
+            <form onSubmit={handleAddEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-655 font-sans">
+              <p className="text-[10px] font-bold text-indigo-650 uppercase tracking-wider">Primary Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Employee ID *</label>
-                  <input type="text" required value={addEmpId} onChange={(e) => setAddEmpId(e.target.value)} placeholder="e.g. KFIL/L1-502" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Employee ID *</label>
+                  <input type="text" required value={addEmpId} onChange={(e) => setAddEmpId(e.target.value)} placeholder="e.g. KFIL/L1-502" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Full Name *</label>
-                  <input type="text" required value={addEmpName} onChange={(e) => setAddEmpName(e.target.value)} placeholder="e.g. AMIT RATHOD" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-sans" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Full Name *</label>
+                  <input type="text" required value={addEmpName} onChange={(e) => setAddEmpName(e.target.value)} placeholder="e.g. AMIT RATHOD" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-sans" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Department *</label>
-                  <select value={addEmpDept} onChange={(e) => setAddEmpDept(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Department *</label>
+                  <select value={addEmpDept} onChange={(e) => setAddEmpDept(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer">
                     <option value="HE">HE</option>
                     <option value="FINAL">FINAL</option>
                     <option value="REWORK">REWORK</option>
@@ -1235,22 +1235,22 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Mobile Number</label>
-                  <input type="text" value={addEmpMobile} onChange={(e) => setAddEmpMobile(e.target.value)} placeholder="Mobile No" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Mobile Number</label>
+                  <input type="text" value={addEmpMobile} onChange={(e) => setAddEmpMobile(e.target.value)} placeholder="Mobile No" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 {addEmpDept === 'Other' && (
                   <div className="col-span-2 space-y-1.5">
-                    <label className="text-[9px] font-bold text-orange-600 uppercase">Custom Department Name *</label>
-                    <input type="text" required value={addEmpCustomDept} onChange={(e) => setAddEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                    <label className="text-[10px] font-bold text-indigo-650 uppercase">Custom Department Name *</label>
+                    <input type="text" required value={addEmpCustomDept} onChange={(e) => setAddEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Biometric Punch Code</label>
-                  <input type="text" value={addEmpPunchCode} onChange={(e) => setAddEmpPunchCode(e.target.value)} placeholder="e.g. FOU190" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Biometric Punch Code</label>
+                  <input type="text" value={addEmpPunchCode} onChange={(e) => setAddEmpPunchCode(e.target.value)} placeholder="e.g. FOU190" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Payment Basis *</label>
-                  <select value={addEmpBasis} onChange={(e) => setAddEmpBasis(e.target.value as any)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Basis *</label>
+                  <select value={addEmpBasis} onChange={(e) => setAddEmpBasis(e.target.value as any)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer">
                     <option value="Day Basis">Day Basis</option>
                     <option value="Load Basis">Load Basis</option>
                   </select>
@@ -1258,49 +1258,49 @@ export default function AdminDashboard() {
                 {addEmpBasis === 'Day Basis' && (
                   <>
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Salary Per Day (₹) *</label>
-                      <input type="number" step="any" required value={addEmpRate} onChange={(e) => setAddEmpRate(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Salary Per Day (₹) *</label>
+                      <input type="number" step="any" required value={addEmpRate} onChange={(e) => setAddEmpRate(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Deduction Per Day (₹) *</label>
-                      <input type="number" step="any" required value={addEmpDeduct} onChange={(e) => setAddEmpDeduct(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Deduction Per Day (₹) *</label>
+                      <input type="number" step="any" required value={addEmpDeduct} onChange={(e) => setAddEmpDeduct(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold" />
                     </div>
                   </>
                 )}
               </div>
 
-              <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest pt-2">Statutory & Bank Credentials</p>
+              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider pt-2">Statutory & Bank Credentials</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">UAN Number</label>
-                  <input type="text" value={addEmpUan} onChange={(e) => setAddEmpUan(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">UAN Number</label>
+                  <input type="text" value={addEmpUan} onChange={(e) => setAddEmpUan(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">ESIC Number</label>
-                  <input type="text" value={addEmpEsic} onChange={(e) => setAddEmpEsic(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">ESIC Number</label>
+                  <input type="text" value={addEmpEsic} onChange={(e) => setAddEmpEsic(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Bank Name</label>
-                  <input type="text" value={addEmpBankName} onChange={(e) => setAddEmpBankName(e.target.value)} placeholder="State Bank" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-sans" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</label>
+                  <input type="text" value={addEmpBankName} onChange={(e) => setAddEmpBankName(e.target.value)} placeholder="State Bank" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-sans" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">IFSC Code</label>
-                  <input type="text" value={addEmpIfsc} onChange={(e) => setAddEmpIfsc(e.target.value)} placeholder="IFSC" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">IFSC Code</label>
+                  <input type="text" value={addEmpIfsc} onChange={(e) => setAddEmpIfsc(e.target.value)} placeholder="IFSC" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="col-span-2 space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Bank Account Number</label>
-                  <input type="text" value={addEmpBankAcc} onChange={(e) => setAddEmpBankAcc(e.target.value)} placeholder="Acc No" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Bank Account Number</label>
+                  <input type="text" value={addEmpBankAcc} onChange={(e) => setAddEmpBankAcc(e.target.value)} placeholder="Acc No" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
               </div>
 
               {addEmpMessage && (
-                <p className={`text-xs font-mono font-bold mt-2 p-3 border rounded-xl ${addEmpMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{addEmpMessage}</p>
+                <p className={`text-xs font-semibold mt-2 p-3 border rounded-lg ${addEmpMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{addEmpMessage}</p>
               )}
 
               <button
                 type="submit"
                 disabled={isAddingEmp}
-                className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer disabled:opacity-55"
+                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isAddingEmp ? 'Saving profile...' : 'Save Employee Profile'}
               </button>
@@ -1313,30 +1313,30 @@ export default function AdminDashboard() {
       {/* EDIT EMPLOYEE MODAL */}
       {/* ------------------------------------------------------------- */}
       {showEditEmployeeModal && selectedEmployee && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-orange-600" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Edit3 className="w-5 h-5 text-indigo-600" />
                 <span>Edit Employee Profile</span>
               </h3>
               <button onClick={() => { setShowEditEmployeeModal(false); setSelectedEmployee(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <form onSubmit={handleEditEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto font-mono text-xs text-slate-600">
-              <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Primary Info</p>
+            <form onSubmit={handleEditEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-655 font-sans">
+              <p className="text-[10px] font-bold text-indigo-650 uppercase tracking-wider">Primary Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Employee ID (Static)</label>
-                  <input type="text" disabled value={selectedEmployee.employeeId} className="w-full h-10 border border-slate-200 bg-slate-50 text-slate-400 rounded-xl px-3 focus:outline-none cursor-not-allowed font-bold" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Employee ID (Static)</label>
+                  <input type="text" disabled value={selectedEmployee.employeeId} className="w-full h-10 border border-slate-200 bg-slate-50 text-slate-400 rounded-lg px-3 focus:outline-none cursor-not-allowed font-bold" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Full Name *</label>
-                  <input type="text" required value={editEmpName} onChange={(e) => setEditEmpName(e.target.value)} placeholder="e.g. AMIT RATHOD" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-sans" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Full Name *</label>
+                  <input type="text" required value={editEmpName} onChange={(e) => setEditEmpName(e.target.value)} placeholder="e.g. AMIT RATHOD" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-sans" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Department *</label>
-                  <select value={editEmpDept} onChange={(e) => setEditEmpDept(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Department *</label>
+                  <select value={editEmpDept} onChange={(e) => setEditEmpDept(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer">
                     <option value="HE">HE</option>
                     <option value="FINAL">FINAL</option>
                     <option value="REWORK">REWORK</option>
@@ -1347,22 +1347,22 @@ export default function AdminDashboard() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Mobile Number</label>
-                  <input type="text" value={editEmpMobile} onChange={(e) => setEditEmpMobile(e.target.value)} placeholder="Mobile No" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Mobile Number</label>
+                  <input type="text" value={editEmpMobile} onChange={(e) => setEditEmpMobile(e.target.value)} placeholder="Mobile No" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 {editEmpDept === 'Other' && (
                   <div className="col-span-2 space-y-1.5">
-                    <label className="text-[9px] font-bold text-orange-600 uppercase">Custom Department Name *</label>
-                    <input type="text" required value={editEmpCustomDept} onChange={(e) => setEditEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                    <label className="text-[10px] font-bold text-indigo-650 uppercase">Custom Department Name *</label>
+                    <input type="text" required value={editEmpCustomDept} onChange={(e) => setEditEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                   </div>
                 )}
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Biometric Punch Code</label>
-                  <input type="text" value={editEmpPunchCode} onChange={(e) => setEditEmpPunchCode(e.target.value)} placeholder="e.g. FOU190" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Biometric Punch Code</label>
+                  <input type="text" value={editEmpPunchCode} onChange={(e) => setEditEmpPunchCode(e.target.value)} placeholder="e.g. FOU190" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Payment Basis *</label>
-                  <select value={editEmpBasis} onChange={(e) => setEditEmpBasis(e.target.value as any)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-2 focus:outline-none cursor-pointer">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Payment Basis *</label>
+                  <select value={editEmpBasis} onChange={(e) => setEditEmpBasis(e.target.value as any)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer">
                     <option value="Day Basis">Day Basis</option>
                     <option value="Load Basis">Load Basis</option>
                   </select>
@@ -1370,49 +1370,49 @@ export default function AdminDashboard() {
                 {editEmpBasis === 'Day Basis' && (
                   <>
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Salary Per Day (₹) *</label>
-                      <input type="number" step="any" required value={editEmpRate} onChange={(e) => setEditEmpRate(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Salary Per Day (₹) *</label>
+                      <input type="number" step="any" required value={editEmpRate} onChange={(e) => setEditEmpRate(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold" />
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[9px] font-bold text-slate-400 uppercase">Deduction Per Day (₹) *</label>
-                      <input type="number" step="any" required value={editEmpDeduct} onChange={(e) => setEditEmpDeduct(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Deduction Per Day (₹) *</label>
+                      <input type="number" step="any" required value={editEmpDeduct} onChange={(e) => setEditEmpDeduct(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold" />
                     </div>
                   </>
                 )}
               </div>
 
-              <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest pt-2">Statutory & Bank Credentials</p>
+              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider pt-2">Statutory & Bank Credentials</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">UAN Number</label>
-                  <input type="text" value={editEmpUan} onChange={(e) => setEditEmpUan(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">UAN Number</label>
+                  <input type="text" value={editEmpUan} onChange={(e) => setEditEmpUan(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">ESIC Number</label>
-                  <input type="text" value={editEmpEsic} onChange={(e) => setEditEmpEsic(e.target.value)} className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">ESIC Number</label>
+                  <input type="text" value={editEmpEsic} onChange={(e) => setEditEmpEsic(e.target.value)} className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Bank Name</label>
-                  <input type="text" value={editEmpBankName} onChange={(e) => setEditEmpBankName(e.target.value)} placeholder="State Bank" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-sans" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Bank Name</label>
+                  <input type="text" value={editEmpBankName} onChange={(e) => setEditEmpBankName(e.target.value)} placeholder="State Bank" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-sans" />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">IFSC Code</label>
-                  <input type="text" value={editEmpIfsc} onChange={(e) => setEditEmpIfsc(e.target.value)} placeholder="IFSC" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">IFSC Code</label>
+                  <input type="text" value={editEmpIfsc} onChange={(e) => setEditEmpIfsc(e.target.value)} placeholder="IFSC" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
                 <div className="col-span-2 space-y-1.5">
-                  <label className="text-[9px] font-bold text-slate-400 uppercase">Bank Account Number</label>
-                  <input type="text" value={editEmpBankAcc} onChange={(e) => setEditEmpBankAcc(e.target.value)} placeholder="Acc No" className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase">Bank Account Number</label>
+                  <input type="text" value={editEmpBankAcc} onChange={(e) => setEditEmpBankAcc(e.target.value)} placeholder="Acc No" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                 </div>
               </div>
 
               {editEmpMessage && (
-                <p className={`text-xs font-mono font-bold mt-2 p-3 border rounded-xl ${editEmpMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{editEmpMessage}</p>
+                <p className={`text-xs font-semibold mt-2 p-3 border rounded-lg ${editEmpMessage.startsWith('Success') ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-rose-50 text-rose-700 border-rose-100'}`}>{editEmpMessage}</p>
               )}
 
               <button
                 type="submit"
                 disabled={isEditingEmp}
-                className="w-full h-11 bg-orange-600 hover:bg-orange-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-orange-500/10 cursor-pointer disabled:opacity-55"
+                className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50"
               >
                 {isEditingEmp ? 'Saving profile...' : 'Save Employee Profile'}
               </button>
@@ -1427,49 +1427,49 @@ export default function AdminDashboard() {
       {/* BIOMETRIC ATTENDANCE EXPORT MODAL */}
       {/* ------------------------------------------------------------- */}
       {showAttExportModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="font-bold text-slate-900 font-display flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-orange-600" />
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-600" />
                 <span>Export Attendance Logs</span>
               </h3>
               <button onClick={() => setShowAttExportModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <div className="p-6 space-y-4 font-mono text-xs text-slate-600">
-              <p className="text-[10px] text-slate-400 leading-relaxed font-sans">
+            <div className="p-6 space-y-4 text-xs text-slate-655 font-sans">
+              <p className="text-[10px] text-slate-450 leading-relaxed font-sans">
                 Select a custom date range to export all employee check-in/check-out logs downloaded from the biometric devices.
               </p>
               
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">Start Date</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Start Date</label>
                 <input 
                   type="date" 
                   value={attExportStartDate} 
                   onChange={(e) => setAttExportStartDate(e.target.value)} 
-                  className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" 
+                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold text-slate-800" 
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[9px] font-bold text-slate-400 uppercase">End Date</label>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">End Date</label>
                 <input 
                   type="date" 
                   value={attExportEndDate} 
                   onChange={(e) => setAttExportEndDate(e.target.value)} 
-                  className="w-full h-10 border border-slate-200 focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 rounded-xl px-3 focus:outline-none font-bold" 
+                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold text-slate-800" 
                 />
               </div>
 
               {attExportMessage && (
-                <p className="text-[10px] font-mono font-bold text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-xl">{attExportMessage}</p>
+                <p className="text-[10px] font-semibold text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-lg">{attExportMessage}</p>
               )}
 
               <button
                 onClick={handleDownloadAttendance}
                 disabled={isExportingAtt}
-                className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white font-mono text-xs font-bold uppercase tracking-widest rounded-xl transition-all duration-300 shadow-emerald-500/10 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-55"
+                className="w-full h-10 bg-emerald-650 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {isExportingAtt ? (
                   <>
@@ -1547,17 +1547,17 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
   };
 
   return (
-    <div className="space-y-4 border border-slate-100 bg-slate-50/50 p-4 rounded-2xl font-mono text-xs mt-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200/60 pb-3">
-        <h4 className="text-[10px] font-black text-orange-600 uppercase tracking-widest">
-          📅 {monthNames[month - 1]} {year} Attendance Calendar
+    <div className="space-y-4 border border-slate-200 bg-white p-4 rounded-xl text-xs mt-6 shadow-xs font-sans">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-3">
+        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+          Attendance Calendar
         </h4>
-        <div className="flex flex-wrap gap-2 text-[8px] font-bold text-slate-400 uppercase tracking-wider">
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-500 inline-block" />P</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-500 inline-block" />L</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-purple-500 inline-block" />OT</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-cyan-500 inline-block" />H</span>
-          <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-rose-500 inline-block" />A</span>
+        <div className="flex flex-wrap gap-2 text-[10px] font-bold text-slate-450 uppercase tracking-wider">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-emerald-500 inline-block" />P</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-amber-500 inline-block" />L</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-purple-500 inline-block" />OT</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-cyan-500 inline-block" />H</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded bg-rose-500 inline-block" />A</span>
         </div>
       </div>
 
@@ -1581,36 +1581,36 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
           const workedJobs = empJobsMap[dateStr] || [];
           const hasJob = workedJobs.length > 0;
 
-          let cellClass = "bg-slate-100/50 text-slate-400 border-slate-100";
+          let cellClass = "bg-slate-50 text-slate-400 border-slate-200";
           let badgeText = "";
           let textColor = "text-slate-400";
 
           if (log) {
             const status = log.status.toUpperCase();
             if (status.includes('PRESENT')) {
-              cellClass = "bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm";
+              cellClass = "bg-emerald-50 text-emerald-700 border-emerald-250 shadow-2xs";
               textColor = "text-emerald-700";
               badgeText = "P";
             } else if (status.includes('LATE')) {
-              cellClass = "bg-amber-50 text-amber-700 border-amber-200 shadow-sm";
+              cellClass = "bg-amber-50 text-amber-700 border-amber-250 shadow-2xs";
               textColor = "text-amber-700";
               badgeText = "L";
             } else if (status.includes('OVERTIME')) {
-              cellClass = "bg-purple-50 text-purple-700 border-purple-200 shadow-sm";
+              cellClass = "bg-purple-50 text-purple-700 border-purple-250 shadow-2xs";
               textColor = "text-purple-700";
               badgeText = "OT";
             } else if (status.includes('HALF_DAY')) {
-              cellClass = "bg-cyan-50 text-cyan-700 border-cyan-200 shadow-sm";
+              cellClass = "bg-cyan-50 text-cyan-700 border-cyan-250 shadow-2xs";
               textColor = "text-cyan-700";
               badgeText = "H";
             }
           } else if (!isWeekend) {
-            cellClass = "bg-rose-50 text-rose-700 border-rose-200 shadow-sm";
+            cellClass = "bg-rose-50 text-rose-700 border-rose-250 shadow-2xs";
             textColor = "text-rose-700";
             badgeText = "A";
           } else {
-            cellClass = "bg-slate-100/20 text-slate-300 border-slate-100/40";
-            textColor = "text-slate-300";
+            cellClass = "bg-slate-50 text-slate-350 border-slate-150";
+            textColor = "text-slate-450";
           }
 
           return (
@@ -1618,16 +1618,16 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
               type="button"
               key={`day-${dayNum}`}
               onClick={() => setSelectedDayDetails({ dayNum, log, workedJobs, isWeekend })}
-              className={`h-11 border rounded-xl flex flex-col justify-between p-1 text-left relative transition-all hover:scale-105 active:scale-95 cursor-pointer ${cellClass} ${
-                hasJob ? 'ring-1 ring-cyan-500/50 border-cyan-400 bg-cyan-50/20' : ''
+              className={`h-11 border rounded-lg flex flex-col justify-between p-1 text-left relative transition-all hover:scale-102 cursor-pointer ${cellClass} ${
+                hasJob ? 'ring-1 ring-indigo-500/50 border-indigo-400 bg-indigo-50/10' : ''
               }`}
             >
-              <span className={`text-[9px] font-bold ${textColor}`}>{dayNum}</span>
+              <span className={`text-[10px] font-bold ${textColor}`}>{dayNum}</span>
               
               <div className="flex items-center justify-between w-full mt-auto">
-                <span className="text-[8px] font-extrabold tracking-tighter opacity-80">{badgeText}</span>
+                <span className="text-[9px] font-bold opacity-80">{badgeText}</span>
                 {hasJob && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" title="Load jobs logged" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" title="Load jobs logged" />
                 )}
               </div>
             </button>
@@ -1636,24 +1636,24 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
       </div>
 
       {selectedDayDetails && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-2xl rounded-3xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <h5 className="font-bold text-slate-950">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h5 className="font-bold text-slate-900 font-sans">
                 Date: {monthNames[month - 1]} {selectedDayDetails.dayNum}, {year}
               </h5>
               <button 
                 type="button"
                 onClick={() => setSelectedDayDetails(null)} 
-                className="text-slate-400 hover:text-slate-600 font-bold"
+                className="text-slate-400 hover:text-slate-650 font-bold"
               >
                 ✕
               </button>
             </div>
-            <div className="p-5 space-y-4 font-mono text-xs text-slate-600">
+            <div className="p-5 space-y-4 text-xs text-slate-600">
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-orange-600 uppercase tracking-widest">Biometric Time Clock</p>
-                <div className="bg-slate-50 border border-slate-100 p-3 rounded-xl space-y-1.5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Biometric Time Clock</p>
+                <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg space-y-1.5">
                   <div className="flex justify-between">
                     <span>Status:</span> 
                     <strong className={`font-bold ${
@@ -1677,26 +1677,26 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
               </div>
 
               <div className="space-y-2">
-                <p className="text-[9px] font-black text-cyan-600 uppercase tracking-widest">Supervisor Loading Jobs</p>
+                <p className="text-[10px] font-bold text-indigo-650 uppercase tracking-wider">Supervisor Loading Jobs</p>
                 {selectedDayDetails.workedJobs.length === 0 ? (
-                  <p className="text-[10px] text-slate-400 italic bg-slate-50/50 p-2 rounded-xl border border-slate-100">No loading jobs recorded on this day.</p>
+                  <p className="text-[10px] text-slate-450 italic bg-slate-50 p-2 rounded-lg border border-slate-200">No loading jobs recorded on this day.</p>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {selectedDayDetails.workedJobs.map((job: JobLog) => (
-                      <div key={job.id} className="bg-cyan-50/20 border border-cyan-100 p-2.5 rounded-xl space-y-1">
-                        <div className="font-bold text-slate-800 font-sans truncate">{job.jobName}</div>
+                      <div key={job.id} className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
+                        <div className="font-bold text-slate-850 font-sans truncate">{job.jobName}</div>
                         <div className="flex justify-between text-[10px]">
                           <span>Tonnage:</span> <span className="text-slate-600">{job.totalTons} {job.unit}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Rate per Unit:</span> <span className="text-slate-600">₹{job.ratePerTon}</span>
+                          <span>Rate per Unit:</span> <span className="text-slate-655 font-sans">₹{job.ratePerTon}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
                           <span>Crew Size:</span> <span className="text-slate-600">{job.employees.length} members</span>
                         </div>
-                        <div className="flex justify-between text-[10px] border-t border-cyan-100/60 pt-1 mt-1 font-bold">
-                          <span className="text-cyan-700">Split Earnings:</span> 
-                          <span className="text-cyan-700">₹{getJobSplit(job).toFixed(2)}</span>
+                        <div className="flex justify-between text-[10px] border-t border-slate-200 pt-1 mt-1 font-bold">
+                          <span className="text-indigo-650">Split Earnings:</span> 
+                          <span className="text-indigo-650">₹{getJobSplit(job).toFixed(2)}</span>
                         </div>
                       </div>
                     ))}
@@ -1707,7 +1707,7 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
               <button
                 type="button"
                 onClick={() => setSelectedDayDetails(null)}
-                className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase text-[10px] rounded-xl transition-colors cursor-pointer"
+                className="w-full h-10 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold uppercase text-[10px] rounded-lg transition-colors cursor-pointer"
               >
                 Close
               </button>
