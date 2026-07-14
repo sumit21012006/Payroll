@@ -1140,7 +1140,7 @@ app.post('/api/jobs', async (req, res) => {
     for (const de of dayBasisCrew) {
       const att = attendanceMap.get(de.employeeId);
       const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : 636.0;
-      const isHalfDay = att ? (att.status === 'HALF_DAY' || att.hoursWorked < 4.0) : false;
+      const isHalfDay = att ? (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) : false;
       
       totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
     }
@@ -1161,7 +1161,7 @@ app.post('/api/jobs', async (req, res) => {
       // Calculate base splits
       const loaderInfoList = loadBasisCrew.map(le => {
         const att = attendanceMap.get(le.employeeId);
-        const hours = att ? att.hoursWorked : 8.0; // default to 8.0/full day if not synced yet
+        const hours = att ? (att.checkOut !== '' ? att.hoursWorked : 8.0) : 8.0; // default to 8.0/full day if not synced/checked out yet
         const fraction = Math.min(1.0, hours / 8.0);
         const baseSplit = idealShare * fraction;
 
