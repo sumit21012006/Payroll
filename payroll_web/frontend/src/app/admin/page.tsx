@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  Users, DollarSign, Cpu, Settings, LogOut, Calculator, 
+import {
+  Users, DollarSign, Cpu, Settings, LogOut, Calculator,
   Landmark, Layers, Calendar, Sliders, RefreshCw, Activity,
   Eye, Edit3, Plus, Search, Building, CreditCard, Phone, Shield, X, Download
 } from 'lucide-react';
@@ -82,33 +82,33 @@ export default function AdminDashboard() {
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [jobs, setJobs] = useState<JobLog[]>([]);
   const [attendanceLogs, setAttendanceLogs] = useState<any[]>([]);
-  
+
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [isLoading, setIsLoading] = useState(true);
-  
+
   // Tab control
   const [activeTab, setActiveTab] = useState<'profiles' | 'deductions'>('profiles');
-  
+
   // Search & Filter
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
-  
+
   // Sort state
   const [sortField, setSortField] = useState<'id' | 'name' | 'netSalary' | 'workedDays' | 'overtimeHours' | 'totalDeductions'>('id');
   const [sortAscending, setSortAscending] = useState(true);
-  
+
   // Modals state
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
-  
+
   const [employeeForAdvance, setEmployeeForAdvance] = useState<Employee | null>(null);
   const [showAdvanceModal, setShowAdvanceModal] = useState(false);
   const [advFormAcc, setAdvFormAcc] = useState('');
   const [advFormRem, setAdvFormRem] = useState('');
   const [advMessage, setAdvMessage] = useState('');
   const [isSavingAdv, setIsSavingAdv] = useState(false);
-  
+
   const [showAddEmployeeModal, setShowAddEmployeeModal] = useState(false);
   const [addEmpId, setAddEmpId] = useState('');
   const [addEmpName, setAddEmpName] = useState('');
@@ -228,7 +228,7 @@ export default function AdminDashboard() {
       const data = await res.json();
       if (Array.isArray(data)) {
         setPayrollRuns(data);
-        
+
         // Auto-calculate if no records exist for the selected period
         if (data.length === 0 && !isCalculating && autoCalcTracker.current !== `${selectedMonth}-${selectedYear}`) {
           autoCalcTracker.current = `${selectedMonth}-${selectedYear}`;
@@ -272,7 +272,7 @@ export default function AdminDashboard() {
   const handleCalculatePayroll = async () => {
     setIsCalculating(true);
     setCalcMessage('');
-    
+
     // Retrieve global settings from localStorage or fallback to defaults
     const settings = {
       shiftHours: parseFloat(localStorage.getItem('settings_shiftHours') || '9.0'),
@@ -515,7 +515,7 @@ export default function AdminDashboard() {
     const totalPayroll = payrollRuns.reduce((sum, run) => sum + run.netSalary, 0.0);
     const totalOvertime = payrollRuns.reduce((sum, run) => sum + run.otPay, 0.0);
     const totalDeductions = payrollRuns.reduce((sum, run) => sum + run.totalDeductions, 0.0);
-    
+
     const loadCount = employees.filter(e => e.salaryPerDay === 0.0).length;
     const dayCount = totalStaff - loadCount;
 
@@ -582,8 +582,8 @@ export default function AdminDashboard() {
   // Sort & Filter Employee Lists
   const filteredEmployeesList = useMemo(() => {
     const list = employees.filter(emp => {
-      const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = deptFilter === 'All' || emp.department === deptFilter;
       return matchesSearch && matchesDept;
     });
@@ -628,7 +628,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50/50 text-slate-800 flex flex-col font-sans selection:bg-orange-100 selection:text-orange-950">
-      
+
       {/* Navigation Header */}
       <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-md px-8 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm">
         <div className="flex items-center gap-3">
@@ -648,13 +648,13 @@ export default function AdminDashboard() {
             <p className="text-[9px] text-orange-600 font-bold uppercase tracking-widest font-mono">Operations Console</p>
           </div>
         </div>
-        
+
         <div className="flex items-center gap-3">
           {/* Active Period Dropdowns */}
           <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-xl text-xs font-mono">
             <Calendar className="w-4 h-4 text-orange-600" />
-            <select 
-              value={selectedMonth} 
+            <select
+              value={selectedMonth}
               onChange={(e) => setSelectedMonth(Number(e.target.value))}
               className="bg-transparent border-none text-slate-800 focus:outline-none cursor-pointer pr-4 font-bold"
             >
@@ -697,7 +697,7 @@ export default function AdminDashboard() {
             <Calendar className="w-4.5 h-4.5" />
           </button>
 
-          <button 
+          <button
             onClick={handleLogout}
             className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-rose-600 shadow-sm cursor-pointer"
           >
@@ -709,10 +709,10 @@ export default function AdminDashboard() {
 
       {/* Main Grid */}
       <main className="flex-1 p-8 max-w-7xl mx-auto w-full space-y-8">
-        
+
         {/* Statistics Metric Cards */}
         <section className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          
+
           <div className="bg-white border border-slate-200/85 rounded-2xl p-5 relative overflow-hidden shadow-sm hover:shadow-md transition-all duration-300">
             <div className="absolute top-3 right-3 text-orange-600/10"><Users className="w-8 h-8" /></div>
             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">Workforce Total</p>
@@ -751,14 +751,14 @@ export default function AdminDashboard() {
 
         {/* Visual Analytics Row */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          
+
           {/* Department Budget Progress bars */}
           <div className="bg-white border border-slate-200/85 rounded-3xl p-6 shadow-sm hover:border-orange-500/20 transition-all duration-300">
             <h3 className="text-xs font-bold font-mono text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-1.5">
               <Building className="w-4 h-4 text-orange-600" />
               <span>Payroll Allocation by Department</span>
             </h3>
-            
+
             {calculatedMetrics.deptAllocations.length === 0 ? (
               <div className="h-48 flex items-center justify-center text-slate-400 text-xs font-mono">
                 No wages computed yet.
@@ -774,8 +774,8 @@ export default function AdminDashboard() {
                       </span>
                     </div>
                     <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
-                      <div 
-                        className="bg-orange-500 h-full rounded-full transition-all duration-500" 
+                      <div
+                        className="bg-orange-500 h-full rounded-full transition-all duration-500"
                         style={{ width: `${dept.percentage}%` }}
                       />
                     </div>
@@ -793,32 +793,32 @@ export default function AdminDashboard() {
             </h3>
             <div className="grid grid-cols-4 gap-2 text-center h-48 items-end border-b border-slate-100 pb-2">
               <div className="space-y-2 h-full flex flex-col justify-end">
-                <div 
-                  className="bg-emerald-500 rounded-t-lg mx-auto w-8 transition-all duration-500" 
+                <div
+                  className="bg-emerald-500 rounded-t-lg mx-auto w-8 transition-all duration-500"
                   style={{ height: `${biometricRatios.total > 0 ? biometricRatios.present : 0}%` }}
                 />
                 <p className="text-[10px] font-bold text-slate-600">Present</p>
                 <p className="text-[9px] text-slate-400 font-mono">{biometricRatios.total > 0 ? `${biometricRatios.present}%` : '0%'}</p>
               </div>
               <div className="space-y-2 h-full flex flex-col justify-end">
-                <div 
-                  className="bg-amber-500 rounded-t-lg mx-auto w-8 transition-all duration-500" 
+                <div
+                  className="bg-amber-500 rounded-t-lg mx-auto w-8 transition-all duration-500"
                   style={{ height: `${biometricRatios.total > 0 ? biometricRatios.late : 0}%` }}
                 />
                 <p className="text-[10px] font-bold text-slate-600">Late</p>
                 <p className="text-[9px] text-slate-400 font-mono">{biometricRatios.total > 0 ? `${biometricRatios.late}%` : '0%'}</p>
               </div>
               <div className="space-y-2 h-full flex flex-col justify-end">
-                <div 
-                  className="bg-purple-500 rounded-t-lg mx-auto w-8 transition-all duration-500" 
+                <div
+                  className="bg-purple-500 rounded-t-lg mx-auto w-8 transition-all duration-500"
                   style={{ height: `${biometricRatios.total > 0 ? biometricRatios.overtime : 0}%` }}
                 />
                 <p className="text-[10px] font-bold text-slate-600">Overtime</p>
                 <p className="text-[9px] text-slate-400 font-mono">{biometricRatios.total > 0 ? `${biometricRatios.overtime}%` : '0%'}</p>
               </div>
               <div className="space-y-2 h-full flex flex-col justify-end">
-                <div 
-                  className="bg-cyan-500 rounded-t-lg mx-auto w-8 transition-all duration-500" 
+                <div
+                  className="bg-cyan-500 rounded-t-lg mx-auto w-8 transition-all duration-500"
                   style={{ height: `${biometricRatios.total > 0 ? biometricRatios.halfDay : 0}%` }}
                 />
                 <p className="text-[10px] font-bold text-slate-600">Half Day</p>
@@ -832,27 +832,25 @@ export default function AdminDashboard() {
 
         {/* Ledger Section with Tabs */}
         <section className="bg-white border border-slate-200/85 rounded-3xl overflow-hidden shadow-sm">
-          
+
           {/* Tab Switcher Headers */}
           <div className="px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/50">
             <div className="flex bg-slate-100 p-0.5 rounded-xl border border-slate-200/60 w-full md:w-[380px] h-10">
               <button
                 onClick={() => setActiveTab('profiles')}
-                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-                  activeTab === 'profiles'
+                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${activeTab === 'profiles'
                     ? 'bg-white text-orange-600 shadow-sm border border-slate-200/60 font-black'
                     : 'text-slate-400 hover:text-slate-600'
-                }`}
+                  }`}
               >
                 Workforce Profiles
               </button>
               <button
                 onClick={() => setActiveTab('deductions')}
-                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${
-                  activeTab === 'deductions'
+                className={`flex-1 h-full text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all cursor-pointer ${activeTab === 'deductions'
                     ? 'bg-white text-orange-600 shadow-sm border border-slate-200/60 font-black'
                     : 'text-slate-400 hover:text-slate-600'
-                }`}
+                  }`}
               >
                 Advances & Deductions
               </button>
@@ -898,17 +896,17 @@ export default function AdminDashboard() {
           {isLoading ? (
             <div className="p-16 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
               <RefreshCw className="w-6 h-6 text-indigo-600 animate-spin" />
-              <p className="text-xs font-semibold text-indigo-650">Syncing database entries...</p>
+              <p className="text-xs font-semibold text-indigo-600">Syncing database entries...</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs text-slate-655 font-sans">
+              <table className="w-full text-left border-collapse text-xs text-slate-600 font-sans">
                 <thead>
                   <tr className="border-b border-slate-200 text-[10px] font-bold uppercase tracking-wider text-slate-450 bg-slate-50">
                     <th onClick={() => handleSort('id')} className="px-6 py-4 cursor-pointer hover:text-slate-900 select-none">ID {sortField === 'id' && (sortAscending ? '▲' : '▼')}</th>
                     <th onClick={() => handleSort('name')} className="px-6 py-4 cursor-pointer hover:text-slate-900 select-none">Name {sortField === 'name' && (sortAscending ? '▲' : '▼')}</th>
                     <th className="px-6 py-4">Department</th>
-                    
+
                     {activeTab === 'profiles' ? (
                       <>
                         <th className="px-6 py-4 text-center">Basis</th>
@@ -933,21 +931,20 @@ export default function AdminDashboard() {
                   {filteredEmployeesList.map(emp => {
                     const isLoad = emp.salaryPerDay === 0.0;
                     const calculatedRun = payrollRuns.find(r => r.employeeId === emp.employeeId);
-                    
+
                     return (
                       <tr key={emp.employeeId} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4 font-bold text-slate-400">{emp.employeeId}</td>
                         <td className="px-6 py-4 text-slate-900 font-bold font-sans">{emp.name}</td>
                         <td className="px-6 py-4 text-slate-500 font-sans">{emp.department}</td>
-                        
+
                         {activeTab === 'profiles' ? (
                           <>
                             <td className="px-6 py-4 text-center">
-                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${
-                                isLoad 
-                                  ? 'bg-slate-100 text-slate-655 border border-slate-205' 
+                              <span className={`px-2.5 py-0.5 rounded text-[9px] font-bold whitespace-nowrap ${isLoad
+                                  ? 'bg-slate-100 text-slate-600 border border-slate-200'
                                   : 'bg-indigo-50 text-indigo-700 border border-indigo-100'
-                              }`}>
+                                }`}>
                                 {isLoad ? 'LOAD BASIS' : 'DAY BASIS'}
                               </span>
                             </td>
@@ -994,7 +991,7 @@ export default function AdminDashboard() {
                             <td className="px-6 py-4 text-center">
                               <button
                                 onClick={() => openEditAdvance(emp)}
-                                className="p-1.5 text-slate-450 hover:text-indigo-650 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-slate-450 hover:text-indigo-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
                                 title="Edit Advances"
                               >
                                 <Edit3 className="w-4 h-4" />
@@ -1024,39 +1021,37 @@ export default function AdminDashboard() {
                 <Users className="w-5 h-5 text-indigo-600" />
                 <span>Employee Biometric & Wages Sheet</span>
               </h3>
-              <button 
+              <button
                 onClick={() => {
                   setSelectedEmployee(null);
                   setShowDetailsModal(false);
-                }} 
+                }}
                 className="p-1 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto text-xs text-slate-655 font-sans">
-              
+            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto text-xs text-slate-600 font-sans">
+
               {/* Header profile details */}
               <div className="flex justify-between items-start gap-4">
                 <div className="min-w-0">
                   <h4 className="text-sm font-bold text-slate-900 font-sans truncate">{selectedEmployee.name}</h4>
                   <p className="text-xs text-slate-500 font-semibold mt-0.5">{selectedEmployee.employeeId} | {selectedEmployee.department} Dept</p>
                 </div>
-                
+
                 {/* Pay Basis toggle input */}
                 <div className="flex items-center gap-2 bg-slate-100 border border-slate-200 rounded-lg p-1 shrink-0 text-[10px] font-bold">
                   <span className={`px-2 py-1 rounded transition-all ${selectedEmployee.salaryPerDay > 0 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400'}`}>DAY</span>
                   <button
                     onClick={() => handleTogglePayBasis(selectedEmployee.employeeId, selectedEmployee.salaryPerDay === 0.0)}
-                    className={`w-11 h-6 rounded-full p-0.5 transition-all relative ${
-                      selectedEmployee.salaryPerDay === 0.0 ? 'bg-indigo-600' : 'bg-slate-200'
-                    }`}
-                  >
-                    <div 
-                      className={`w-5 h-5 rounded-full bg-white shadow-xs transition-all transform ${
-                        selectedEmployee.salaryPerDay === 0.0 ? 'translate-x-5' : 'translate-x-0'
+                    className={`w-11 h-6 rounded-full p-0.5 transition-all relative ${selectedEmployee.salaryPerDay === 0.0 ? 'bg-indigo-600' : 'bg-slate-200'
                       }`}
+                  >
+                    <div
+                      className={`w-5 h-5 rounded-full bg-white shadow-xs transition-all transform ${selectedEmployee.salaryPerDay === 0.0 ? 'translate-x-5' : 'translate-x-0'
+                        }`}
                     />
                   </button>
                   <span className={`px-2 py-1 rounded transition-all ${selectedEmployee.salaryPerDay === 0.0 ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400'}`}>LOAD</span>
@@ -1064,7 +1059,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* Statutory details box */}
-              <div className="border border-slate-200 bg-slate-50 p-4 rounded-lg text-slate-650 space-y-2">
+              <div className="border border-slate-200 bg-slate-50 p-4 rounded-lg text-slate-600 space-y-2">
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Statutory & Bank Credentials</p>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-200 pt-2.5">
                   <div>
@@ -1093,7 +1088,7 @@ export default function AdminDashboard() {
                 const run = payrollRuns.find(r => r.employeeId === selectedEmployee.employeeId);
                 if (!run) return <p className="text-xs text-slate-400 italic">No wage logs run for this employee in selected period.</p>;
                 return (
-                  <div className="space-y-4 text-xs text-slate-650">
+                  <div className="space-y-4 text-xs text-slate-600">
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <p className="text-[10px] font-bold text-emerald-600 border-b border-emerald-100 pb-1 uppercase tracking-wider">Earnings</p>
@@ -1128,7 +1123,7 @@ export default function AdminDashboard() {
               })()}
 
               {/* Dynamic Attendance Calendar */}
-              <AttendanceCalendar 
+              <AttendanceCalendar
                 employeeId={selectedEmployee.employeeId}
                 attendanceLogs={attendanceLogs}
                 jobs={jobs}
@@ -1153,10 +1148,10 @@ export default function AdminDashboard() {
               </h3>
               <button onClick={() => { setShowAdvanceModal(false); setEmployeeForAdvance(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
-            
-            <form onSubmit={handleSaveAdvances} className="p-6 space-y-4 text-xs text-slate-655 font-sans">
+
+            <form onSubmit={handleSaveAdvances} className="p-6 space-y-4 text-xs text-slate-600 font-sans">
               <p>Employee: <strong className="text-slate-800">{employeeForAdvance.name}</strong> ({employeeForAdvance.employeeId})</p>
-              
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Account Advance (₹)</label>
                 <input
@@ -1211,8 +1206,8 @@ export default function AdminDashboard() {
               <button onClick={() => setShowAddEmployeeModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <form onSubmit={handleAddEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-655 font-sans">
-              <p className="text-[10px] font-bold text-indigo-650 uppercase tracking-wider">Primary Info</p>
+            <form onSubmit={handleAddEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-600 font-sans">
+              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Primary Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase">Employee ID *</label>
@@ -1240,7 +1235,7 @@ export default function AdminDashboard() {
                 </div>
                 {addEmpDept === 'Other' && (
                   <div className="col-span-2 space-y-1.5">
-                    <label className="text-[10px] font-bold text-indigo-650 uppercase">Custom Department Name *</label>
+                    <label className="text-[10px] font-bold text-indigo-600 uppercase">Custom Department Name *</label>
                     <input type="text" required value={addEmpCustomDept} onChange={(e) => setAddEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                   </div>
                 )}
@@ -1323,8 +1318,8 @@ export default function AdminDashboard() {
               <button onClick={() => { setShowEditEmployeeModal(false); setSelectedEmployee(null); }} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <form onSubmit={handleEditEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-655 font-sans">
-              <p className="text-[10px] font-bold text-indigo-650 uppercase tracking-wider">Primary Info</p>
+            <form onSubmit={handleEditEmployeeSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs text-slate-600 font-sans">
+              <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Primary Info</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase">Employee ID (Static)</label>
@@ -1352,7 +1347,7 @@ export default function AdminDashboard() {
                 </div>
                 {editEmpDept === 'Other' && (
                   <div className="col-span-2 space-y-1.5">
-                    <label className="text-[10px] font-bold text-indigo-650 uppercase">Custom Department Name *</label>
+                    <label className="text-[10px] font-bold text-indigo-600 uppercase">Custom Department Name *</label>
                     <input type="text" required value={editEmpCustomDept} onChange={(e) => setEditEmpCustomDept(e.target.value)} placeholder="e.g. FOUNDRY LINE C" className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none" />
                   </div>
                 )}
@@ -1437,28 +1432,28 @@ export default function AdminDashboard() {
               <button onClick={() => setShowAttExportModal(false)} className="text-slate-400 hover:text-slate-600"><X className="w-5 h-5" /></button>
             </div>
 
-            <div className="p-6 space-y-4 text-xs text-slate-655 font-sans">
+            <div className="p-6 space-y-4 text-xs text-slate-600 font-sans">
               <p className="text-[10px] text-slate-450 leading-relaxed font-sans">
                 Select a custom date range to export all employee check-in/check-out logs downloaded from the biometric devices.
               </p>
-              
+
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">Start Date</label>
-                <input 
-                  type="date" 
-                  value={attExportStartDate} 
-                  onChange={(e) => setAttExportStartDate(e.target.value)} 
-                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold text-slate-800" 
+                <input
+                  type="date"
+                  value={attExportStartDate}
+                  onChange={(e) => setAttExportStartDate(e.target.value)}
+                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold text-slate-800"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">End Date</label>
-                <input 
-                  type="date" 
-                  value={attExportEndDate} 
-                  onChange={(e) => setAttExportEndDate(e.target.value)} 
-                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold text-slate-800" 
+                <input
+                  type="date"
+                  value={attExportEndDate}
+                  onChange={(e) => setAttExportEndDate(e.target.value)}
+                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3 focus:outline-none font-bold text-slate-800"
                 />
               </div>
 
@@ -1507,7 +1502,7 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
-  
+
   const firstDayOfWeek = new Date(year, month - 1, 1).getDay();
   const totalDays = new Date(year, month, 0).getDate();
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -1618,12 +1613,11 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
               type="button"
               key={`day-${dayNum}`}
               onClick={() => setSelectedDayDetails({ dayNum, log, workedJobs, isWeekend })}
-              className={`h-11 border rounded-lg flex flex-col justify-between p-1 text-left relative transition-all hover:scale-102 cursor-pointer ${cellClass} ${
-                hasJob ? 'ring-1 ring-indigo-500/50 border-indigo-400 bg-indigo-50/10' : ''
-              }`}
+              className={`h-11 border rounded-lg flex flex-col justify-between p-1 text-left relative transition-all hover:scale-102 cursor-pointer ${cellClass} ${hasJob ? 'ring-1 ring-indigo-500/50 border-indigo-400 bg-indigo-50/10' : ''
+                }`}
             >
               <span className={`text-[10px] font-bold ${textColor}`}>{dayNum}</span>
-              
+
               <div className="flex items-center justify-between w-full mt-auto">
                 <span className="text-[9px] font-bold opacity-80">{badgeText}</span>
                 {hasJob && (
@@ -1642,10 +1636,10 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
               <h5 className="font-bold text-slate-900 font-sans">
                 Date: {monthNames[month - 1]} {selectedDayDetails.dayNum}, {year}
               </h5>
-              <button 
+              <button
                 type="button"
-                onClick={() => setSelectedDayDetails(null)} 
-                className="text-slate-400 hover:text-slate-650 font-bold"
+                onClick={() => setSelectedDayDetails(null)}
+                className="text-slate-400 hover:text-slate-600 font-bold"
               >
                 ✕
               </button>
@@ -1655,21 +1649,20 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
                 <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Biometric Time Clock</p>
                 <div className="bg-slate-50 border border-slate-200 p-3 rounded-lg space-y-1.5">
                   <div className="flex justify-between">
-                    <span>Status:</span> 
-                    <strong className={`font-bold ${
-                      selectedDayDetails.log?.status === 'PRESENT' ? 'text-emerald-600' :
-                      selectedDayDetails.log?.status === 'LATE' ? 'text-amber-600' :
-                      selectedDayDetails.log?.status === 'OVERTIME' ? 'text-purple-600' :
-                      selectedDayDetails.log?.status === 'HALF_DAY' ? 'text-cyan-600' :
-                      !selectedDayDetails.isWeekend ? 'text-rose-600' : 'text-slate-400'
-                    }`}>
+                    <span>Status:</span>
+                    <strong className={`font-bold ${selectedDayDetails.log?.status === 'PRESENT' ? 'text-emerald-600' :
+                        selectedDayDetails.log?.status === 'LATE' ? 'text-amber-600' :
+                          selectedDayDetails.log?.status === 'OVERTIME' ? 'text-purple-600' :
+                            selectedDayDetails.log?.status === 'HALF_DAY' ? 'text-cyan-600' :
+                              !selectedDayDetails.isWeekend ? 'text-rose-600' : 'text-slate-400'
+                      }`}>
                       {selectedDayDetails.log ? selectedDayDetails.log.status : (selectedDayDetails.isWeekend ? 'WEEKEND REST DAY' : 'ABSENT')}
                     </strong>
                   </div>
                   {selectedDayDetails.log && (
                     <>
                       <div className="flex justify-between"><span>Check In:</span> <strong className="text-slate-700">{selectedDayDetails.log.checkIn}</strong></div>
-                      <div className="flex justify-between"><span>Shift:</span> <strong className="text-indigo-605 font-semibold">{getShiftFromTime(selectedDayDetails.log.checkIn)}</strong></div>
+                      <div className="flex justify-between"><span>Shift:</span> <strong className="text-indigo-600 font-semibold">{getShiftFromTime(selectedDayDetails.log.checkIn)}</strong></div>
                       <div className="flex justify-between"><span>Check Out:</span> <strong className="text-slate-700">{selectedDayDetails.log.checkOut || 'Active'}</strong></div>
                       <div className="flex justify-between"><span>Hours Worked:</span> <strong className="text-slate-700">{selectedDayDetails.log.hoursWorked.toFixed(2)} hrs</strong></div>
                     </>
@@ -1678,26 +1671,26 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
               </div>
 
               <div className="space-y-2">
-                <p className="text-[10px] font-bold text-indigo-650 uppercase tracking-wider">Supervisor Loading Jobs</p>
+                <p className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider">Supervisor Loading Jobs</p>
                 {selectedDayDetails.workedJobs.length === 0 ? (
                   <p className="text-[10px] text-slate-450 italic bg-slate-50 p-2 rounded-lg border border-slate-200">No loading jobs recorded on this day.</p>
                 ) : (
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {selectedDayDetails.workedJobs.map((job: JobLog) => (
                       <div key={job.id} className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
-                        <div className="font-bold text-slate-850 font-sans truncate">{job.jobName}</div>
+                        <div className="font-bold text-slate-800 font-sans truncate">{job.jobName}</div>
                         <div className="flex justify-between text-[10px]">
                           <span>Tonnage:</span> <span className="text-slate-600">{job.totalTons} {job.unit}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Rate per Unit:</span> <span className="text-slate-655 font-sans">₹{job.ratePerTon}</span>
+                          <span>Rate per Unit:</span> <span className="text-slate-600 font-sans">₹{job.ratePerTon}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
                           <span>Crew Size:</span> <span className="text-slate-600">{job.employees.length} members</span>
                         </div>
                         <div className="flex justify-between text-[10px] border-t border-slate-200 pt-1 mt-1 font-bold">
-                          <span className="text-indigo-650">Split Earnings:</span> 
-                          <span className="text-indigo-650">₹{getJobSplit(job).toFixed(2)}</span>
+                          <span className="text-indigo-600">Split Earnings:</span>
+                          <span className="text-indigo-600">₹{getJobSplit(job).toFixed(2)}</span>
                         </div>
                       </div>
                     ))}

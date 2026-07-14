@@ -296,10 +296,10 @@ export default function EmployeeDashboard() {
             {isLoading ? (
               <div className="p-12 text-center text-slate-400 flex flex-col items-center justify-center gap-2">
                 <RefreshCw className="w-6 h-6 text-indigo-500 animate-spin" />
-                <p className="text-xs font-semibold text-indigo-650">Fetching Payslip...</p>
+                <p className="text-xs font-semibold text-indigo-600">Fetching Payslip...</p>
               </div>
             ) : payroll ? (
-              <div className="space-y-8 text-xs text-slate-650">
+              <div className="space-y-8 text-xs text-slate-600">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {/* Earnings Column */}
                   <div className="space-y-4">
@@ -590,7 +590,7 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
                   {selectedDayDetails.log && (
                     <>
                       <div className="flex justify-between"><span>Check In:</span> <strong className="text-slate-700">{selectedDayDetails.log.checkIn}</strong></div>
-                      <div className="flex justify-between"><span>Shift:</span> <strong className="text-indigo-650">{getShiftFromTime(selectedDayDetails.log.checkIn)}</strong></div>
+                      <div className="flex justify-between"><span>Shift:</span> <strong className="text-indigo-600">{getShiftFromTime(selectedDayDetails.log.checkIn)}</strong></div>
                       <div className="flex justify-between"><span>Check Out:</span> <strong className="text-slate-700">{selectedDayDetails.log.checkOut || 'Active'}</strong></div>
                       <div className="flex justify-between"><span>Hours Worked:</span> <strong className="text-slate-700">{selectedDayDetails.log.hoursWorked.toFixed(2)} hrs</strong></div>
                     </>
@@ -608,13 +608,13 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
                       <div key={job.id} className="bg-slate-50 border border-slate-200 p-2.5 rounded-lg space-y-1">
                         <div className="font-bold text-slate-800 font-sans truncate">{job.jobName}</div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Tonnage:</span> <span className="text-slate-650">{job.totalTons} {job.unit}</span>
+                          <span>Tonnage:</span> <span className="text-slate-600">{job.totalTons} {job.unit}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Rate per Unit:</span> <span className="text-slate-650">₹{job.ratePerTon}</span>
+                          <span>Rate per Unit:</span> <span className="text-slate-600 font-sans">₹{job.ratePerTon}</span>
                         </div>
                         <div className="flex justify-between text-[10px]">
-                          <span>Crew Size:</span> <span className="text-slate-650">{job.employees.length} members</span>
+                          <span>Crew Size:</span> <span className="text-slate-600">{job.employees.length} members</span>
                         </div>
                         <div className="flex justify-between text-[10px] border-t border-slate-200 pt-1 mt-1 font-bold">
                           <span className="text-indigo-600">Split Earnings:</span> 

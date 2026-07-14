@@ -152,7 +152,7 @@ export default function LoginPage() {
         type="button"
         className={`absolute top-6 right-6 p-2.5 rounded-xl border transition-all shadow-xs cursor-pointer z-20 ${theme === 'dark'
           ? 'bg-zinc-900/60 border-zinc-800 text-amber-400 hover:bg-zinc-800/60'
-          : 'bg-white/80 border-slate-200 text-slate-650 hover:bg-slate-100'
+          : 'bg-white/80 border-slate-200 text-slate-600 hover:bg-slate-100'
           }`}
         title={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
       >
@@ -240,8 +240,8 @@ export default function LoginPage() {
                   onChange={(e) => setEmployeeId(e.target.value)}
                   placeholder="e.g. KFIL/L1-406"
                   className={`w-full h-10 border rounded-lg pl-10 pr-4 text-xs focus:outline-none transition-all ${theme === 'dark'
-                    ? 'bg-zinc-950/50 border-zinc-850 text-white placeholder:text-zinc-600 focus:border-indigo-505 focus:ring-indigo-505/20'
-                    : 'bg-white border-slate-300 text-slate-850 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/10'
+                    ? 'bg-zinc-950/50 border-zinc-800 text-white placeholder:text-zinc-600 focus:border-indigo-500 focus:ring-indigo-500/20'
+                    : 'bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/10'
                     }`}
                 />
               </div>
@@ -255,7 +255,7 @@ export default function LoginPage() {
                     {matchedEmployee.name.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-zinc-200' : 'text-slate-850'}`}>{matchedEmployee.name}</p>
+                    <p className={`text-xs font-bold truncate ${theme === 'dark' ? 'text-zinc-200' : 'text-slate-800'}`}>{matchedEmployee.name}</p>
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-semibold">{matchedEmployee.department} Department</p>
                   </div>
                   <CheckCircle className="w-4.5 h-4.5 text-emerald-500 shrink-0 animate-in zoom-in duration-200" />
@@ -276,8 +276,8 @@ export default function LoginPage() {
                   onChange={(e) => setPasscode(e.target.value)}
                   placeholder={`Enter ${selectedRole} passcode`}
                   className={`w-full h-10 border rounded-lg pl-10 pr-4 text-xs focus:outline-none transition-all ${theme === 'dark'
-                    ? 'bg-zinc-950/50 border-zinc-850 text-white placeholder:text-zinc-650 focus:border-indigo-505 focus:ring-indigo-505/20'
-                    : 'bg-white border-slate-300 text-slate-850 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/10'
+                    ? 'bg-zinc-950/50 border-zinc-800 text-white placeholder:text-zinc-550 focus:border-indigo-500 focus:ring-indigo-500/20'
+                    : 'bg-white border-slate-300 text-slate-800 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-500/10'
                     }`}
                 />
               </div>
@@ -297,11 +297,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={selectedRole === 'employee' && !matchedEmployee}
-            className={`w-full h-10 rounded-lg flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider text-white transition-all duration-150 cursor-pointer ${selectedRole === 'employee' && !matchedEmployee
+            className={`w-full h-10 rounded-lg flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-wider transition-all duration-150 cursor-pointer ${selectedRole === 'employee' && !matchedEmployee
               ? (theme === 'dark'
-                ? 'bg-zinc-950/45 text-zinc-600 border border-zinc-900 cursor-not-allowed'
-                : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed')
-              : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 shadow-md shadow-indigo-500/10 border border-indigo-500/20 hover:scale-[1.01]'
+                ? 'bg-zinc-950 text-zinc-500 border border-zinc-900 cursor-not-allowed'
+                : 'bg-slate-200 text-slate-500 border border-slate-300 cursor-not-allowed')
+              : 'bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800 shadow-md shadow-indigo-500/10 border border-indigo-500/20 hover:scale-[1.01]'
               }`}
           >
             <span>Authorize & Sign In</span>
@@ -310,7 +310,7 @@ export default function LoginPage() {
         </form>
 
         {/* Cheatsheet Panel */}
-        <div className={`text-[10px] leading-relaxed p-4 border rounded-xl space-y-1 ${theme === 'dark' ? 'bg-zinc-950/30 border-zinc-850 text-zinc-450' : 'bg-slate-50 border-slate-200 text-slate-500'
+        <div className={`text-[10px] leading-relaxed p-4 border rounded-xl space-y-1 ${theme === 'dark' ? 'bg-zinc-950/30 border-zinc-800 text-zinc-455' : 'bg-slate-50 border-slate-200 text-slate-500'
           }`}>
           <p className={`font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-zinc-400' : 'text-indigo-600'}`}>Demo Credentials:</p>
           <p>Admin passcode: <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"admin"</strong> | Supervisor: <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"supervisor"</strong></p>
@@ -318,7 +318,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className={`text-[8px] font-mono uppercase tracking-widest text-center ${theme === 'dark' ? 'text-zinc-550' : 'text-slate-400'}`}>
+        <p className={`text-[8px] font-mono uppercase tracking-widest text-center ${theme === 'dark' ? 'text-zinc-500' : 'text-slate-400'}`}>
           © 2026 FOUNDTECH ENGINEERING
         </p>
 
