@@ -144,7 +144,7 @@ export default function LoginPage() {
         className={`absolute inset-0 bg-cover bg-center transition-all duration-500 ${
           theme === 'dark' ? 'opacity-40 brightness-50' : 'opacity-25 brightness-110'
         }`}
-        style={{ backgroundImage: 'url("/industrial_background.png")' }}
+        style={{ backgroundImage: 'url("/industrial_background.jpg")' }}
       />
       
       {/* Cosmic background glows */}
