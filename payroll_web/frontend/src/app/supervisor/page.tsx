@@ -105,6 +105,7 @@ export default function SupervisorDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
   const [shiftFilter, setShiftFilter] = useState('SELECT ALL (shift)');
+  const [categoryFilter, setCategoryFilter] = useState('All');
 
   const [formMessage, setFormMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -538,12 +539,19 @@ export default function SupervisorDashboard() {
     router.push('/login');
   };
 
-  // Filter employees: must have checked in & checked out, and match search, department, and selected shift
+  // Filter employees: must have checked in & checked out, and match search, department, selected shift, and category (L1/L2)
   const filteredEmployees = useMemo(() => {
     return employees.filter((emp) => {
       const matchesSearch = emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           emp.employeeId.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesDept = deptFilter === 'All' || emp.department === deptFilter;
+
+      // Filter by category (L1 vs L2)
+      let matchesCategory = true;
+      if (categoryFilter !== 'All') {
+        const prefix = emp.employeeId.substring(0, 2).toUpperCase();
+        matchesCategory = prefix === categoryFilter;
+      }
 
       // Find attendance log for this employee on this date
       const log = attendanceLogs.find(l => l.employeeId === emp.employeeId && l.date === date);
@@ -569,9 +577,9 @@ export default function SupervisorDashboard() {
 
       const matchesShift = shiftFilter === 'SELECT ALL (shift)' || empShift === shiftFilter;
 
-      return matchesSearch && matchesDept && matchesShift;
+      return matchesSearch && matchesDept && matchesShift && matchesCategory;
     });
-  }, [employees, searchQuery, deptFilter, shiftFilter, date, attendanceLogs]);
+  }, [employees, searchQuery, deptFilter, shiftFilter, categoryFilter, date, attendanceLogs]);
 
   // Clean up selectedCrew if selected employees are not present/checked-out on the selected date
   useEffect(() => {
@@ -1101,6 +1109,15 @@ export default function SupervisorDashboard() {
                     {uniqueDepartments.map(d => (
                       <option key={d} value={d}>{d} Dept</option>
                     ))}
+                  </select>
+                  <select
+                    value={categoryFilter}
+                    onChange={(e) => setCategoryFilter(e.target.value)}
+                    className="w-28 h-10 bg-white border border-slate-300 rounded-lg px-2.5 focus:outline-none cursor-pointer focus:border-indigo-500 font-semibold text-slate-700"
+                  >
+                    <option value="All">All L1/L2</option>
+                    <option value="L1">L1 Only</option>
+                    <option value="L2">L2 Only</option>
                   </select>
                 </div>
 
