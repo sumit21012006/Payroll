@@ -38,7 +38,12 @@ const corsOptions: cors.CorsOptions = {
     }
 
     const incomingOrigin = origin.trim().replace(/\/$/, '');
-    if (allowedOrigins.indexOf(incomingOrigin) !== -1) {
+    
+    // Automatically allow local development and Vercel domains (including previews)
+    const isLocalhost = incomingOrigin.startsWith('http://localhost') || incomingOrigin.startsWith('http://127.0.0.1');
+    const isVercel = incomingOrigin.endsWith('.vercel.app');
+    
+    if (allowedOrigins.indexOf(incomingOrigin) !== -1 || isLocalhost || isVercel) {
       callback(null, true);
     } else {
       console.warn(`[CORS REJECT] Origin "${origin}" is not in allowed origins:`, allowedOrigins);
