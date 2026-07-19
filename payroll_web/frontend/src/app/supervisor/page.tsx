@@ -573,11 +573,15 @@ export default function SupervisorDashboard() {
     });
   }, [employees, searchQuery, deptFilter, shiftFilter, date, attendanceLogs]);
 
-  // Clean up selectedCrew if selected employees are marked absent (filtered out)
+  // Clean up selectedCrew if selected employees are not present/checked-out on the selected date
   useEffect(() => {
-    const validIds = filteredEmployees.map(e => e.employeeId);
-    setSelectedCrew(prev => prev.filter(id => validIds.includes(id)));
-  }, [filteredEmployees]);
+    const presentIds = employees.filter(emp => {
+      const log = attendanceLogs.find(l => l.employeeId === emp.employeeId && l.date === date);
+      return log && log.checkIn && log.checkIn !== '' && log.checkOut && log.checkOut !== '' && log.hoursWorked >= 1.0;
+    }).map(e => e.employeeId);
+
+    setSelectedCrew(prev => prev.filter(id => presentIds.includes(id)));
+  }, [date, attendanceLogs, employees]);
 
   // Unique departments for filtering
   const uniqueDepartments = useMemo(() => {
