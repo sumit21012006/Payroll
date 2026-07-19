@@ -154,38 +154,66 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
   if (table === 'ATTLOG') {
     try {
       const lines = rawText.split(/\r?\n/).filter(line => line.trim().length > 0);
-      let insertedCount = 0;
+      
+      // 1. Fetch all employees in a single query to map punchingCode -> Employee in-memory
+      const dbEmployees = await prisma.employee.findMany();
+      const employeeMap = new Map(dbEmployees.map(e => [e.punchingCode, e]));
+      
+      // 2. Parse all punches from the batch
+      interface ParsedPunch {
+        employee: typeof dbEmployees[0];
+        timestamp: Date;
+        dateStr: string;
+        timeStr: string;
+      }
+      const parsedPunches: ParsedPunch[] = [];
 
       for (const line of lines) {
-        // ZKTeco/eSSL protocol data rows are separated by tabs (\t)
         const parts = line.split(/\t/);
         if (parts.length < 2) continue;
 
-        const punchingCode = parts[0].trim(); // Pin/BiometricUID
-        const timestampStr = parts[1].trim(); // Date/Time: "yyyy-MM-dd HH:mm:ss"
+        const punchingCode = parts[0].trim();
+        const timestampStr = parts[1].trim();
 
-        // Find employee by biometric UID/punching code
-        const employee = await prisma.employee.findFirst({
-          where: { punchingCode }
-        });
-
+        const employee = employeeMap.get(punchingCode);
         if (!employee) {
           console.warn(`[ADMS] Punch logged for unknown BiometricUID: ${punchingCode}`);
           continue;
         }
 
-        // Parse timestamp
         const dt = new Date(timestampStr.replace(' ', 'T'));
         if (isNaN(dt.getTime())) continue;
 
         const dateStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
         const timeStr = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
 
-        // Retrieve most recent log for this employee to pair check-in/check-out sequentially
-        const lastLog = await prisma.attendance.findFirst({
-          where: { employeeId: employee.employeeId },
-          orderBy: { id: 'desc' }
+        parsedPunches.push({
+          employee,
+          timestamp: dt,
+          dateStr,
+          timeStr
         });
+      }
+
+      // 3. Sort punches chronologically to ensure pairing logic processes check-ins before check-outs
+      parsedPunches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+      // 4. Local cache for lastLog of each employee to avoid redundant findFirst queries
+      const lastLogCache = new Map<string, any>();
+      let insertedCount = 0;
+
+      for (const punch of parsedPunches) {
+        const { employee, timestamp, dateStr, timeStr } = punch;
+
+        // Retrieve most recent log from cache or database
+        let lastLog = lastLogCache.get(employee.employeeId);
+        if (lastLog === undefined) {
+          lastLog = await prisma.attendance.findFirst({
+            where: { employeeId: employee.employeeId },
+            orderBy: { id: 'desc' }
+          });
+          lastLogCache.set(employee.employeeId, lastLog);
+        }
 
         let shouldPair = false;
         let targetLog = lastLog;
@@ -195,7 +223,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           const lastTimeParts = lastLog.checkIn.split(':').map(Number);
           const lastCheckInDate = new Date(lastDateParts[2], lastDateParts[0] - 1, lastDateParts[1], lastTimeParts[0], lastTimeParts[1], 0);
 
-          const diffMs = dt.getTime() - lastCheckInDate.getTime();
+          const diffMs = timestamp.getTime() - lastCheckInDate.getTime();
           const diffHours = diffMs / (1000 * 60 * 60);
 
           // If last log has no check-out, and the gap is less than 16 hours (and at least 5 minutes), we pair it
@@ -219,24 +247,20 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           } else if (hours > 9.0) {
             status = 'OVERTIME';
           } else {
-            // Re-evaluate if they were late on check-in
             const [inHour, inMin] = checkIn.split(':').map(Number);
             if (inHour >= 5 && inHour <= 11) {
-              // Shift A: starts 06:45, late if check-in is after 07:00
               const isLate = inHour > 7 || (inHour === 7 && inMin > 0);
               if (isLate) status = 'LATE';
             } else if (inHour >= 13 && inHour <= 18) {
-              // Shift B: starts 14:45, late if check-in is after 15:00
               const isLate = inHour > 15 || (inHour === 15 && inMin > 0);
               if (isLate) status = 'LATE';
             } else if (inHour >= 21 || inHour <= 2) {
-              // Shift C: starts 22:45, late if check-in is after 23:00 (crossing midnight)
               const isLate = (inHour === 23 && inMin > 0) || (inHour >= 0 && inHour <= 2);
               if (isLate) status = 'LATE';
             }
           }
 
-          await prisma.attendance.update({
+          const updatedLog = await prisma.attendance.update({
             where: { id: targetLog.id },
             data: {
               checkOut,
@@ -244,20 +268,24 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
               status
             }
           });
+          lastLogCache.set(employee.employeeId, updatedLog);
         } else {
           // Check if a record already exists for this date to prevent unique constraint failures
-          const existingRecord = await prisma.attendance.findUnique({
-            where: {
-              employeeId_date: {
-                employeeId: employee.employeeId,
-                date: dateStr
+          let existingRecord = null;
+          if (lastLog && lastLog.date === dateStr) {
+            existingRecord = lastLog;
+          } else {
+            existingRecord = await prisma.attendance.findUnique({
+              where: {
+                employeeId_date: {
+                  employeeId: employee.employeeId,
+                  date: dateStr
+                }
               }
-            }
-          });
+            });
+          }
 
           if (existingRecord) {
-            // A record already exists for this date.
-            // If the existing record doesn't have a check-out, and the new punch is later, pair it
             if (existingRecord.checkOut === '') {
               const [inH, inM] = existingRecord.checkIn.split(':').map(Number);
               const [newH, newM] = timeStr.split(':').map(Number);
@@ -274,7 +302,6 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                 } else if (hours > 9.0) {
                   status = 'OVERTIME';
                 } else {
-                  // Re-evaluate if they were late on check-in
                   if (inH >= 5 && inH <= 11) {
                     const isLate = inH > 7 || (inH === 7 && inM > 0);
                     if (isLate) status = 'LATE';
@@ -287,7 +314,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                   }
                 }
 
-                await prisma.attendance.update({
+                const updatedLog = await prisma.attendance.update({
                   where: { id: existingRecord.id },
                   data: {
                     checkOut,
@@ -295,9 +322,9 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                     status
                   }
                 });
+                lastLogCache.set(employee.employeeId, updatedLog);
               }
             } else {
-              // If it already has both check-in and check-out, we only update check-out if the new punch is later
               const [outH, outM] = existingRecord.checkOut.split(':').map(Number);
               const [newH, newM] = timeStr.split(':').map(Number);
               const outMin = outH * 60 + outM;
@@ -313,7 +340,6 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                 } else if (hours > 9.0) {
                   status = 'OVERTIME';
                 } else {
-                  // Re-evaluate late check-in
                   const [inH, inM] = existingRecord.checkIn.split(':').map(Number);
                   if (inH >= 5 && inH <= 11) {
                     const isLate = inH > 7 || (inH === 7 && inM > 0);
@@ -327,7 +353,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                   }
                 }
 
-                await prisma.attendance.update({
+                const updatedLog = await prisma.attendance.update({
                   where: { id: existingRecord.id },
                   data: {
                     checkOut,
@@ -335,10 +361,10 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                     status
                   }
                 });
+                lastLogCache.set(employee.employeeId, updatedLog);
               }
             }
           } else {
-            // Create new check-in for the day
             const checkIn = timeStr;
             const checkOut = '';
             const hours = 0.0;
@@ -356,7 +382,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
               if (isLate) status = 'LATE';
             }
 
-            await prisma.attendance.create({
+            const newLog = await prisma.attendance.create({
               data: {
                 employeeId: employee.employeeId,
                 date: dateStr,
@@ -366,6 +392,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
                 hoursWorked: hours
               }
             });
+            lastLogCache.set(employee.employeeId, newLog);
           }
         }
         insertedCount++;
@@ -373,7 +400,6 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
 
       console.log(`[ADMS] Successfully synced ${insertedCount} biometric entries.`);
       res.setHeader('Content-Type', 'text/plain');
-      // eSSL/ZKTeco machines clear their queue buffer only upon receiving OK/GBYTE
       res.send('OK\r\n');
     } catch (err) {
       console.error('[ADMS] Error parsing logs:', err);

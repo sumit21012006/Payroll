@@ -104,7 +104,7 @@ export default function SupervisorDashboard() {
   const [selectedCrew, setSelectedCrew] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
-  const [shiftFilter, setShiftFilter] = useState('Shift A');
+  const [shiftFilter, setShiftFilter] = useState('SELECT ALL (shift)');
 
   const [formMessage, setFormMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -567,7 +567,7 @@ export default function SupervisorDashboard() {
         empShift = 'Shift C';
       }
 
-      const matchesShift = empShift === shiftFilter;
+      const matchesShift = shiftFilter === 'SELECT ALL (shift)' || empShift === shiftFilter;
 
       return matchesSearch && matchesDept && matchesShift;
     });
@@ -1082,8 +1082,9 @@ export default function SupervisorDashboard() {
                   <select
                     value={shiftFilter}
                     onChange={(e) => setShiftFilter(e.target.value)}
-                    className="w-32 h-10 bg-white border border-slate-300 rounded-lg px-2.5 focus:outline-none cursor-pointer font-semibold text-indigo-700 focus:border-indigo-500"
+                    className="w-44 h-10 bg-white border border-slate-300 rounded-lg px-2.5 focus:outline-none cursor-pointer font-semibold text-indigo-700 focus:border-indigo-500"
                   >
+                    <option value="SELECT ALL (shift)">SELECT ALL (shift)</option>
                     <option value="Shift A">Shift A</option>
                     <option value="Shift B">Shift B</option>
                     <option value="Shift C">Shift C</option>
