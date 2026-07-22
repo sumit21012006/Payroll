@@ -2093,10 +2093,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       return 'Shift A';
     };
 
-    // Day 1 column is Col 4 (D)
-    // Day N column is Col 3 + N
-    // Total column is Col 4 + daysInMonth
-    // COUNT column is Col 5 + daysInMonth
+    // Column Index Mapping
     const startDayCol = 4;
     const endDayCol = 3 + daysInMonth;
     const totalColIdx = 4 + daysInMonth;
@@ -2105,7 +2102,17 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     const startDayColLetter = getExcelColLetter(startDayCol);
     const endDayColLetter = getExcelColLetter(endDayCol);
     const totalColLetter = getExcelColLetter(totalColIdx);
-    const countColLetter = getExcelColLetter(countColIdx);
+
+    // Set Column Widths
+    worksheet.getColumn(1).width = 16; // PF NO.
+    worksheet.getColumn(2).width = 16; // Punching Code
+    worksheet.getColumn(3).width = 34; // Day / Name
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      worksheet.getColumn(startDayCol + d - 1).width = 9;
+    }
+    worksheet.getColumn(totalColIdx).width = 14;
+    worksheet.getColumn(countColIdx).width = 10;
 
     // Row 1: Month Date
     const row1 = worksheet.getRow(1);
@@ -2113,6 +2120,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
 
     // Row 2: Header Row
     const row2 = worksheet.getRow(2);
+    row2.height = 26;
     row2.getCell(1).value = 'PF NO.';
     row2.getCell(2).value = 'Punching Code';
     row2.getCell(3).value = 'Day';
@@ -2125,8 +2133,19 @@ app.get('/api/payroll/salary-report', async (req, res) => {
 
     // Style Header Row 2
     row2.eachCell((cell: any) => {
-      cell.font = { bold: true };
-      cell.alignment = { horizontal: 'center' };
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF1E293B' } // Dark Slate 800
+      };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF475569' } },
+        bottom: { style: 'medium', color: { argb: 'FF0F172A' } },
+        left: { style: 'thin', color: { argb: 'FF334155' } },
+        right: { style: 'thin', color: { argb: 'FF334155' } }
+      };
     });
 
     const teamRates: Record<string, number> = {
@@ -2137,6 +2156,14 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       'MP Team': 320
     };
 
+    const teamStyles: Record<string, { fill: string; text: string }> = {
+      'Final Team A': { fill: 'FF1E3A8A', text: 'FFFFFFFF' }, // Navy Blue
+      'Final Team B': { fill: 'FF0F172A', text: 'FFFFFFFF' }, // Dark Slate
+      'HE Team A':    { fill: 'FF065F46', text: 'FFFFFFFF' }, // Forest Emerald
+      'HE Team B':    { fill: 'FF115E59', text: 'FFFFFFFF' }, // Dark Cyan
+      'MP Team':      { fill: 'FF78350F', text: 'FFFFFFFF' }  // Bronze Amber
+    };
+
     const teamDailyMT: Record<string, number[]> = {
       'Final Team A': new Array(daysInMonth + 1).fill(0),
       'Final Team B': new Array(daysInMonth + 1).fill(0),
@@ -2145,6 +2172,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       'MP Team': new Array(daysInMonth + 1).fill(0)
     };
 
+    // Load-basis employees map: empId -> { emp, daily: (number|null)[] }
     const teamEmployees: Record<string, Map<string, { emp: any; daily: (number | null)[] }>> = {
       'Final Team A': new Map(),
       'Final Team B': new Map(),
@@ -2153,16 +2181,16 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       'MP Team': new Map()
     };
 
-    const teamNewEarnings: Record<string, number[]> = {
-      'Final Team A': new Array(daysInMonth + 1).fill(0),
-      'Final Team B': new Array(daysInMonth + 1).fill(0),
-      'HE Team A': new Array(daysInMonth + 1).fill(0),
-      'HE Team B': new Array(daysInMonth + 1).fill(0),
-      'MP Team': new Array(daysInMonth + 1).fill(0)
+    // Day-basis employees NEW map: empId -> { emp, daily: (number|null)[] }
+    const teamNewEmployees: Record<string, Map<string, { emp: any; daily: (number | null)[] }>> = {
+      'Final Team A': new Map(),
+      'Final Team B': new Map(),
+      'HE Team A': new Map(),
+      'HE Team B': new Map(),
+      'MP Team': new Map()
     };
 
-    // Pre-populate MP Team list from Excel sheet format
-    // Pre-populate MP Team list from Excel sheet format
+    // Pre-populate MP Team list as per specification for inactive MP section
     const mpEmployeeNames = [
       'Mr. DEEPAK PAL',
       'SATYAM PATEL',
@@ -2189,41 +2217,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       });
     });
 
-    // Pre-populate employees from FINAL and HE departments into their respective team blocks dynamically by attendance shift
-    allEmployees.forEach(emp => {
-      const deptUpper = (emp.department || '').toUpperCase();
-      if (emp.salaryPerDay > 0) return; // Day-basis workers go to NEW row when working load jobs
-
-      let targetTeam = '';
-      let shiftACount = 0;
-      let shiftBCount = 0;
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const att = attMap.get(`${emp.employeeId}_${m}/${d}/${y}`);
-        if (att && att.checkIn) {
-          const shift = getEmployeeShift(emp.employeeId, `${m}/${d}/${y}`);
-          if (shift === 'Shift B') shiftBCount++;
-          else shiftACount++;
-        }
-      }
-
-      if (deptUpper.includes('FINAL')) {
-        targetTeam = shiftBCount > shiftACount ? 'Final Team B' : 'Final Team A';
-      } else if (deptUpper.includes('HE')) {
-        targetTeam = shiftBCount > shiftACount ? 'HE Team B' : 'HE Team A';
-      }
-
-      if (targetTeam) {
-        if (!teamEmployees[targetTeam].has(emp.employeeId)) {
-          teamEmployees[targetTeam].set(emp.employeeId, {
-            emp,
-            daily: new Array(daysInMonth + 1).fill(null)
-          });
-        }
-      }
-    });
-
-    // Populate Job Logs into teams based on Job Type + Shift
+    // Populate Job Logs into teams ONLY for employees with actual job history in this month!
     monthJobs.forEach(job => {
       const parts = job.date.split('/');
       const day = parseInt(parts[1]);
@@ -2245,10 +2239,17 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         teamDailyMT[targetTeam][day] += job.totalTons || 0;
 
         if (emp.salaryPerDay > 0) {
-          // Day basis employee on load job -> goes to NEW row
-          teamNewEarnings[targetTeam][day] += je.splitEarnings || 0;
+          // Day-basis employee added to load job -> Create individual NEW row for this employee
+          if (!teamNewEmployees[targetTeam].has(emp.employeeId)) {
+            teamNewEmployees[targetTeam].set(emp.employeeId, {
+              emp,
+              daily: new Array(daysInMonth + 1).fill(null)
+            });
+          }
+          const newRecord = teamNewEmployees[targetTeam].get(emp.employeeId)!;
+          newRecord.daily[day] = (newRecord.daily[day] || 0) + (je.splitEarnings || 0);
         } else {
-          // Load basis employee -> regular row under team
+          // Load-basis employee -> regular row under team
           if (!teamEmployees[targetTeam].has(emp.employeeId)) {
             teamEmployees[targetTeam].set(emp.employeeId, {
               emp,
@@ -2263,16 +2264,17 @@ app.get('/api/payroll/salary-report', async (req, res) => {
 
     let currRow = 3;
     const teamRowReferences: Record<string, {
-      headerRow: number,
-      amtRow: number,
-      mtRow: number,
-      rateRow: number,
-      manpowerRow: number,
-      paidAmtRow: number,
-      empStartRow: number,
-      empEndRow: number,
-      newRow: number,
-      totalRow: number
+      headerRow: number;
+      amtRow: number;
+      mtRow: number;
+      rateRow: number;
+      manpowerRow: number;
+      paidAmtRow: number;
+      empStartRow: number;
+      empEndRow: number;
+      newStartRow: number;
+      newEndRow: number;
+      totalRow: number;
     }> = {};
 
     const teamsList = [
@@ -2283,14 +2285,23 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       { key: 'MP Team', label: 'MP' }
     ];
 
+    const thinBorder = {
+      top: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      bottom: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      left: { style: 'thin', color: { argb: 'FFCBD5E1' } },
+      right: { style: 'thin', color: { argb: 'FFCBD5E1' } }
+    };
+
     teamsList.forEach((teamInfo, tIdx) => {
       const tKey = teamInfo.key;
       const tLabel = teamInfo.label;
       const rateVal = teamRates[tKey];
+      const tStyle = teamStyles[tKey];
 
       // 1. Header Row / Diff Row
       const hRow = currRow;
       const rHeader = worksheet.getRow(hRow);
+      rHeader.height = 24;
       rHeader.getCell(3).value = tLabel;
 
       if (tIdx > 0) {
@@ -2309,35 +2320,45 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         }
         rHeader.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${hRow}:${endDayColLetter}${hRow})` };
       }
+
+      // Style Header Row
+      rHeader.eachCell((cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: tStyle.fill } };
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: tStyle.text } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = thinBorder;
+      });
+      rHeader.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
       currRow++;
 
       // 2. TOTAL AMOUNT Row
       const amtRow = currRow;
       const rAmt = worksheet.getRow(amtRow);
+      rAmt.height = 20;
       rAmt.getCell(3).value = 'TOTAL AMOUNT';
 
       // 3. TOTAL MT Row
       const mtRow = currRow + 1;
+      const rMT = worksheet.getRow(mtRow);
+      rMT.height = 20;
+      rMT.getCell(3).value = 'TOTAL MT';
 
       // 4. Rate Row
       const rateRow = currRow + 2;
+      const rRate = worksheet.getRow(rateRow);
+      rRate.height = 20;
+      rRate.getCell(3).value = 'Rate';
 
       // 5. No.of Manpawar Row
       const manpowerRow = currRow + 3;
+      const rManpower = worksheet.getRow(manpowerRow);
+      rManpower.height = 20;
+      rManpower.getCell(3).value = 'No.of Manpawar';
 
       // 6. Paid Amount Row
       const paidAmtRow = currRow + 4;
-
-      const rMT = worksheet.getRow(mtRow);
-      rMT.getCell(3).value = 'TOTAL MT';
-
-      const rRate = worksheet.getRow(rateRow);
-      rRate.getCell(3).value = 'Rate';
-
-      const rManpower = worksheet.getRow(manpowerRow);
-      rManpower.getCell(3).value = 'No.of Manpawar';
-
       const rPaidAmt = worksheet.getRow(paidAmtRow);
+      rPaidAmt.height = 20;
       rPaidAmt.getCell(3).value = 'Paid Amount';
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -2352,12 +2373,11 @@ app.get('/api/payroll/salary-report', async (req, res) => {
 
         let mpCount = 0;
         teamEmployees[tKey].forEach(eData => {
-          const att = attMap.get(`${eData.emp.employeeId}_${m}/${d}/${y}`);
-          if ((att && att.checkIn) || (eData.daily[d] !== null && eData.daily[d]! > 0)) {
-            mpCount++;
-          }
+          if (eData.daily[d] !== null && eData.daily[d]! > 0) mpCount++;
         });
-        if (teamNewEarnings[tKey][d] > 0) mpCount++;
+        teamNewEmployees[tKey].forEach(eData => {
+          if (eData.daily[d] !== null && eData.daily[d]! > 0) mpCount++;
+        });
 
         if (mpCount > 0) {
           rManpower.getCell(startDayCol + d - 1).value = mpCount;
@@ -2372,14 +2392,60 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       rManpower.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${manpowerRow}:${endDayColLetter}${manpowerRow})` };
       rPaidAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${paidAmtRow}:${endDayColLetter}${paidAmtRow})` };
 
+      // Style Rows 2 to 6
+      rAmt.eachCell((cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } }; // Light blue fill
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E3A8A' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.border = thinBorder;
+        cell.numFmt = '#,##0.00';
+      });
+      rAmt.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+
+      rMT.eachCell((cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF334155' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.border = thinBorder;
+        cell.numFmt = '#,##0.000';
+      });
+      rMT.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+
+      rRate.eachCell((cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+        cell.font = { name: 'Segoe UI', size: 10, color: { argb: 'FF475569' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.border = thinBorder;
+        cell.numFmt = '#,##0';
+      });
+      rRate.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+
+      rManpower.eachCell((cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0FDF4' } };
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF166534' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        cell.border = thinBorder;
+      });
+      rManpower.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+
+      rPaidAmt.eachCell((cell: any) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF047857' } };
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.border = thinBorder;
+        cell.numFmt = '#,##0.00';
+      });
+      rPaidAmt.getCell(3).alignment = { vertical: 'middle', horizontal: 'left' };
+
       currRow += 5;
 
-      // 7. Employee Rows
+      // 7. Load-basis Employee Rows (Only employees with logged jobs!)
       const empStartRow = currRow;
       const empList = Array.from(teamEmployees[tKey].values());
 
       empList.forEach(eData => {
         const rEmp = worksheet.getRow(currRow);
+        rEmp.height = 20;
         rEmp.getCell(1).value = '';
         rEmp.getCell(2).value = eData.emp.punchingCode || '';
         rEmp.getCell(3).value = eData.emp.name;
@@ -2391,35 +2457,108 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         }
         rEmp.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
         rEmp.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+
+        rEmp.eachCell((cell: any, colNumber: number) => {
+          cell.font = { name: 'Segoe UI', size: 10 };
+          cell.border = thinBorder;
+          if (colNumber === 1 || colNumber === 2) {
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+          } else if (colNumber === 3) {
+            cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          } else {
+            cell.alignment = { vertical: 'middle', horizontal: 'right' };
+            cell.numFmt = '#,##0';
+          }
+        });
+
         currRow++;
       });
       const empEndRow = currRow - 1;
 
-      // 8. NEW Row
-      const newRow = currRow;
-      const rNew = worksheet.getRow(newRow);
-      rNew.getCell(3).value = 'NEW';
-      for (let d = 1; d <= daysInMonth; d++) {
-        const val = teamNewEarnings[tKey][d];
-        if (val > 0) {
-          rNew.getCell(startDayCol + d - 1).value = Math.round(val);
-        }
-      }
-      rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${newRow}:${endDayColLetter}${newRow})` };
-      rNew.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${newRow}:${endDayColLetter}${newRow})` };
-      currRow++;
+      // 8. Day-basis NEW Rows (1 dynamic NEW row for each day-basis employee added!)
+      const newStartRow = currRow;
+      const newList = Array.from(teamNewEmployees[tKey].values());
 
-      // 9. Total Row
+      if (newList.length > 0) {
+        newList.forEach(nData => {
+          const rNew = worksheet.getRow(currRow);
+          rNew.height = 20;
+          rNew.getCell(1).value = '';
+          rNew.getCell(2).value = nData.emp.punchingCode || '';
+          rNew.getCell(3).value = `NEW (${nData.emp.name})`;
+
+          for (let d = 1; d <= daysInMonth; d++) {
+            if (nData.daily[d] !== null) {
+              rNew.getCell(startDayCol + d - 1).value = Math.round(nData.daily[d]!);
+            }
+          }
+          rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+          rNew.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+
+          rNew.eachCell((cell: any, colNumber: number) => {
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // Light Amber fill for NEW rows
+            cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFB45309' } };
+            cell.border = thinBorder;
+            if (colNumber === 1 || colNumber === 2) {
+              cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            } else if (colNumber === 3) {
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'right' };
+              cell.numFmt = '#,##0';
+            }
+          });
+
+          currRow++;
+        });
+      } else {
+        // Fallback NEW row if no day-basis worker added
+        const rNew = worksheet.getRow(currRow);
+        rNew.height = 20;
+        rNew.getCell(3).value = 'NEW';
+        rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+        rNew.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+
+        rNew.eachCell((cell: any, colNumber: number) => {
+          cell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
+          cell.border = thinBorder;
+          if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+          else cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        });
+
+        currRow++;
+      }
+      const newEndRow = currRow - 1;
+
+      // 9. Total Row for Team
       const totalRow = currRow;
       const rTotal = worksheet.getRow(totalRow);
+      rTotal.height = 24;
       rTotal.getCell(3).value = 'Total';
 
-      const sumFrom = empStartRow <= empEndRow ? empStartRow : newRow;
+      const sumFrom = empStartRow <= empEndRow ? empStartRow : newStartRow;
       for (let d = 1; d <= daysInMonth; d++) {
         const colL = getExcelColLetter(startDayCol + d - 1);
-        rTotal.getCell(startDayCol + d - 1).value = { formula: `SUM(${colL}${sumFrom}:${colL}${newRow})` };
+        rTotal.getCell(startDayCol + d - 1).value = { formula: `SUM(${colL}${sumFrom}:${colL}${newEndRow})` };
       }
       rTotal.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${totalRow}:${endDayColLetter}${totalRow})` };
+
+      rTotal.eachCell((cell: any, colNumber: number) => {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } }; // Dark Slate fill for Total row
+        cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF475569' } },
+          bottom: { style: 'double', color: { argb: 'FF0F172A' } },
+          left: { style: 'thin', color: { argb: 'FF475569' } },
+          right: { style: 'thin', color: { argb: 'FF475569' } }
+        };
+        if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+        else {
+          cell.alignment = { vertical: 'middle', horizontal: 'right' };
+          cell.numFmt = '#,##0';
+        }
+      });
+
       currRow++;
 
       teamRowReferences[tKey] = {
@@ -2431,11 +2570,12 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         paidAmtRow,
         empStartRow,
         empEndRow,
-        newRow,
+        newStartRow,
+        newEndRow,
         totalRow
       };
 
-      currRow++;
+      currRow++; // Spacer row between teams
     });
 
     // 10. Summary Footer Block
@@ -2445,31 +2585,53 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     const refHEB = teamRowReferences['HE Team B'];
     const refMP = teamRowReferences['MP Team'];
 
-    // Final amount
     const rowFinalAmt = currRow;
     const rFinalAmt = worksheet.getRow(rowFinalAmt);
+    rFinalAmt.height = 22;
     rFinalAmt.getCell(3).value = 'Final amount';
     for (let d = 1; d <= daysInMonth; d++) {
       const colL = getExcelColLetter(startDayCol + d - 1);
       rFinalAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${refFinalA.totalRow}+${colL}${refFinalB.totalRow}` };
     }
     rFinalAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowFinalAmt}:${endDayColLetter}${rowFinalAmt})` };
+
+    rFinalAmt.eachCell((cell: any, colNumber: number) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEFF6FF' } };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E3A8A' } };
+      cell.border = thinBorder;
+      if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      else {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '#,##0.00';
+      }
+    });
     currRow++;
 
-    // Final MT
     const rowFinalMT = currRow;
     const rFinalMT = worksheet.getRow(rowFinalMT);
+    rFinalMT.height = 22;
     rFinalMT.getCell(3).value = 'Final MT';
     for (let d = 1; d <= daysInMonth; d++) {
       const colL = getExcelColLetter(startDayCol + d - 1);
       rFinalMT.getCell(startDayCol + d - 1).value = { formula: `${colL}${refFinalA.mtRow}+${colL}${refFinalB.mtRow}` };
     }
     rFinalMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowFinalMT}:${endDayColLetter}${rowFinalMT})` };
+
+    rFinalMT.eachCell((cell: any, colNumber: number) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF334155' } };
+      cell.border = thinBorder;
+      if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      else {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '#,##0.000';
+      }
+    });
     currRow++;
 
-    // HE amount
     const rowHEAmt = currRow;
     const rHEAmt = worksheet.getRow(rowHEAmt);
+    rHEAmt.height = 22;
     rHEAmt.getCell(3).value = 'HE amount';
     for (let d = 1; d <= daysInMonth; d++) {
       const colL = getExcelColLetter(startDayCol + d - 1);
@@ -2477,11 +2639,22 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     }
     rHEAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowHEAmt}:${endDayColLetter}${rowHEAmt})` };
     rHEAmt.getCell(countColIdx + 1).value = { formula: `${totalColLetter}${rowFinalMT}*220` };
+
+    rHEAmt.eachCell((cell: any, colNumber: number) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF047857' } };
+      cell.border = thinBorder;
+      if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      else {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '#,##0.00';
+      }
+    });
     currRow++;
 
-    // HE MT
     const rowHEMT = currRow;
     const rHEMT = worksheet.getRow(rowHEMT);
+    rHEMT.height = 22;
     rHEMT.getCell(3).value = 'HE MT';
     for (let d = 1; d <= daysInMonth; d++) {
       const colL = getExcelColLetter(startDayCol + d - 1);
@@ -2489,28 +2662,61 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     }
     rHEMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowHEMT}:${endDayColLetter}${rowHEMT})` };
     rHEMT.getCell(countColIdx + 1).value = { formula: `${totalColLetter}${rowHEMT}*320` };
+
+    rHEMT.eachCell((cell: any, colNumber: number) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF334155' } };
+      cell.border = thinBorder;
+      if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      else {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '#,##0.000';
+      }
+    });
     currRow++;
 
-    // MP amount
     const rowMPAmt = currRow;
     const rMPAmt = worksheet.getRow(rowMPAmt);
+    rMPAmt.height = 22;
     rMPAmt.getCell(3).value = 'MP amount';
     for (let d = 1; d <= daysInMonth; d++) {
       const colL = getExcelColLetter(startDayCol + d - 1);
       rMPAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${refMP.totalRow}` };
     }
     rMPAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowMPAmt}:${endDayColLetter}${rowMPAmt})` };
+
+    rMPAmt.eachCell((cell: any, colNumber: number) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFB45309' } };
+      cell.border = thinBorder;
+      if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      else {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '#,##0.00';
+      }
+    });
     currRow++;
 
-    // MP MT
     const rowMPMT = currRow;
     const rMPMT = worksheet.getRow(rowMPMT);
+    rMPMT.height = 22;
     rMPMT.getCell(3).value = 'MP MT';
     for (let d = 1; d <= daysInMonth; d++) {
       const colL = getExcelColLetter(startDayCol + d - 1);
       rMPMT.getCell(startDayCol + d - 1).value = { formula: `${colL}${refMP.mtRow}` };
     }
     rMPMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowMPMT}:${endDayColLetter}${rowMPMT})` };
+
+    rMPMT.eachCell((cell: any, colNumber: number) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF334155' } };
+      cell.border = thinBorder;
+      if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+      else {
+        cell.alignment = { vertical: 'middle', horizontal: 'right' };
+        cell.numFmt = '#,##0.000';
+      }
+    });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Salary_Report_${m}_${y}.xlsx`);
