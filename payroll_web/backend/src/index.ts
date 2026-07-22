@@ -2528,14 +2528,13 @@ app.get('/api/payroll/salary-report', async (req, res) => {
           rNew.getCell(2).border = thinBorder;
 
           for (let d = 1; d <= daysInMonth; d++) {
-            const att = attMap.get(`${nData.emp.employeeId}_${m}/${d}/${y}`);
-            const isPresent = att && att.checkIn;
-            const baseWage = isPresent ? nData.emp.salaryPerDay : 0;
-            const loadBonus = nData.daily[d] || 0;
-            const totalEarning = baseWage + loadBonus;
-
-            if (totalEarning > 0) {
-              rNew.getCell(startDayCol + d - 1).value = Math.round(totalEarning);
+            if (nData.daily[d] !== null && nData.daily[d]! > 0) {
+              const att = attMap.get(`${nData.emp.employeeId}_${m}/${d}/${y}`);
+              const isPresent = att && att.checkIn;
+              const baseWage = isPresent ? nData.emp.salaryPerDay : 0;
+              const loadBonus = nData.daily[d] || 0;
+              const dayEarning = baseWage + loadBonus;
+              rNew.getCell(startDayCol + d - 1).value = Math.round(dayEarning);
             }
           }
           rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
