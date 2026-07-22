@@ -2024,6 +2024,466 @@ app.get('/api/attendance/export', async (req, res) => {
   }
 });
 
+// Helper: Convert 1-based column index to Excel column string (1='A', 2='B', 27='AA', etc.)
+function getExcelColLetter(colIdx: number): string {
+  let temp = 0;
+  let letter = '';
+  while (colIdx > 0) {
+    temp = (colIdx - 1) % 26;
+    letter = String.fromCharCode(65 + temp) + letter;
+    colIdx = Math.floor((colIdx - temp - 1) / 26);
+  }
+  return letter;
+}
+
+// REST Route: Export Salary Report (Salary_Report.xlsx format)
+app.get('/api/payroll/salary-report', async (req, res) => {
+  const { month, year } = req.query;
+  if (!month || !year) {
+    return res.status(400).json({ error: 'Month and Year parameters are required.' });
+  }
+
+  const m = parseInt(month as string);
+  const y = parseInt(year as string);
+
+  if (isNaN(m) || isNaN(y) || m < 1 || m > 12) {
+    return res.status(400).json({ error: 'Invalid month or year.' });
+  }
+
+  try {
+    const ExcelJS = require('exceljs');
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`MANE TANNAGE (${m})`);
+
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const matchPattern = `${m}/`;
+
+    // Fetch Job Logs, Attendance, Employees
+    const jobs = await prisma.jobLog.findMany({
+      where: { date: { startsWith: matchPattern } },
+      include: { employees: { include: { employee: true } } }
+    });
+
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: { date: { startsWith: matchPattern } }
+    });
+
+    const allEmployees = await prisma.employee.findMany();
+
+    // Map attendance records by employeeId + date
+    const attMap = new Map<string, any>();
+    attendanceRecords.forEach(att => {
+      attMap.set(`${att.employeeId}_${att.date}`, att);
+    });
+
+    // Filter jobs for month & year
+    const monthJobs = jobs.filter(j => {
+      const parts = j.date.split('/');
+      return parts.length === 3 && parseInt(parts[2]) === y;
+    });
+
+    // Determine shift for employee on date
+    const getEmployeeShift = (empId: string, dateStr: string): string => {
+      const att = attMap.get(`${empId}_${dateStr}`);
+      if (!att || !att.checkIn) return 'Shift A';
+      const parts = att.checkIn.split(':').map(Number);
+      if (parts.length < 2) return 'Shift A';
+      const hour = parts[0];
+      if (hour >= 13 && hour <= 18) return 'Shift B';
+      return 'Shift A';
+    };
+
+    // Day 1 column is Col 4 (D)
+    // Day N column is Col 3 + N
+    // Total column is Col 4 + daysInMonth
+    // COUNT column is Col 5 + daysInMonth
+    const startDayCol = 4;
+    const endDayCol = 3 + daysInMonth;
+    const totalColIdx = 4 + daysInMonth;
+    const countColIdx = 5 + daysInMonth;
+
+    const startDayColLetter = getExcelColLetter(startDayCol);
+    const endDayColLetter = getExcelColLetter(endDayCol);
+    const totalColLetter = getExcelColLetter(totalColIdx);
+    const countColLetter = getExcelColLetter(countColIdx);
+
+    // Row 1: Month Date
+    const row1 = worksheet.getRow(1);
+    row1.getCell(2).value = new Date(y, m - 1, 1);
+
+    // Row 2: Header Row
+    const row2 = worksheet.getRow(2);
+    row2.getCell(1).value = 'PF NO.';
+    row2.getCell(2).value = 'Punching Code';
+    row2.getCell(3).value = 'Day';
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      row2.getCell(startDayCol + d - 1).value = d;
+    }
+    row2.getCell(totalColIdx).value = 'Total';
+    row2.getCell(countColIdx).value = 'COUNT';
+
+    // Style Header Row 2
+    row2.eachCell((cell: any) => {
+      cell.font = { bold: true };
+      cell.alignment = { horizontal: 'center' };
+    });
+
+    const teamRates: Record<string, number> = {
+      'Final Team A': 220,
+      'Final Team B': 220,
+      'HE Team A': 320,
+      'HE Team B': 320,
+      'MP Team': 320
+    };
+
+    const teamDailyMT: Record<string, number[]> = {
+      'Final Team A': new Array(daysInMonth + 1).fill(0),
+      'Final Team B': new Array(daysInMonth + 1).fill(0),
+      'HE Team A': new Array(daysInMonth + 1).fill(0),
+      'HE Team B': new Array(daysInMonth + 1).fill(0),
+      'MP Team': new Array(daysInMonth + 1).fill(0)
+    };
+
+    const teamEmployees: Record<string, Map<string, { emp: any; daily: (number | null)[] }>> = {
+      'Final Team A': new Map(),
+      'Final Team B': new Map(),
+      'HE Team A': new Map(),
+      'HE Team B': new Map(),
+      'MP Team': new Map()
+    };
+
+    const teamNewEarnings: Record<string, number[]> = {
+      'Final Team A': new Array(daysInMonth + 1).fill(0),
+      'Final Team B': new Array(daysInMonth + 1).fill(0),
+      'HE Team A': new Array(daysInMonth + 1).fill(0),
+      'HE Team B': new Array(daysInMonth + 1).fill(0),
+      'MP Team': new Array(daysInMonth + 1).fill(0)
+    };
+
+    // Pre-populate MP Team list from Excel sheet format
+    const mpEmployeeNames = [
+      'Mr. DEEPAK PAL',
+      'SATYAM PATEL',
+      'HARIOM THAKUR',
+      'SURAJ THAKUR',
+      'SHAKRAM GOUND',
+      'ANKIT KUSHWAHA',
+      'BHUPENDER PATEL',
+      'NARENDRA PALEL',
+      'DEVENDRA YADAV'
+    ];
+
+    mpEmployeeNames.forEach((name, idx) => {
+      const foundEmp = allEmployees.find(e => e.name.toLowerCase() === name.toLowerCase()) || {
+        employeeId: `MP_${idx + 1}`,
+        name: name,
+        punchingCode: '',
+        salaryPerDay: 0
+      };
+      teamEmployees['MP Team'].set(foundEmp.employeeId, {
+        emp: foundEmp,
+        daily: new Array(daysInMonth + 1).fill(null)
+      });
+    });
+
+    // Populate Job Logs into teams based on Job Type + Shift
+    monthJobs.forEach(job => {
+      const parts = job.date.split('/');
+      const day = parseInt(parts[1]);
+      if (day < 1 || day > daysInMonth) return;
+
+      const isFinalJob = job.jobName.toLowerCase().includes('final');
+
+      job.employees.forEach(je => {
+        const emp = je.employee;
+        const shift = getEmployeeShift(emp.employeeId, job.date);
+
+        let targetTeam = '';
+        if (isFinalJob) {
+          targetTeam = shift === 'Shift B' ? 'Final Team B' : 'Final Team A';
+        } else {
+          targetTeam = shift === 'Shift B' ? 'HE Team B' : 'HE Team A';
+        }
+
+        teamDailyMT[targetTeam][day] += job.totalTons || 0;
+
+        if (emp.salaryPerDay > 0) {
+          // Day basis employee on load job -> goes to NEW row
+          teamNewEarnings[targetTeam][day] += je.splitEarnings || 0;
+        } else {
+          // Load basis employee -> regular row under team
+          if (!teamEmployees[targetTeam].has(emp.employeeId)) {
+            teamEmployees[targetTeam].set(emp.employeeId, {
+              emp,
+              daily: new Array(daysInMonth + 1).fill(null)
+            });
+          }
+          const empRecord = teamEmployees[targetTeam].get(emp.employeeId)!;
+          empRecord.daily[day] = (empRecord.daily[day] || 0) + (je.splitEarnings || 0);
+        }
+      });
+    });
+
+    let currRow = 3;
+    const teamRowReferences: Record<string, {
+      headerRow: number,
+      amtRow: number,
+      mtRow: number,
+      rateRow: number,
+      manpowerRow: number,
+      paidAmtRow: number,
+      empStartRow: number,
+      empEndRow: number,
+      newRow: number,
+      totalRow: number
+    }> = {};
+
+    const teamsList = [
+      { key: 'Final Team A', label: 'FINAL TEAM A' },
+      { key: 'Final Team B', label: 'FINAL TEAM B' },
+      { key: 'HE Team A', label: 'HE TEAM A' },
+      { key: 'HE Team B', label: 'HE TEAM B' },
+      { key: 'MP Team', label: 'MP' }
+    ];
+
+    teamsList.forEach((teamInfo, tIdx) => {
+      const tKey = teamInfo.key;
+      const tLabel = teamInfo.label;
+      const rateVal = teamRates[tKey];
+
+      // 1. Header Row / Diff Row
+      const hRow = currRow;
+      const rHeader = worksheet.getRow(hRow);
+      rHeader.getCell(3).value = tLabel;
+
+      if (tIdx > 0) {
+        const prevTeamKey = teamsList[tIdx - 1].key;
+        const prevRefs = teamRowReferences[prevTeamKey];
+        if (prevRefs) {
+          for (let d = 1; d <= daysInMonth; d++) {
+            const colL = getExcelColLetter(startDayCol + d - 1);
+            rHeader.getCell(startDayCol + d - 1).value = { formula: `${colL}${prevRefs.totalRow}-${colL}${prevRefs.amtRow}` };
+          }
+          rHeader.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${hRow}:${endDayColLetter}${hRow})` };
+        }
+      } else {
+        for (let d = 1; d <= daysInMonth; d++) {
+          rHeader.getCell(startDayCol + d - 1).value = d;
+        }
+        rHeader.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${hRow}:${endDayColLetter}${hRow})` };
+      }
+      currRow++;
+
+      // 2. TOTAL AMOUNT Row
+      const amtRow = currRow;
+      const rAmt = worksheet.getRow(amtRow);
+      rAmt.getCell(3).value = 'TOTAL AMOUNT';
+
+      // 3. TOTAL MT Row
+      const mtRow = currRow + 1;
+
+      // 4. Rate Row
+      const rateRow = currRow + 2;
+
+      // 5. No.of Manpawar Row
+      const manpowerRow = currRow + 3;
+
+      // 6. Paid Amount Row
+      const paidAmtRow = currRow + 4;
+
+      const rMT = worksheet.getRow(mtRow);
+      rMT.getCell(3).value = 'TOTAL MT';
+
+      const rRate = worksheet.getRow(rateRow);
+      rRate.getCell(3).value = 'Rate';
+
+      const rManpower = worksheet.getRow(manpowerRow);
+      rManpower.getCell(3).value = 'No.of Manpawar';
+
+      const rPaidAmt = worksheet.getRow(paidAmtRow);
+      rPaidAmt.getCell(3).value = 'Paid Amount';
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const colL = getExcelColLetter(startDayCol + d - 1);
+        const mtVal = teamDailyMT[tKey][d];
+        if (tKey !== 'MP Team' && mtVal > 0) {
+          rMT.getCell(startDayCol + d - 1).value = mtVal;
+        }
+
+        rRate.getCell(startDayCol + d - 1).value = rateVal;
+        rAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${rateRow}*${colL}${mtRow}` };
+
+        let mpCount = 0;
+        teamEmployees[tKey].forEach(eData => {
+          if (eData.daily[d] !== null && eData.daily[d]! > 0) mpCount++;
+        });
+        if (teamNewEarnings[tKey][d] > 0) mpCount++;
+
+        if (mpCount > 0) {
+          rManpower.getCell(startDayCol + d - 1).value = mpCount;
+        }
+
+        rPaidAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${amtRow}/${colL}${manpowerRow}` };
+      }
+
+      rAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${amtRow}:${endDayColLetter}${amtRow})` };
+      rMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${mtRow}:${endDayColLetter}${mtRow})` };
+      rRate.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rateRow}:${endDayColLetter}${rateRow})` };
+      rManpower.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${manpowerRow}:${endDayColLetter}${manpowerRow})` };
+      rPaidAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${paidAmtRow}:${endDayColLetter}${paidAmtRow})` };
+
+      currRow += 5;
+
+      // 7. Employee Rows
+      const empStartRow = currRow;
+      const empList = Array.from(teamEmployees[tKey].values());
+
+      empList.forEach(eData => {
+        const rEmp = worksheet.getRow(currRow);
+        rEmp.getCell(1).value = '';
+        rEmp.getCell(2).value = eData.emp.punchingCode || '';
+        rEmp.getCell(3).value = eData.emp.name;
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          if (eData.daily[d] !== null) {
+            rEmp.getCell(startDayCol + d - 1).value = Math.round(eData.daily[d]!);
+          }
+        }
+        rEmp.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+        rEmp.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
+        currRow++;
+      });
+      const empEndRow = currRow - 1;
+
+      // 8. NEW Row
+      const newRow = currRow;
+      const rNew = worksheet.getRow(newRow);
+      rNew.getCell(3).value = 'NEW';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const val = teamNewEarnings[tKey][d];
+        if (val > 0) {
+          rNew.getCell(startDayCol + d - 1).value = Math.round(val);
+        }
+      }
+      rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${newRow}:${endDayColLetter}${newRow})` };
+      rNew.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${newRow}:${endDayColLetter}${newRow})` };
+      currRow++;
+
+      // 9. Total Row
+      const totalRow = currRow;
+      const rTotal = worksheet.getRow(totalRow);
+      rTotal.getCell(3).value = 'Total';
+
+      const sumFrom = empStartRow <= empEndRow ? empStartRow : newRow;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const colL = getExcelColLetter(startDayCol + d - 1);
+        rTotal.getCell(startDayCol + d - 1).value = { formula: `SUM(${colL}${sumFrom}:${colL}${newRow})` };
+      }
+      rTotal.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${totalRow}:${endDayColLetter}${totalRow})` };
+      currRow++;
+
+      teamRowReferences[tKey] = {
+        headerRow: hRow,
+        amtRow,
+        mtRow,
+        rateRow,
+        manpowerRow,
+        paidAmtRow,
+        empStartRow,
+        empEndRow,
+        newRow,
+        totalRow
+      };
+
+      currRow++;
+    });
+
+    // 10. Summary Footer Block
+    const refFinalA = teamRowReferences['Final Team A'];
+    const refFinalB = teamRowReferences['Final Team B'];
+    const refHEA = teamRowReferences['HE Team A'];
+    const refHEB = teamRowReferences['HE Team B'];
+    const refMP = teamRowReferences['MP Team'];
+
+    // Final amount
+    const rowFinalAmt = currRow;
+    const rFinalAmt = worksheet.getRow(rowFinalAmt);
+    rFinalAmt.getCell(3).value = 'Final amount';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colL = getExcelColLetter(startDayCol + d - 1);
+      rFinalAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${refFinalA.totalRow}+${colL}${refFinalB.totalRow}` };
+    }
+    rFinalAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowFinalAmt}:${endDayColLetter}${rowFinalAmt})` };
+    currRow++;
+
+    // Final MT
+    const rowFinalMT = currRow;
+    const rFinalMT = worksheet.getRow(rowFinalMT);
+    rFinalMT.getCell(3).value = 'Final MT';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colL = getExcelColLetter(startDayCol + d - 1);
+      rFinalMT.getCell(startDayCol + d - 1).value = { formula: `${colL}${refFinalA.mtRow}+${colL}${refFinalB.mtRow}` };
+    }
+    rFinalMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowFinalMT}:${endDayColLetter}${rowFinalMT})` };
+    currRow++;
+
+    // HE amount
+    const rowHEAmt = currRow;
+    const rHEAmt = worksheet.getRow(rowHEAmt);
+    rHEAmt.getCell(3).value = 'HE amount';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colL = getExcelColLetter(startDayCol + d - 1);
+      rHEAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${refHEA.totalRow}+${colL}${refHEB.totalRow}` };
+    }
+    rHEAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowHEAmt}:${endDayColLetter}${rowHEAmt})` };
+    rHEAmt.getCell(countColIdx + 1).value = { formula: `${totalColLetter}${rowFinalMT}*220` };
+    currRow++;
+
+    // HE MT
+    const rowHEMT = currRow;
+    const rHEMT = worksheet.getRow(rowHEMT);
+    rHEMT.getCell(3).value = 'HE MT';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colL = getExcelColLetter(startDayCol + d - 1);
+      rHEMT.getCell(startDayCol + d - 1).value = { formula: `${colL}${refHEA.mtRow}+${colL}${refHEB.mtRow}` };
+    }
+    rHEMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowHEMT}:${endDayColLetter}${rowHEMT})` };
+    rHEMT.getCell(countColIdx + 1).value = { formula: `${totalColLetter}${rowHEMT}*320` };
+    currRow++;
+
+    // MP amount
+    const rowMPAmt = currRow;
+    const rMPAmt = worksheet.getRow(rowMPAmt);
+    rMPAmt.getCell(3).value = 'MP amount';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colL = getExcelColLetter(startDayCol + d - 1);
+      rMPAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${refMP.totalRow}` };
+    }
+    rMPAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowMPAmt}:${endDayColLetter}${rowMPAmt})` };
+    currRow++;
+
+    // MP MT
+    const rowMPMT = currRow;
+    const rMPMT = worksheet.getRow(rowMPMT);
+    rMPMT.getCell(3).value = 'MP MT';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const colL = getExcelColLetter(startDayCol + d - 1);
+      rMPMT.getCell(startDayCol + d - 1).value = { formula: `${colL}${refMP.mtRow}` };
+    }
+    rMPMT.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${rowMPMT}:${endDayColLetter}${rowMPMT})` };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Salary_Report_${m}_${y}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    console.error('Error generating Salary Report:', err);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 KFIL Solapur Backend running at http://localhost:${PORT}`);
 });

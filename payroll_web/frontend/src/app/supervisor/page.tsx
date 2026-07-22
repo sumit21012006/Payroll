@@ -767,6 +767,38 @@ export default function SupervisorDashboard() {
     }
   };
 
+  const handleExportSalaryReport = async () => {
+    setIsExporting(true);
+    setExportMessage('');
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/payroll/salary-report?month=${exportMonth}&year=${exportYear}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Salary_Report_${exportMonth}_${exportYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      setShowExportModal(false);
+    } catch (err) {
+      console.error('Error exporting salary report:', err);
+      setExportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans selection:bg-indigo-100 selection:text-indigo-900">
       
@@ -1542,72 +1574,86 @@ export default function SupervisorDashboard() {
         </div>
       )}
 
-      {/* Operations Export Modal */}
+      {/* Operations & Salary Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-sm w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+          <div className="bg-white border border-slate-200 shadow-xl rounded-xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-indigo-600" />
-                <span>Export Operations Report</span>
+                <Download className="w-5 h-5 text-indigo-600" />
+                <span>Export Operations & Salary Reports</span>
               </h3>
               <button onClick={() => setShowExportModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
             </div>
 
             <div className="p-6 space-y-4 text-xs text-slate-600">
               <p className="text-slate-500 leading-relaxed font-sans">
-                Select a month and year to download a horizontal side-by-side weekly operations calendar report Excel spreadsheet.
+                Select a month and year to generate and download Excel reports for supervisor operations and team salary distribution.
               </p>
               
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-slate-500">Select Month</label>
-                <select 
-                  value={exportMonth} 
-                  onChange={(e) => setExportMonth(Number(e.target.value))} 
-                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer font-bold font-sans"
-                >
-                  <option value={1}>January</option>
-                  <option value={2}>February</option>
-                  <option value={3}>March</option>
-                  <option value={4}>April</option>
-                  <option value={5}>May</option>
-                  <option value={6}>June</option>
-                  <option value={7}>July</option>
-                  <option value={8}>August</option>
-                  <option value={9}>September</option>
-                  <option value={10}>October</option>
-                  <option value={11}>November</option>
-                  <option value={12}>December</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-slate-500">Select Month</label>
+                  <select 
+                    value={exportMonth} 
+                    onChange={(e) => setExportMonth(Number(e.target.value))} 
+                    className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer font-bold font-sans"
+                  >
+                    <option value={1}>January</option>
+                    <option value={2}>February</option>
+                    <option value={3}>March</option>
+                    <option value={4}>April</option>
+                    <option value={5}>May</option>
+                    <option value={6}>June</option>
+                    <option value={7}>July</option>
+                    <option value={8}>August</option>
+                    <option value={9}>September</option>
+                    <option value={10}>October</option>
+                    <option value={11}>November</option>
+                    <option value={12}>December</option>
+                  </select>
+                </div>
 
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-slate-500">Select Year</label>
-                <select 
-                  value={exportYear} 
-                  onChange={(e) => setExportYear(Number(e.target.value))} 
-                  className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer font-bold font-sans"
-                >
-                  <option value={2025}>2025</option>
-                  <option value={2026}>2026</option>
-                  <option value={2027}>2027</option>
-                  <option value={2028}>2028</option>
-                  <option value={2029}>2029</option>
-                  <option value={2030}>2030</option>
-                </select>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-semibold text-slate-500">Select Year</label>
+                  <select 
+                    value={exportYear} 
+                    onChange={(e) => setExportYear(Number(e.target.value))} 
+                    className="w-full h-10 border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-2 focus:outline-none cursor-pointer font-bold font-sans"
+                  >
+                    <option value={2025}>2025</option>
+                    <option value={2026}>2026</option>
+                    <option value={2027}>2027</option>
+                    <option value={2028}>2028</option>
+                    <option value={2029}>2029</option>
+                    <option value={2030}>2030</option>
+                  </select>
+                </div>
               </div>
 
               {exportMessage && (
                 <p className="text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-lg">{exportMessage}</p>
               )}
 
-              <button
-                onClick={handleExportOperationsReport}
-                disabled={isExporting}
-                className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
-              >
-                {isExporting ? 'Generating Report...' : 'Download Excel Calendar'}
-              </button>
+              <div className="space-y-2.5 pt-2">
+                <button
+                  onClick={handleExportSalaryReport}
+                  disabled={isExporting}
+                  className="w-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50 shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>{isExporting ? 'Generating Report...' : 'Download Salary Report (Excel)'}</span>
+                </button>
+
+                <button
+                  onClick={handleExportOperationsReport}
+                  disabled={isExporting}
+                  className="w-full h-11 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer disabled:opacity-50 shadow-xs flex items-center justify-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>{isExporting ? 'Generating Report...' : 'Download Operations Calendar'}</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -62,6 +62,21 @@ interface JobLog {
   employees: JobLogEmployeeRelation[];
 }
 
+const getShiftFromTime = (checkInStr: string) => {
+  if (!checkInStr) return 'N/A';
+  const parts = checkInStr.split(':').map(Number);
+  if (parts.length < 2 || isNaN(parts[0])) return 'N/A';
+  const hour = parts[0];
+  if (hour >= 5 && hour <= 11) {
+    return 'Shift A';
+  } else if (hour >= 13 && hour <= 18) {
+    return 'Shift B';
+  } else if (hour >= 21 || hour <= 2) {
+    return 'Shift C';
+  }
+  return 'General Shift';
+};
+
 export default function AdminDashboard() {
   const router = useRouter();
 
@@ -163,6 +178,97 @@ export default function AdminDashboard() {
 
   const [isExportingAtt, setIsExportingAtt] = useState(false);
   const [attExportMessage, setAttExportMessage] = useState('');
+
+  // Reports Center Modal State
+  const [showReportsModal, setShowReportsModal] = useState(false);
+  const [reportMonth, setReportMonth] = useState(new Date().getMonth() + 1);
+  const [reportYear, setReportYear] = useState(new Date().getFullYear());
+  const [isExportingReport, setIsExportingReport] = useState(false);
+  const [reportMessage, setReportMessage] = useState('');
+
+  const handleExportSalaryReportAdmin = async () => {
+    setIsExportingReport(true);
+    setReportMessage('');
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/payroll/salary-report?month=${reportMonth}&year=${reportYear}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Salary_Report_${reportMonth}_${reportYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setReportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExportingReport(false);
+    }
+  };
+
+  const handleExportOperationsReportAdmin = async () => {
+    setIsExportingReport(true);
+    setReportMessage('');
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/jobs/export?month=${reportMonth}&year=${reportYear}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Operations_Report_${reportMonth}_${reportYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setReportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExportingReport(false);
+    }
+  };
+
+  const handleExportPayrollRegisterAdmin = async () => {
+    setIsExportingReport(true);
+    setReportMessage('');
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/payroll/export?month=${reportMonth}&year=${reportYear}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Payroll_${reportMonth}_${reportYear}_Register.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setReportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExportingReport(false);
+    }
+  };
 
   const handleDownloadAttendance = async () => {
     setIsExportingAtt(true);
@@ -688,18 +794,19 @@ export default function AdminDashboard() {
 
 
 
-          {/* Biometric Attendance Export button */}
+          {/* Reports Button */}
           <button
-            onClick={() => setShowAttExportModal(true)}
-            className="p-2.5 border border-slate-200 hover:border-blue-200 hover:bg-blue-50 rounded-xl transition-all shadow-sm text-slate-500 hover:text-blue-600 cursor-pointer"
-            title="Export biometric attendance logs to Excel"
+            onClick={() => setShowReportsModal(true)}
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-emerald-300 hover:bg-emerald-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-600 hover:text-emerald-700 shadow-xs cursor-pointer"
+            title="Download Reports"
           >
-            <Calendar className="w-4.5 h-4.5" />
+            <Download className="w-4 h-4 text-emerald-600" />
+            <span>Reports</span>
           </button>
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-rose-600 shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:border-rose-300 hover:bg-rose-50 rounded-xl text-xs font-bold transition-all duration-300 text-slate-500 hover:text-rose-600 shadow-xs cursor-pointer"
           >
             <LogOut className="w-4 h-4" />
             <span>Logout</span>
@@ -1483,6 +1590,133 @@ export default function AdminDashboard() {
         </div>
       )}
 
+      {/* Reports Center Modal */}
+      {showReportsModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 shadow-2xl rounded-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
+                <Download className="w-5 h-5 text-emerald-600" />
+                <span>Reports Center</span>
+              </h3>
+              <button onClick={() => setShowReportsModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer"><X className="w-5 h-5" /></button>
+            </div>
+
+            <div className="p-6 space-y-5 text-xs text-slate-600">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Month</label>
+                  <select 
+                    value={reportMonth} 
+                    onChange={(e) => setReportMonth(Number(e.target.value))} 
+                    className="w-full h-10 border border-slate-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-3 focus:outline-none cursor-pointer font-bold font-sans text-slate-800"
+                  >
+                    <option value={1}>January</option>
+                    <option value={2}>February</option>
+                    <option value={3}>March</option>
+                    <option value={4}>April</option>
+                    <option value={5}>May</option>
+                    <option value={6}>June</option>
+                    <option value={7}>July</option>
+                    <option value={8}>August</option>
+                    <option value={9}>September</option>
+                    <option value={10}>October</option>
+                    <option value={11}>November</option>
+                    <option value={12}>December</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select Year</label>
+                  <select 
+                    value={reportYear} 
+                    onChange={(e) => setReportYear(Number(e.target.value))} 
+                    className="w-full h-10 border border-slate-300 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl px-3 focus:outline-none cursor-pointer font-bold font-sans text-slate-800"
+                  >
+                    <option value={2025}>2025</option>
+                    <option value={2026}>2026</option>
+                    <option value={2027}>2027</option>
+                    <option value={2028}>2028</option>
+                    <option value={2029}>2029</option>
+                    <option value={2030}>2030</option>
+                  </select>
+                </div>
+              </div>
+
+              {reportMessage && (
+                <p className="text-rose-600 bg-rose-50 border border-rose-100 p-2.5 rounded-lg">{reportMessage}</p>
+              )}
+
+              <div className="space-y-3 pt-1">
+                <button
+                  onClick={handleExportSalaryReportAdmin}
+                  disabled={isExportingReport}
+                  className="w-full p-3.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-500/30 rounded-lg"><Download className="w-4 h-4 text-white" /></div>
+                    <div className="text-left">
+                      <div className="text-xs font-extrabold">Monthly Team Salary Report</div>
+                      <div className="text-[10px] text-emerald-100 font-normal font-sans">Salary_Report.xlsx format (Teams A/B, HE, MP)</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] bg-white/20 px-2.5 py-1 rounded-md">Download</span>
+                </button>
+
+                <button
+                  onClick={handleExportOperationsReportAdmin}
+                  disabled={isExportingReport}
+                  className="w-full p-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-500/30 rounded-lg"><Calendar className="w-4 h-4 text-white" /></div>
+                    <div className="text-left">
+                      <div className="text-xs font-extrabold">Daily Operations Allocation</div>
+                      <div className="text-[10px] text-indigo-100 font-normal font-sans">Daily operations grid & worker allocations</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] bg-white/20 px-2.5 py-1 rounded-md">Download</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleExportPayrollRegisterAdmin();
+                    setShowReportsModal(false);
+                  }}
+                  className="w-full p-3.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold transition-all cursor-pointer shadow-sm flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-700 rounded-lg"><DollarSign className="w-4 h-4 text-amber-400" /></div>
+                    <div className="text-left">
+                      <div className="text-xs font-extrabold">Monthly Payroll Register</div>
+                      <div className="text-[10px] text-slate-300 font-normal font-sans">Full basic, OT, PF, ESIC & net pay breakdown</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] bg-white/10 px-2.5 py-1 rounded-md">Download</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowReportsModal(false);
+                    setShowAttExportModal(true);
+                  }}
+                  className="w-full p-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all cursor-pointer shadow-sm flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-blue-500/30 rounded-lg"><Calendar className="w-4 h-4 text-white" /></div>
+                    <div className="text-left">
+                      <div className="text-xs font-extrabold">Biometric Attendance Logs</div>
+                      <div className="text-[10px] text-blue-100 font-normal font-sans">Raw device check-in & check-out logs</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] bg-white/20 px-2.5 py-1 rounded-md">Download</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
@@ -1712,18 +1946,3 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: A
     </div>
   );
 }
-
-const getShiftFromTime = (checkInStr: string) => {
-  if (!checkInStr) return 'N/A';
-  const parts = checkInStr.split(':').map(Number);
-  if (parts.length < 2 || isNaN(parts[0])) return 'N/A';
-  const hour = parts[0];
-  if (hour >= 5 && hour <= 11) {
-    return 'Shift A';
-  } else if (hour >= 13 && hour <= 18) {
-    return 'Shift B';
-  } else if (hour >= 21 || hour <= 2) {
-    return 'Shift C';
-  }
-  return 'General Shift';
-};
