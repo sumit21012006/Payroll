@@ -2054,6 +2054,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`MANE TANNAGE (${m})`);
+    worksheet.views = [{ state: 'frozen', xSplit: 3, ySplit: 2 }];
 
     const daysInMonth = new Date(y, m, 0).getDate();
     const matchPattern = `${m}/`;
