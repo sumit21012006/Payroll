@@ -2450,24 +2450,53 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         rEmp.getCell(2).value = eData.emp.punchingCode || '';
         rEmp.getCell(3).value = eData.emp.name;
 
+        // Apply styled fills for left 2 columns
+        rEmp.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } }; // Light slate fill
+        rEmp.getCell(1).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF475569' } };
+        rEmp.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+        rEmp.getCell(1).border = thinBorder;
+
+        rEmp.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } }; // Light indigo fill
+        rEmp.getCell(2).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E3A8A' } };
+        rEmp.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+        rEmp.getCell(2).border = thinBorder;
+
         for (let d = 1; d <= daysInMonth; d++) {
-          if (eData.daily[d] !== null) {
-            rEmp.getCell(startDayCol + d - 1).value = Math.round(eData.daily[d]!);
+          let dailyVal: number | null = null;
+
+          if (eData.emp.salaryPerDay > 0) {
+            // Day-basis employee: Base Wage (if Present) + Load split bonus
+            const att = attMap.get(`${eData.emp.employeeId}_${m}/${d}/${y}`);
+            const isPresent = att && att.checkIn;
+            const baseWage = isPresent ? eData.emp.salaryPerDay : 0;
+            const loadBonus = eData.daily[d] || 0;
+            if (baseWage > 0 || loadBonus > 0) {
+              dailyVal = baseWage + loadBonus;
+            }
+          } else {
+            // Load-basis employee
+            if (eData.daily[d] !== null) {
+              dailyVal = eData.daily[d];
+            }
+          }
+
+          if (dailyVal !== null) {
+            rEmp.getCell(startDayCol + d - 1).value = Math.round(dailyVal);
           }
         }
         rEmp.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
         rEmp.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
 
         rEmp.eachCell((cell: any, colNumber: number) => {
-          cell.font = { name: 'Segoe UI', size: 10 };
-          cell.border = thinBorder;
-          if (colNumber === 1 || colNumber === 2) {
-            cell.alignment = { vertical: 'middle', horizontal: 'center' };
-          } else if (colNumber === 3) {
-            cell.alignment = { vertical: 'middle', horizontal: 'left' };
-          } else {
-            cell.alignment = { vertical: 'middle', horizontal: 'right' };
-            cell.numFmt = '#,##0';
+          if (colNumber > 2) {
+            cell.font = { name: 'Segoe UI', size: 10 };
+            cell.border = thinBorder;
+            if (colNumber === 3) {
+              cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            } else {
+              cell.alignment = { vertical: 'middle', horizontal: 'right' };
+              cell.numFmt = '#,##0';
+            }
           }
         });
 
@@ -2487,25 +2516,42 @@ app.get('/api/payroll/salary-report', async (req, res) => {
           rNew.getCell(2).value = nData.emp.punchingCode || '';
           rNew.getCell(3).value = `NEW (${nData.emp.name})`;
 
+          // Apply styled fills for left 2 columns
+          rNew.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+          rNew.getCell(1).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF475569' } };
+          rNew.getCell(1).alignment = { vertical: 'middle', horizontal: 'center' };
+          rNew.getCell(1).border = thinBorder;
+
+          rNew.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+          rNew.getCell(2).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF1E3A8A' } };
+          rNew.getCell(2).alignment = { vertical: 'middle', horizontal: 'center' };
+          rNew.getCell(2).border = thinBorder;
+
           for (let d = 1; d <= daysInMonth; d++) {
-            if (nData.daily[d] !== null) {
-              rNew.getCell(startDayCol + d - 1).value = Math.round(nData.daily[d]!);
+            const att = attMap.get(`${nData.emp.employeeId}_${m}/${d}/${y}`);
+            const isPresent = att && att.checkIn;
+            const baseWage = isPresent ? nData.emp.salaryPerDay : 0;
+            const loadBonus = nData.daily[d] || 0;
+            const totalEarning = baseWage + loadBonus;
+
+            if (totalEarning > 0) {
+              rNew.getCell(startDayCol + d - 1).value = Math.round(totalEarning);
             }
           }
           rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
           rNew.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
 
           rNew.eachCell((cell: any, colNumber: number) => {
-            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // Light Amber fill for NEW rows
-            cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFB45309' } };
-            cell.border = thinBorder;
-            if (colNumber === 1 || colNumber === 2) {
-              cell.alignment = { vertical: 'middle', horizontal: 'center' };
-            } else if (colNumber === 3) {
-              cell.alignment = { vertical: 'middle', horizontal: 'left' };
-            } else {
-              cell.alignment = { vertical: 'middle', horizontal: 'right' };
-              cell.numFmt = '#,##0';
+            if (colNumber > 2) {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } }; // Light Amber fill for NEW rows
+              cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFB45309' } };
+              cell.border = thinBorder;
+              if (colNumber === 3) {
+                cell.alignment = { vertical: 'middle', horizontal: 'left' };
+              } else {
+                cell.alignment = { vertical: 'middle', horizontal: 'right' };
+                cell.numFmt = '#,##0';
+              }
             }
           });
 
@@ -2519,11 +2565,18 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
         rNew.getCell(countColIdx).value = { formula: `COUNT(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
 
+        rNew.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+        rNew.getCell(1).border = thinBorder;
+        rNew.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF2FF' } };
+        rNew.getCell(2).border = thinBorder;
+
         rNew.eachCell((cell: any, colNumber: number) => {
-          cell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
-          cell.border = thinBorder;
-          if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
-          else cell.alignment = { vertical: 'middle', horizontal: 'right' };
+          if (colNumber > 2) {
+            cell.font = { name: 'Segoe UI', size: 10, italic: true, color: { argb: 'FF94A3B8' } };
+            cell.border = thinBorder;
+            if (colNumber === 3) cell.alignment = { vertical: 'middle', horizontal: 'left' };
+            else cell.alignment = { vertical: 'middle', horizontal: 'right' };
+          }
         });
 
         currRow++;
