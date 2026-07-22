@@ -2181,8 +2181,8 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       'MP Team': new Map()
     };
 
-    // Day-basis employees NEW map: empId -> { emp, daily: (number|null)[] }
-    const teamNewEmployees: Record<string, Map<string, { emp: any; daily: (number | null)[] }>> = {
+    // Day-basis employees NEW map: empId -> { emp, allocatedDays: boolean[], bonus: number[] }
+    const teamNewEmployees: Record<string, Map<string, { emp: any; allocatedDays: boolean[]; bonus: number[] }>> = {
       'Final Team A': new Map(),
       'Final Team B': new Map(),
       'HE Team A': new Map(),
@@ -2243,11 +2243,13 @@ app.get('/api/payroll/salary-report', async (req, res) => {
           if (!teamNewEmployees[targetTeam].has(emp.employeeId)) {
             teamNewEmployees[targetTeam].set(emp.employeeId, {
               emp,
-              daily: new Array(daysInMonth + 1).fill(null)
+              allocatedDays: new Array(daysInMonth + 1).fill(false),
+              bonus: new Array(daysInMonth + 1).fill(0)
             });
           }
           const newRecord = teamNewEmployees[targetTeam].get(emp.employeeId)!;
-          newRecord.daily[day] = (newRecord.daily[day] || 0) + (je.splitEarnings || 0);
+          newRecord.allocatedDays[day] = true;
+          newRecord.bonus[day] += je.splitEarnings || 0;
         } else {
           // Load-basis employee -> regular row under team
           if (!teamEmployees[targetTeam].has(emp.employeeId)) {
@@ -2375,8 +2377,8 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         teamEmployees[tKey].forEach(eData => {
           if (eData.daily[d] !== null && eData.daily[d]! > 0) mpCount++;
         });
-        teamNewEmployees[tKey].forEach(eData => {
-          if (eData.daily[d] !== null && eData.daily[d]! > 0) mpCount++;
+        teamNewEmployees[tKey].forEach(nData => {
+          if (nData.allocatedDays[d]) mpCount++;
         });
 
         if (mpCount > 0) {
@@ -2462,26 +2464,8 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         rEmp.getCell(2).border = thinBorder;
 
         for (let d = 1; d <= daysInMonth; d++) {
-          let dailyVal: number | null = null;
-
-          if (eData.emp.salaryPerDay > 0) {
-            // Day-basis employee: Base Wage (if Present) + Load split bonus
-            const att = attMap.get(`${eData.emp.employeeId}_${m}/${d}/${y}`);
-            const isPresent = att && att.checkIn;
-            const baseWage = isPresent ? eData.emp.salaryPerDay : 0;
-            const loadBonus = eData.daily[d] || 0;
-            if (baseWage > 0 || loadBonus > 0) {
-              dailyVal = baseWage + loadBonus;
-            }
-          } else {
-            // Load-basis employee
-            if (eData.daily[d] !== null) {
-              dailyVal = eData.daily[d];
-            }
-          }
-
-          if (dailyVal !== null) {
-            rEmp.getCell(startDayCol + d - 1).value = Math.round(dailyVal);
+          if (eData.daily[d] !== null) {
+            rEmp.getCell(startDayCol + d - 1).value = Math.round(eData.daily[d]!);
           }
         }
         rEmp.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
@@ -2528,13 +2512,11 @@ app.get('/api/payroll/salary-report', async (req, res) => {
           rNew.getCell(2).border = thinBorder;
 
           for (let d = 1; d <= daysInMonth; d++) {
-            if (nData.daily[d] !== null && nData.daily[d]! > 0) {
-              const att = attMap.get(`${nData.emp.employeeId}_${m}/${d}/${y}`);
-              const isPresent = att && att.checkIn;
-              const baseWage = isPresent ? nData.emp.salaryPerDay : 0;
-              const loadBonus = nData.daily[d] || 0;
-              const dayEarning = baseWage + loadBonus;
-              rNew.getCell(startDayCol + d - 1).value = Math.round(dayEarning);
+            if (nData.allocatedDays[d]) {
+              const dayWage = nData.emp.salaryPerDay || 0;
+              const bonus = nData.bonus[d] || 0;
+              const totalDaySalary = dayWage + bonus;
+              rNew.getCell(startDayCol + d - 1).value = Math.round(totalDaySalary);
             }
           }
           rNew.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${currRow}:${endDayColLetter}${currRow})` };
