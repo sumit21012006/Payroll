@@ -2189,27 +2189,33 @@ app.get('/api/payroll/salary-report', async (req, res) => {
       });
     });
 
-    // Pre-populate employees from FINAL and HE departments into their respective team blocks
+    // Pre-populate employees from FINAL and HE departments into their respective team blocks dynamically by attendance shift
     allEmployees.forEach(emp => {
       const deptUpper = (emp.department || '').toUpperCase();
       if (emp.salaryPerDay > 0) return; // Day-basis workers go to NEW row when working load jobs
 
-      if (deptUpper.includes('FINAL')) {
-        // Split FINAL department workers across Final Team A and Final Team B (e.g. half/half or by punching code)
-        const pCodeNum = parseInt(emp.punchingCode.replace(/\D/g, '')) || 0;
-        const target = pCodeNum % 2 === 0 ? 'Final Team A' : 'Final Team B';
-        if (!teamEmployees[target].has(emp.employeeId)) {
-          teamEmployees[target].set(emp.employeeId, {
-            emp,
-            daily: new Array(daysInMonth + 1).fill(null)
-          });
+      let targetTeam = '';
+      let shiftACount = 0;
+      let shiftBCount = 0;
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const att = attMap.get(`${emp.employeeId}_${m}/${d}/${y}`);
+        if (att && att.checkIn) {
+          const shift = getEmployeeShift(emp.employeeId, `${m}/${d}/${y}`);
+          if (shift === 'Shift B') shiftBCount++;
+          else shiftACount++;
         }
+      }
+
+      if (deptUpper.includes('FINAL')) {
+        targetTeam = shiftBCount > shiftACount ? 'Final Team B' : 'Final Team A';
       } else if (deptUpper.includes('HE')) {
-        // Split HE department workers across HE Team A and HE Team B
-        const pCodeNum = parseInt(emp.punchingCode.replace(/\D/g, '')) || 0;
-        const target = pCodeNum % 2 === 0 ? 'HE Team A' : 'HE Team B';
-        if (!teamEmployees[target].has(emp.employeeId)) {
-          teamEmployees[target].set(emp.employeeId, {
+        targetTeam = shiftBCount > shiftACount ? 'HE Team B' : 'HE Team A';
+      }
+
+      if (targetTeam) {
+        if (!teamEmployees[targetTeam].has(emp.employeeId)) {
+          teamEmployees[targetTeam].set(emp.employeeId, {
             emp,
             daily: new Array(daysInMonth + 1).fill(null)
           });
@@ -2346,7 +2352,10 @@ app.get('/api/payroll/salary-report', async (req, res) => {
 
         let mpCount = 0;
         teamEmployees[tKey].forEach(eData => {
-          if (eData.daily[d] !== null && eData.daily[d]! > 0) mpCount++;
+          const att = attMap.get(`${eData.emp.employeeId}_${m}/${d}/${y}`);
+          if ((att && att.checkIn) || (eData.daily[d] !== null && eData.daily[d]! > 0)) {
+            mpCount++;
+          }
         });
         if (teamNewEarnings[tKey][d] > 0) mpCount++;
 
