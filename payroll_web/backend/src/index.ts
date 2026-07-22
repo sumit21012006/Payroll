@@ -2053,34 +2053,45 @@ app.get('/api/payroll/salary-report', async (req, res) => {
   try {
     const ExcelJS = require('exceljs');
     const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(`MANE TANNAGE (${m})`);
+    const worksheet = workbook.addWorksheet(`MAIN TONNAGE (${m})`);
     worksheet.views = [{ state: 'frozen', xSplit: 3, ySplit: 2 }];
 
     const daysInMonth = new Date(y, m, 0).getDate();
-    const matchPattern = `${m}/`;
+    const yearPattern = `/${y}`;
 
-    // Fetch Job Logs, Attendance, Employees
+    // Fetch Job Logs, Attendance, Employees for selected year
     const jobs = await prisma.jobLog.findMany({
-      where: { date: { startsWith: matchPattern } },
+      where: { date: { endsWith: yearPattern } },
       include: { employees: { include: { employee: true } } }
     });
 
     const attendanceRecords = await prisma.attendance.findMany({
-      where: { date: { startsWith: matchPattern } }
+      where: { date: { endsWith: yearPattern } }
     });
 
-    const allEmployees = await prisma.employee.findMany();
+    const allEmployees = await prisma.employee.findMany({
+      select: {
+        employeeId: true,
+        name: true,
+        punchingCode: true,
+        salaryPerDay: true,
+        department: true
+      }
+    });
 
-    // Map attendance records by employeeId + date
+    // Map attendance records by employeeId + date for exact month & year
     const attMap = new Map<string, any>();
     attendanceRecords.forEach(att => {
-      attMap.set(`${att.employeeId}_${att.date}`, att);
+      const parts = att.date.split('/');
+      if (parts.length === 3 && parseInt(parts[0]) === m && parseInt(parts[2]) === y) {
+        attMap.set(`${att.employeeId}_${att.date}`, att);
+      }
     });
 
-    // Filter jobs for month & year
+    // Filter jobs for exact month & year
     const monthJobs = jobs.filter(j => {
       const parts = j.date.split('/');
-      return parts.length === 3 && parseInt(parts[2]) === y;
+      return parts.length === 3 && parseInt(parts[0]) === m && parseInt(parts[2]) === y;
     });
 
     // Determine shift for employee on date
