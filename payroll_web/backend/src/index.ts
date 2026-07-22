@@ -2162,6 +2162,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     };
 
     // Pre-populate MP Team list from Excel sheet format
+    // Pre-populate MP Team list from Excel sheet format
     const mpEmployeeNames = [
       'Mr. DEEPAK PAL',
       'SATYAM PATEL',
@@ -2179,12 +2180,41 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         employeeId: `MP_${idx + 1}`,
         name: name,
         punchingCode: '',
-        salaryPerDay: 0
+        salaryPerDay: 0,
+        department: 'MP'
       };
       teamEmployees['MP Team'].set(foundEmp.employeeId, {
         emp: foundEmp,
         daily: new Array(daysInMonth + 1).fill(null)
       });
+    });
+
+    // Pre-populate employees from FINAL and HE departments into their respective team blocks
+    allEmployees.forEach(emp => {
+      const deptUpper = (emp.department || '').toUpperCase();
+      if (emp.salaryPerDay > 0) return; // Day-basis workers go to NEW row when working load jobs
+
+      if (deptUpper.includes('FINAL')) {
+        // Split FINAL department workers across Final Team A and Final Team B (e.g. half/half or by punching code)
+        const pCodeNum = parseInt(emp.punchingCode.replace(/\D/g, '')) || 0;
+        const target = pCodeNum % 2 === 0 ? 'Final Team A' : 'Final Team B';
+        if (!teamEmployees[target].has(emp.employeeId)) {
+          teamEmployees[target].set(emp.employeeId, {
+            emp,
+            daily: new Array(daysInMonth + 1).fill(null)
+          });
+        }
+      } else if (deptUpper.includes('HE')) {
+        // Split HE department workers across HE Team A and HE Team B
+        const pCodeNum = parseInt(emp.punchingCode.replace(/\D/g, '')) || 0;
+        const target = pCodeNum % 2 === 0 ? 'HE Team A' : 'HE Team B';
+        if (!teamEmployees[target].has(emp.employeeId)) {
+          teamEmployees[target].set(emp.employeeId, {
+            emp,
+            daily: new Array(daysInMonth + 1).fill(null)
+          });
+        }
+      }
     });
 
     // Populate Job Logs into teams based on Job Type + Shift
@@ -2263,7 +2293,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
         if (prevRefs) {
           for (let d = 1; d <= daysInMonth; d++) {
             const colL = getExcelColLetter(startDayCol + d - 1);
-            rHeader.getCell(startDayCol + d - 1).value = { formula: `${colL}${prevRefs.totalRow}-${colL}${prevRefs.amtRow}` };
+            rHeader.getCell(startDayCol + d - 1).value = { formula: `IFERROR(${colL}${prevRefs.totalRow}-${colL}${prevRefs.amtRow}, 0)` };
           }
           rHeader.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${hRow}:${endDayColLetter}${hRow})` };
         }
@@ -2324,7 +2354,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
           rManpower.getCell(startDayCol + d - 1).value = mpCount;
         }
 
-        rPaidAmt.getCell(startDayCol + d - 1).value = { formula: `${colL}${amtRow}/${colL}${manpowerRow}` };
+        rPaidAmt.getCell(startDayCol + d - 1).value = { formula: `IFERROR(${colL}${amtRow}/${colL}${manpowerRow}, 0)` };
       }
 
       rAmt.getCell(totalColIdx).value = { formula: `SUM(${startDayColLetter}${amtRow}:${endDayColLetter}${amtRow})` };
