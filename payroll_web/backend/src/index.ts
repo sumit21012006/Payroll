@@ -2098,58 +2098,75 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Statutory Wages ${MONTH_NAMES[m - 1] || m} ${y}`);
 
-    // Title Row
+    // Title Row 1
     worksheet.mergeCells('A1:Y1');
     const titleCell = worksheet.getCell('A1');
     titleCell.value = `KFIL SOLAPUR Wages Register for the Month of ${MONTH_NAMES[m - 1] || m}-${y}`;
-    titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; // Slate 800
+    titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FF000000' } };
     titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 30;
 
-    // Header Row 2
-    worksheet.getRow(2).values = [
+    // Super-Header Row 2 (Group Headers)
+    worksheet.mergeCells('A2:G2');
+    worksheet.getCell('A2').value = 'EMPLOYEE DETAILS';
+
+    worksheet.mergeCells('H2:O2');
+    worksheet.getCell('H2').value = 'EARNINGS';
+
+    worksheet.mergeCells('P2:U2');
+    worksheet.getCell('P2').value = 'DEDUCTIONS';
+
+    worksheet.mergeCells('V2:Y2');
+    worksheet.getCell('V2').value = 'SUMMARY & NET PAY';
+
+    const groupHeaderRow = worksheet.getRow(2);
+    groupHeaderRow.height = 24;
+    groupHeaderRow.eachCell((cell) => {
+      cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF000000' } };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    // Sub-Header Row 3
+    worksheet.getRow(3).values = [
       'Sr No',                      // A
       'UAN NO',                     // B
       'ESIC NO',                    // C
       'FULL NAME OF EMPLOYEE',      // D
       'Employee Type',              // E
-      'Rate Per Day',               // F
-      'Total Days Worked',          // G
-      'BASIC PAY',                  // H
-      'Tonnage Pay',                // I
-      'Daily Pay (Idle)',           // J
-      'GROSS WAGES PAYABLE',        // K
+      'Rate Per\nDay',              // F
+      'Total Days\nWorked',         // G
+      'BASIC\nPAY',                 // H
+      'Tonnage\nPay',               // I
+      'Daily Pay\n(Idle)',          // J
+      'GROSS WAGES\nPAYABLE',       // K
       'BASIC + DA',                 // L
       'HRA',                        // M
-      'OTHER ALLOWANCE',            // N
-      'LEGAL GROSS WAGES',          // O
-      'PF Deduction (12%)',         // P
-      'Professional Tax (PT)',      // Q
-      'ESIC (0.75%)',               // R
-      'Canteen Charge',             // S
-      'Account Advance',            // T
-      'MLWL (LWF)',                 // U
-      'Total Deductions',           // V
-      'Net Wages',                  // W
-      'Other Deduction',            // X
-      'FINAL PAY'                   // Y
+      'OTHER\nALLOWANCE',           // N
+      'LEGAL GROSS\nWAGES',         // O
+      'PF Deduction\n(12%)',        // P
+      'Professional\nTax (PT)',     // Q
+      'ESIC\n(0.75%)',              // R
+      'Canteen\nCharge',            // S
+      'Account\nAdvance',           // T
+      'MLWL\n(LWF)',                // U
+      'Total\nDeductions',          // V
+      'Net\nWages',                 // W
+      'Other\nDeduction',           // X
+      'FINAL\nPAY'                  // Y
     ];
 
-    const headerRow = worksheet.getRow(2);
-    headerRow.height = 25;
-    headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } }; // Slate 700
-      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, name: 'Arial', size: 9 };
-      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    const subHeaderRow = worksheet.getRow(3);
+    subHeaderRow.height = 32;
+    subHeaderRow.eachCell((cell) => {
+      cell.font = { color: { argb: 'FF000000' }, bold: true, name: 'Arial', size: 9 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     });
 
-    let totalBasic = 0, totalTonnage = 0, totalIdle = 0, totalGross = 0;
-    let totalBasicDa = 0, totalHra = 0, totalOtherAllow = 0, totalLegalGross = 0;
-    let totalPf = 0, totalPt = 0, totalEsic = 0, totalCanteen = 0, totalAdvance = 0, totalMlwl = 0;
-    let totalDeductions = 0, totalNet = 0, totalOtherDeduct = 0, totalFinal = 0;
+    const blankZeroFmt = '#,##0.00;-#,##0.00;""';
 
-    employees.forEach((emp, idx) => {
+    let activeDataRowIdx = 4;
+
+    employees.forEach((emp) => {
       const isLoadBasis = emp.salaryPerDay === 0.0;
       const empType = isLoadBasis ? 'Load basis' : 'Day basis';
       const ratePerDay = isLoadBasis ? (emp.deductionPerDay || 0.0) : emp.salaryPerDay;
@@ -2183,126 +2200,134 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       // Skip employees who did not work at all in this month
       if (totalDaysWorked === 0 && !isLoadBasis) return;
 
-      const basicPay = isLoadBasis ? 0.0 : (totalDaysWorked * ratePerDay);
+      const r = activeDataRowIdx;
       const tonnagePay = isLoadBasis ? (empTotalTonnagePayMap.get(emp.employeeId) || 0.0) : 0.0;
-      const grossWages = isLoadBasis ? (tonnagePay + idleDailyPay) : basicPay;
-
-      // Statutory Salary Components
-      const basicDa = Math.round(totalDaysWorked * (15746 / 26));
-      const hra = Math.round(basicDa * 0.05);
-      const otherAllowance = Math.max(0, grossWages - basicDa - hra);
-      const legalGross = basicDa + hra + otherAllowance;
-
-      // Deductions
-      const pfDeduction = Math.round(basicDa * 0.12); // Calculated for ALL employees
-      
-      let ptDeduction = 0;
-      if (grossWages > 10000) ptDeduction = 200;
-      else if (grossWages > 7500) ptDeduction = 175;
-
-      const esicDeduction = Math.round(legalGross * 0.0075);
-      const canteenDeduction = grossWages > 0 ? 500 : 0;
       const advanceDeduction = emp.accountAdvance || 0;
       const mlwlDeduction = (m === 6 || m === 12) ? 25 : 0;
 
-      const totalDeduct = pfDeduction + ptDeduction + esicDeduction + canteenDeduction + advanceDeduction + mlwlDeduction;
-      const netWages = Math.max(0, legalGross - totalDeduct);
-      const otherDeduction = netWages > 0 ? 500 : 0;
-      const finalPay = Math.max(0, netWages - otherDeduction);
-
-      // Accumulate Totals
-      totalBasic += basicPay;
-      totalTonnage += tonnagePay;
-      totalIdle += idleDailyPay;
-      totalGross += grossWages;
-      totalBasicDa += basicDa;
-      totalHra += hra;
-      totalOtherAllow += otherAllowance;
-      totalLegalGross += legalGross;
-      totalPf += pfDeduction;
-      totalPt += ptDeduction;
-      totalEsic += esicDeduction;
-      totalCanteen += canteenDeduction;
-      totalAdvance += advanceDeduction;
-      totalMlwl += mlwlDeduction;
-      totalDeductions += totalDeduct;
-      totalNet += netWages;
-      totalOtherDeduct += otherDeduction;
-      totalFinal += finalPay;
-
       const row = worksheet.addRow([
-        idx + 1,                            // A: Sr No
-        emp.uan || '-',                     // B: UAN NO
-        emp.esic || '-',                    // C: ESIC NO
+        activeDataRowIdx - 3,               // A: Sr No
+        emp.uan || '',                      // B: UAN NO
+        emp.esic || '',                     // C: ESIC NO
         emp.name,                           // D: FULL NAME
         empType,                            // E: Employee Type
-        ratePerDay,                         // F: Rate Per Day
-        totalDaysWorked,                    // G: Total Days Worked
-        isLoadBasis ? 0 : { formula: `ROUND(G${idx + 3}*F${idx + 3},0)` }, // H: BASIC PAY
-        tonnagePay,                         // I: Tonnage Pay
-        idleDailyPay,                       // J: Daily Pay (Idle)
-        isLoadBasis ? { formula: `I${idx + 3}+J${idx + 3}` } : { formula: `H${idx + 3}` }, // K: GROSS WAGES PAYABLE
-        { formula: `ROUND(G${idx + 3}*550,0)` }, // L: BASIC + DA (Worked Days * 550)
-        { formula: `ROUND(L${idx + 3}*0.05,0)` }, // M: HRA
-        { formula: `MAX(0, K${idx + 3}-L${idx + 3}-M${idx + 3})` }, // N: OTHER ALLOWANCE
-        { formula: `L${idx + 3}+M${idx + 3}+N${idx + 3}` }, // O: LEGAL GROSS WAGES
-        { formula: `ROUND(L${idx + 3}*0.12,0)` }, // P: PF (12%)
-        { formula: `IF(K${idx + 3}>10000, 200, IF(K${idx + 3}>7500, 175, 0))` }, // Q: PT
-        { formula: `ROUND(O${idx + 3}*0.0075,0)` }, // R: ESIC (0.75%)
-        { formula: `IF(K${idx + 3}>0, 500, 0)` }, // S: Canteen
-        advanceDeduction,                   // T: Account Advance
-        mlwlDeduction,                      // U: MLWL
-        { formula: `P${idx + 3}+Q${idx + 3}+R${idx + 3}+S${idx + 3}+T${idx + 3}+U${idx + 3}` }, // V: Total Deductions
-        { formula: `O${idx + 3}-V${idx + 3}` }, // W: Net Wages
-        { formula: `IF(W${idx + 3}>0, 500, 0)` }, // X: Other Deduction
-        { formula: `MAX(0, W${idx + 3}-X${idx + 3})` } // Y: FINAL PAY
+        ratePerDay > 0 ? ratePerDay : '',   // F: Rate Per Day
+        totalDaysWorked > 0 ? totalDaysWorked : '', // G: Total Days Worked
+        isLoadBasis ? '' : { formula: `IF(G${r}>0, ROUND(G${r}*F${r},0), "")` }, // H: BASIC PAY
+        tonnagePay > 0 ? tonnagePay : '',   // I: Tonnage Pay
+        idleDailyPay > 0 ? idleDailyPay : '', // J: Daily Pay (Idle)
+        isLoadBasis ? { formula: `IF(OR(I${r}>0,J${r}>0), I${r}+J${r}, "")` } : { formula: `IF(H${r}>0, H${r}, "")` }, // K: GROSS WAGES
+        { formula: `IF(G${r}>0, ROUND(G${r}*550,0), "")` }, // L: BASIC + DA (Worked Days * 550)
+        { formula: `IF(L${r}>0, ROUND(L${r}*0.05,0), "")` }, // M: HRA
+        { formula: `IF(K${r}>0, MAX(0, K${r}-L${r}-M${r}), "")` }, // N: OTHER ALLOWANCE
+        { formula: `IF(L${r}>0, L${r}+M${r}+N${r}, "")` }, // O: LEGAL GROSS WAGES
+        { formula: `IF(L${r}>0, ROUND(L${r}*0.12,0), "")` }, // P: PF (12%)
+        { formula: `IF(K${r}>10000, 200, IF(K${r}>7500, 175, ""))` }, // Q: PT
+        { formula: `IF(O${r}>0, ROUND(O${r}*0.0075,0), "")` }, // R: ESIC (0.75%)
+        { formula: `IF(K${r}>0, 500, "")` }, // S: Canteen
+        advanceDeduction > 0 ? advanceDeduction : '', // T: Account Advance
+        mlwlDeduction > 0 ? mlwlDeduction : '',       // U: MLWL
+        { formula: `IF(OR(P${r}>0,Q${r}>0,R${r}>0,S${r}>0,T${r}>0,U${r}>0), P${r}+Q${r}+R${r}+S${r}+T${r}+U${r}, "")` }, // V: Total Deductions
+        { formula: `IF(O${r}>0, O${r}-V${r}, "")` }, // W: Net Wages
+        { formula: `IF(W${r}>0, 500, "")` }, // X: Other Deduction
+        { formula: `IF(W${r}>0, MAX(0, W${r}-X${r}), "")` } // Y: FINAL PAY
       ]);
 
-      // Format currency cells
+      // Format currency cells with zero-hiding number format
       [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].forEach((colIdx) => {
         const cell = row.getCell(colIdx);
-        cell.numFmt = '#,##0.00';
+        cell.numFmt = blankZeroFmt;
       });
+
+      activeDataRowIdx++;
     });
 
-    const lastDataRow = employees.length + 2;
-    const totRowIdx = lastDataRow + 1;
+    const lastDataRow = activeDataRowIdx - 1;
+    const totRowIdx = activeDataRowIdx;
 
     // Summary Row with Excel SUM Formulas
     const summaryRow = worksheet.addRow([
       'TOTAL', '', '', '', '', '', '',
-      { formula: `SUM(H3:H${lastDataRow})` },
-      { formula: `SUM(I3:I${lastDataRow})` },
-      { formula: `SUM(J3:J${lastDataRow})` },
-      { formula: `SUM(K3:K${lastDataRow})` },
-      { formula: `SUM(L3:L${lastDataRow})` },
-      { formula: `SUM(M3:M${lastDataRow})` },
-      { formula: `SUM(N3:N${lastDataRow})` },
-      { formula: `SUM(O3:O${lastDataRow})` },
-      { formula: `SUM(P3:P${lastDataRow})` },
-      { formula: `SUM(Q3:Q${lastDataRow})` },
-      { formula: `SUM(R3:R${lastDataRow})` },
-      { formula: `SUM(S3:S${lastDataRow})` },
-      { formula: `SUM(T3:T${lastDataRow})` },
-      { formula: `SUM(U3:U${lastDataRow})` },
-      { formula: `SUM(V3:V${lastDataRow})` },
-      { formula: `SUM(W3:W${lastDataRow})` },
-      { formula: `SUM(X3:X${lastDataRow})` },
-      { formula: `SUM(Y3:Y${lastDataRow})` }
+      { formula: `SUM(H4:H${lastDataRow})` },
+      { formula: `SUM(I4:I${lastDataRow})` },
+      { formula: `SUM(J4:J${lastDataRow})` },
+      { formula: `SUM(K4:K${lastDataRow})` },
+      { formula: `SUM(L4:L${lastDataRow})` },
+      { formula: `SUM(M4:M${lastDataRow})` },
+      { formula: `SUM(N4:N${lastDataRow})` },
+      { formula: `SUM(O4:O${lastDataRow})` },
+      { formula: `SUM(P4:P${lastDataRow})` },
+      { formula: `SUM(Q4:Q${lastDataRow})` },
+      { formula: `SUM(R4:R${lastDataRow})` },
+      { formula: `SUM(S4:S${lastDataRow})` },
+      { formula: `SUM(T4:T${lastDataRow})` },
+      { formula: `SUM(U4:U${lastDataRow})` },
+      { formula: `SUM(V4:V${lastDataRow})` },
+      { formula: `SUM(W4:W${lastDataRow})` },
+      { formula: `SUM(X4:X${lastDataRow})` },
+      { formula: `SUM(Y4:Y${lastDataRow})` }
     ]);
     summaryRow.font = { bold: true, name: 'Arial', size: 10 };
     summaryRow.height = 24;
     summaryRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
-      cell.border = { top: { style: 'medium' }, bottom: { style: 'double' } };
+      cell.numFmt = blankZeroFmt;
     });
 
     // Employer Contribution Summaries with Live Formulas
     const empPfRow = worksheet.addRow(['EMPLOYER PF CONTRIBUTION (13%)', '', '', '', '', '', '', '', '', '', '', { formula: `ROUND(L${totRowIdx}*0.13,0)` }]);
-    empPfRow.font = { bold: true, color: { argb: 'FF166534' } };
+    empPfRow.font = { bold: true, color: { argb: 'FF000000' } };
+    empPfRow.getCell(12).numFmt = blankZeroFmt;
 
     const empEsicRow = worksheet.addRow(['EMPLOYER ESIC CONTRIBUTION (3.75%)', '', '', '', '', '', '', '', '', '', '', { formula: `ROUND(O${totRowIdx}*0.0375,0)` }]);
-    empEsicRow.font = { bold: true, color: { argb: 'FF166534' } };
+    empEsicRow.font = { bold: true, color: { argb: 'FF000000' } };
+    empEsicRow.getCell(12).numFmt = blankZeroFmt;
+
+    // Apply plain borders and adjust column widths
+    for (let r = 1; r <= worksheet.rowCount; r++) {
+      const row = worksheet.getRow(r);
+      for (let c = 1; c <= 25; c++) {
+        const cell = row.getCell(c);
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FF94A3B8' } },
+          bottom: { style: 'thin', color: { argb: 'FF94A3B8' } },
+          left: { style: 'thin', color: { argb: 'FF94A3B8' } },
+          right: { style: 'thin', color: { argb: 'FF94A3B8' } }
+        };
+      }
+    }
+
+    // Set Column Widths to fit headers & content comfortably
+    const colWidths = [
+      8,  // A: Sr No
+      16, // B: UAN NO
+      14, // C: ESIC NO
+      28, // D: FULL NAME
+      14, // E: Employee Type
+      12, // F: Rate Per Day
+      12, // G: Total Days Worked
+      14, // H: BASIC PAY
+      14, // I: Tonnage Pay
+      14, // J: Daily Pay (Idle)
+      16, // K: GROSS WAGES PAYABLE
+      14, // L: BASIC + DA
+      12, // M: HRA
+      14, // N: OTHER ALLOWANCE
+      16, // O: LEGAL GROSS WAGES
+      14, // P: PF Deduction (12%)
+      14, // Q: Professional Tax (PT)
+      12, // R: ESIC (0.75%)
+      12, // S: Canteen Charge
+      14, // T: Account Advance
+      12, // U: MLWL (LWF)
+      14, // V: Total Deductions
+      14, // W: Net Wages
+      14, // X: Other Deduction
+      14  // Y: FINAL PAY
+    ];
+
+    colWidths.forEach((w, idx) => {
+      worksheet.getColumn(idx + 1).width = w;
+    });
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename=Statutory_Wages_Register_${m}_${y}.xlsx`);
