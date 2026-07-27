@@ -1146,7 +1146,10 @@ app.post('/api/jobs', async (req, res) => {
     const totalPayout = totalTons * ratePerTon;
     const crewEmployees = await prisma.employee.findMany({
       where: {
-        employeeId: { in: employeeIds }
+        OR: [
+          { employeeId: { in: employeeIds } },
+          { punchingCode: { in: employeeIds } }
+        ]
       }
     });
 
@@ -1156,16 +1159,21 @@ app.post('/api/jobs', async (req, res) => {
     // Look up attendance logs for these employees on this date to know hours worked
     const attendanceRecords = await prisma.attendance.findMany({
       where: {
-        employeeId: { in: employeeIds },
+        employeeId: { in: crewEmployees.map(e => e.employeeId) },
         date: date
       }
     });
-    const attendanceMap = new Map(attendanceRecords.map(r => [r.employeeId, r]));
+
+    // Map for attendance by employeeId
+    const attendanceMap = new Map<string, any>();
+    attendanceRecords.forEach(r => {
+      attendanceMap.set(r.employeeId, r);
+    });
 
     // 1. Calculate Day-Basis Crew Deductions (Half-Day aware)
     let totalDayWagesToDeduct = 0.0;
     for (const de of dayBasisCrew) {
-      const att = attendanceMap.get(de.employeeId);
+      const att = attendanceMap.get(de.employeeId) || attendanceMap.get(de.punchingCode);
       const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : (de.deductionPerDay > 0 ? de.deductionPerDay : 0.0);
       const isHalfDay = att ? (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) : false;
       
@@ -1178,6 +1186,7 @@ app.post('/api/jobs', async (req, res) => {
     // Set defaults: all day-basis crew get 0 split
     for (const de of dayBasisCrew) {
       finalSplits.set(de.employeeId, 0.0);
+      if (de.punchingCode) finalSplits.set(de.punchingCode, 0.0);
     }
 
     // 2. Distribute loader split earnings proportionally
@@ -1187,13 +1196,14 @@ app.post('/api/jobs', async (req, res) => {
 
       // Calculate base splits
       const loaderInfoList = loadBasisCrew.map(le => {
-        const att = attendanceMap.get(le.employeeId);
+        const att = attendanceMap.get(le.employeeId) || attendanceMap.get(le.punchingCode);
         const hours = att ? (att.checkOut !== '' ? att.hoursWorked : 8.0) : 8.0; // default to 8.0/full day if not synced/checked out yet
         const fraction = Math.min(1.0, hours / 8.0);
         const baseSplit = idealShare * fraction;
 
         return {
           employeeId: le.employeeId,
+          punchingCode: le.punchingCode,
           hours,
           baseSplit,
           isFullTime: hours >= 8.0
@@ -1211,26 +1221,31 @@ app.post('/api/jobs', async (req, res) => {
         for (const l of loaderInfoList) {
           const finalVal = l.baseSplit + (l.isFullTime ? extraShare : 0.0);
           finalSplits.set(l.employeeId, finalVal);
+          if (l.punchingCode) finalSplits.set(l.punchingCode, finalVal);
         }
       } else if (surplus > 0) {
         // If no loader worked 8 hours or more, divide surplus equally among all loaders
         const extraShare = surplus / totalLoaders;
         for (const l of loaderInfoList) {
-          finalSplits.set(l.employeeId, l.baseSplit + extraShare);
+          const finalVal = l.baseSplit + extraShare;
+          finalSplits.set(l.employeeId, finalVal);
+          if (l.punchingCode) finalSplits.set(l.punchingCode, finalVal);
         }
       } else {
         // No surplus
         for (const l of loaderInfoList) {
           finalSplits.set(l.employeeId, l.baseSplit);
+          if (l.punchingCode) finalSplits.set(l.punchingCode, l.baseSplit);
         }
       }
     } else {
       for (const le of loadBasisCrew) {
         finalSplits.set(le.employeeId, 0.0);
+        if (le.punchingCode) finalSplits.set(le.punchingCode, 0.0);
       }
     }
 
-    // Create Job Log along with employee relations using finalSplits map
+    // Create Job Log along with employee relations using canonical employeeId
     const jobLog = await prisma.jobLog.create({
       data: {
         id,
@@ -1242,16 +1257,20 @@ app.post('/api/jobs', async (req, res) => {
         castingName,
         castingQty,
         employees: {
-          create: employeeIds.map((empId: string) => {
+          create: crewEmployees.map(emp => {
             return {
-              employeeId: empId,
-              splitEarnings: finalSplits.get(empId) || 0.0
+              employeeId: emp.employeeId,
+              splitEarnings: finalSplits.get(emp.employeeId) || finalSplits.get(emp.punchingCode) || 0.0
             };
           })
         }
       },
       include: {
-        employees: true
+        employees: {
+          include: {
+            employee: true
+          }
+        }
       }
     });
 
