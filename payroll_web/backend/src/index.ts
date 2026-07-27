@@ -1170,78 +1170,56 @@ app.post('/api/jobs', async (req, res) => {
       attendanceMap.set(r.employeeId, r);
     });
 
-    // 1. Calculate Day-Basis Crew Deductions (Half-Day aware)
-    let totalDayWagesToDeduct = 0.0;
-    for (const de of dayBasisCrew) {
-      const att = attendanceMap.get(de.employeeId) || attendanceMap.get(de.punchingCode);
-      const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : (de.deductionPerDay > 0 ? de.deductionPerDay : 0.0);
-      const isHalfDay = att ? (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) : false;
-      
-      totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
-    }
-
-    const remainingPool = totalPayout - totalDayWagesToDeduct;
+    // Distribute job split earnings among ALL assigned crew members proportionally
+    const totalCrewCount = crewEmployees.length;
     const finalSplits = new Map<string, number>();
 
-    // Set defaults: all day-basis crew get 0 split
-    for (const de of dayBasisCrew) {
-      finalSplits.set(de.employeeId, 0.0);
-      if (de.punchingCode) finalSplits.set(de.punchingCode, 0.0);
-    }
+    if (totalCrewCount > 0 && totalPayout > 0) {
+      const idealShare = totalPayout / totalCrewCount;
 
-    // 2. Distribute loader split earnings proportionally
-    if (loadBasisCrew.length > 0 && remainingPool > 0) {
-      const totalLoaders = loadBasisCrew.length;
-      const idealShare = remainingPool / totalLoaders;
-
-      // Calculate base splits
-      const loaderInfoList = loadBasisCrew.map(le => {
-        const att = attendanceMap.get(le.employeeId) || attendanceMap.get(le.punchingCode);
-        const hours = att ? (att.checkOut !== '' ? att.hoursWorked : 8.0) : 8.0; // default to 8.0/full day if not synced/checked out yet
+      const crewInfoList = crewEmployees.map(c => {
+        const att = attendanceMap.get(c.employeeId) || attendanceMap.get(c.punchingCode);
+        const hours = att ? (att.checkOut !== '' ? att.hoursWorked : 8.0) : 8.0;
         const fraction = Math.min(1.0, hours / 8.0);
         const baseSplit = idealShare * fraction;
 
         return {
-          employeeId: le.employeeId,
-          punchingCode: le.punchingCode,
+          employeeId: c.employeeId,
+          punchingCode: c.punchingCode,
           hours,
           baseSplit,
           isFullTime: hours >= 8.0
         };
       });
 
-      const sumBaseSplits = loaderInfoList.reduce((sum, item) => sum + item.baseSplit, 0.0);
-      const surplus = Math.max(0.0, remainingPool - sumBaseSplits);
+      const sumBaseSplits = crewInfoList.reduce((sum, item) => sum + item.baseSplit, 0.0);
+      const surplus = Math.max(0.0, totalPayout - sumBaseSplits);
+      const fullTimeCrew = crewInfoList.filter(c => c.isFullTime);
 
-      const fullTimeLoaders = loaderInfoList.filter(l => l.isFullTime);
-
-      if (fullTimeLoaders.length > 0 && surplus > 0) {
-        // Distribute surplus to full-time workers
-        const extraShare = surplus / fullTimeLoaders.length;
-        for (const l of loaderInfoList) {
-          const finalVal = l.baseSplit + (l.isFullTime ? extraShare : 0.0);
-          finalSplits.set(l.employeeId, finalVal);
-          if (l.punchingCode) finalSplits.set(l.punchingCode, finalVal);
+      if (fullTimeCrew.length > 0 && surplus > 0) {
+        const extraShare = surplus / fullTimeCrew.length;
+        for (const c of crewInfoList) {
+          const finalVal = c.baseSplit + (c.isFullTime ? extraShare : 0.0);
+          finalSplits.set(c.employeeId, finalVal);
+          if (c.punchingCode) finalSplits.set(c.punchingCode, finalVal);
         }
       } else if (surplus > 0) {
-        // If no loader worked 8 hours or more, divide surplus equally among all loaders
-        const extraShare = surplus / totalLoaders;
-        for (const l of loaderInfoList) {
-          const finalVal = l.baseSplit + extraShare;
-          finalSplits.set(l.employeeId, finalVal);
-          if (l.punchingCode) finalSplits.set(l.punchingCode, finalVal);
+        const extraShare = surplus / totalCrewCount;
+        for (const c of crewInfoList) {
+          const finalVal = c.baseSplit + extraShare;
+          finalSplits.set(c.employeeId, finalVal);
+          if (c.punchingCode) finalSplits.set(c.punchingCode, finalVal);
         }
       } else {
-        // No surplus
-        for (const l of loaderInfoList) {
-          finalSplits.set(l.employeeId, l.baseSplit);
-          if (l.punchingCode) finalSplits.set(l.punchingCode, l.baseSplit);
+        for (const c of crewInfoList) {
+          finalSplits.set(c.employeeId, c.baseSplit);
+          if (c.punchingCode) finalSplits.set(c.punchingCode, c.baseSplit);
         }
       }
     } else {
-      for (const le of loadBasisCrew) {
-        finalSplits.set(le.employeeId, 0.0);
-        if (le.punchingCode) finalSplits.set(le.punchingCode, 0.0);
+      for (const c of crewEmployees) {
+        finalSplits.set(c.employeeId, 0.0);
+        if (c.punchingCode) finalSplits.set(c.punchingCode, 0.0);
       }
     }
 
