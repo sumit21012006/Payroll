@@ -2238,40 +2238,57 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
         empType,                            // E: Employee Type
         ratePerDay,                         // F: Rate Per Day
         totalDaysWorked,                    // G: Total Days Worked
-        basicPay,                           // H: BASIC PAY
+        isLoadBasis ? 0 : { formula: `ROUND(G${idx + 3}*F${idx + 3},0)` }, // H: BASIC PAY
         tonnagePay,                         // I: Tonnage Pay
         idleDailyPay,                       // J: Daily Pay (Idle)
-        grossWages,                         // K: GROSS WAGES PAYABLE
-        basicDa,                            // L: BASIC + DA
-        hra,                                // M: HRA
-        otherAllowance,                     // N: OTHER ALLOWANCE
-        legalGross,                         // O: LEGAL GROSS WAGES
-        pfDeduction,                        // P: PF (12%)
-        ptDeduction,                        // Q: PT
-        esicDeduction,                      // R: ESIC (0.75%)
-        canteenDeduction,                   // S: Canteen
+        isLoadBasis ? { formula: `I${idx + 3}+J${idx + 3}` } : { formula: `H${idx + 3}` }, // K: GROSS WAGES PAYABLE
+        { formula: `ROUND(G${idx + 3}*550,0)` }, // L: BASIC + DA (Worked Days * 550)
+        { formula: `ROUND(L${idx + 3}*0.05,0)` }, // M: HRA
+        { formula: `MAX(0, K${idx + 3}-L${idx + 3}-M${idx + 3})` }, // N: OTHER ALLOWANCE
+        { formula: `L${idx + 3}+M${idx + 3}+N${idx + 3}` }, // O: LEGAL GROSS WAGES
+        { formula: `ROUND(L${idx + 3}*0.12,0)` }, // P: PF (12%)
+        { formula: `IF(K${idx + 3}>10000, 200, IF(K${idx + 3}>7500, 175, 0))` }, // Q: PT
+        { formula: `ROUND(O${idx + 3}*0.0075,0)` }, // R: ESIC (0.75%)
+        { formula: `IF(K${idx + 3}>0, 500, 0)` }, // S: Canteen
         advanceDeduction,                   // T: Account Advance
         mlwlDeduction,                      // U: MLWL
-        totalDeduct,                        // V: Total Deductions
-        netWages,                           // W: Net Wages
-        otherDeduction,                     // X: Other Deduction
-        finalPay                            // Y: FINAL PAY
+        { formula: `P${idx + 3}+Q${idx + 3}+R${idx + 3}+S${idx + 3}+T${idx + 3}+U${idx + 3}` }, // V: Total Deductions
+        { formula: `O${idx + 3}-V${idx + 3}` }, // W: Net Wages
+        { formula: `IF(W${idx + 3}>0, 500, 0)` }, // X: Other Deduction
+        { formula: `MAX(0, W${idx + 3}-X${idx + 3})` } // Y: FINAL PAY
       ]);
 
       // Format currency cells
-      [6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].forEach((colIdx) => {
+      [6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].forEach((colIdx) => {
         const cell = row.getCell(colIdx);
         cell.numFmt = '#,##0.00';
       });
     });
 
-    // Summary Row
+    const lastDataRow = employees.length + 2;
+    const totRowIdx = lastDataRow + 1;
+
+    // Summary Row with Excel SUM Formulas
     const summaryRow = worksheet.addRow([
       'TOTAL', '', '', '', '', '', '',
-      totalBasic, totalTonnage, totalIdle, totalGross,
-      totalBasicDa, totalHra, totalOtherAllow, totalLegalGross,
-      totalPf, totalPt, totalEsic, totalCanteen, totalAdvance, totalMlwl,
-      totalDeductions, totalNet, totalOtherDeduct, totalFinal
+      { formula: `SUM(H3:H${lastDataRow})` },
+      { formula: `SUM(I3:I${lastDataRow})` },
+      { formula: `SUM(J3:J${lastDataRow})` },
+      { formula: `SUM(K3:K${lastDataRow})` },
+      { formula: `SUM(L3:L${lastDataRow})` },
+      { formula: `SUM(M3:M${lastDataRow})` },
+      { formula: `SUM(N3:N${lastDataRow})` },
+      { formula: `SUM(O3:O${lastDataRow})` },
+      { formula: `SUM(P3:P${lastDataRow})` },
+      { formula: `SUM(Q3:Q${lastDataRow})` },
+      { formula: `SUM(R3:R${lastDataRow})` },
+      { formula: `SUM(S3:S${lastDataRow})` },
+      { formula: `SUM(T3:T${lastDataRow})` },
+      { formula: `SUM(U3:U${lastDataRow})` },
+      { formula: `SUM(V3:V${lastDataRow})` },
+      { formula: `SUM(W3:W${lastDataRow})` },
+      { formula: `SUM(X3:X${lastDataRow})` },
+      { formula: `SUM(Y3:Y${lastDataRow})` }
     ]);
     summaryRow.font = { bold: true, name: 'Arial', size: 10 };
     summaryRow.height = 24;
@@ -2280,11 +2297,11 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       cell.border = { top: { style: 'medium' }, bottom: { style: 'double' } };
     });
 
-    // Employer Contribution Summaries
-    const empPfRow = worksheet.addRow(['EMPLOYER PF CONTRIBUTION (13%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalBasicDa * 0.13)]);
+    // Employer Contribution Summaries with Live Formulas
+    const empPfRow = worksheet.addRow(['EMPLOYER PF CONTRIBUTION (13%)', '', '', '', '', '', '', '', '', '', '', { formula: `ROUND(L${totRowIdx}*0.13,0)` }]);
     empPfRow.font = { bold: true, color: { argb: 'FF166534' } };
 
-    const empEsicRow = worksheet.addRow(['EMPLOYER ESIC CONTRIBUTION (3.75%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalLegalGross * 0.0375)]);
+    const empEsicRow = worksheet.addRow(['EMPLOYER ESIC CONTRIBUTION (3.75%)', '', '', '', '', '', '', '', '', '', '', { formula: `ROUND(O${totRowIdx}*0.0375,0)` }]);
     empEsicRow.font = { bold: true, color: { argb: 'FF166534' } };
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
