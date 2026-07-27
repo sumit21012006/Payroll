@@ -269,6 +269,33 @@ export default function AdminDashboard() {
       setIsExportingReport(false);
     }
   };
+  const handleExportStatutoryReportAdmin = async () => {
+    setIsExportingReport(true);
+    setReportMessage('');
+    try {
+      const token = localStorage.getItem('sessionToken') || '';
+      const res = await fetch(`${API_URL}/api/payroll/statutory-report?month=${reportMonth}&year=${reportYear}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Server error: ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Statutory_Wages_Register_${reportMonth}_${reportYear}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setReportMessage((err as Error).message || 'Export failed.');
+    } finally {
+      setIsExportingReport(false);
+    }
+  };
 
   const handleDownloadAttendance = async () => {
     setIsExportingAtt(true);
@@ -1658,6 +1685,21 @@ export default function AdminDashboard() {
                     <div className="text-left">
                       <div className="text-xs font-extrabold">Monthly Team Salary Report</div>
                       <div className="text-[10px] text-emerald-100 font-normal font-sans">Salary_Report.xlsx format (Teams A/B, HE, MP)</div>
+                    </div>
+                  </div>
+                  <span className="text-[11px] bg-white/20 px-2.5 py-1 rounded-md">Download</span>
+                </button>
+
+                <button
+                  onClick={handleExportStatutoryReportAdmin}
+                  disabled={isExportingReport}
+                  className="w-full p-3.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all cursor-pointer disabled:opacity-50 shadow-sm flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-purple-500/30 rounded-lg"><Download className="w-4 h-4 text-white" /></div>
+                    <div className="text-left">
+                      <div className="text-xs font-extrabold">Statutory Wages Register (PF/ESIC)</div>
+                      <div className="text-[10px] text-purple-100 font-normal font-sans">Official statutory register with employer PF (13%) & ESIC (3.75%)</div>
                     </div>
                   </div>
                   <span className="text-[11px] bg-white/20 px-2.5 py-1 rounded-md">Download</span>

@@ -2019,6 +2019,126 @@ app.get('/api/attendance/export', async (req, res) => {
     res.status(500).json({ error: (err as Error).message });
   }
 });
+// REST Route: Export Statutory Wages Register (PF/ESIC)
+app.get('/api/payroll/statutory-report', async (req, res) => {
+  const { month, year } = req.query;
+  if (!month || !year) {
+    return res.status(400).json({ error: 'Month and Year parameters are required.' });
+  }
+
+  const m = parseInt(month as string);
+  const y = parseInt(year as string);
+
+  if (isNaN(m) || isNaN(y) || m < 1 || m > 12) {
+    return res.status(400).json({ error: 'Invalid month or year.' });
+  }
+
+  try {
+    const list = await prisma.payrollRun.findMany({
+      where: { month: m, year: y },
+      include: { employee: true },
+      orderBy: { employeeId: 'asc' }
+    });
+
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Statutory Wages ${MONTH_NAMES[m - 1] || m} ${y}`);
+
+    // Title Row
+    worksheet.mergeCells('A1:V1');
+    const titleCell = worksheet.getCell('A1');
+    titleCell.value = `KFIL SOLAPUR - Statutory Wages Register (PF & ESIC) for ${MONTH_NAMES[m - 1] || m} ${y}`;
+    titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF581C87' } }; // Deep Purple 900
+    titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
+    worksheet.getRow(1).height = 30;
+
+    // Headers
+    worksheet.getRow(2).values = [
+      'Sr No', 'UAN NO', 'ESIC NO', 'Employee Name', 'Punching Code', 'Employee Type', 'Rate Per Day',
+      'Days Worked', 'Basic Pay', 'Tonnage Pay', 'Gross Wages', 'Basic + DA', 'HRA', 'Other Allowance',
+      'PF Deduction (12%)', 'ESIC (0.75%)', 'Professional Tax', 'Canteen Charge', 'Account Advance',
+      'MLWL (LWF)', 'Total Deductions', 'Net Salary'
+    ];
+
+    const headerRow = worksheet.getRow(2);
+    headerRow.height = 25;
+    headerRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7E22CE' } }; // Purple 700
+      cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, name: 'Arial', size: 9 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center' };
+    });
+
+    let totalBasic = 0, totalGross = 0, totalBasicDa = 0, totalPf = 0, totalEsic = 0, totalPt = 0, totalDeductions = 0, totalNet = 0;
+
+    list.forEach((run, idx) => {
+      const isLoad = run.employee.salaryPerDay === 0.0;
+      const row = worksheet.addRow([
+        idx + 1,
+        run.employee.uan || '-',
+        run.employee.esic || '-',
+        run.employee.name,
+        run.employee.punchingCode,
+        isLoad ? 'LOAD BASIS' : 'DAY BASIS',
+        isLoad ? (run.employee.deductionPerDay || 0) : run.employee.salaryPerDay,
+        run.workedDays,
+        run.basicPay,
+        run.jobEarnings,
+        run.grossSalary,
+        run.basicDa,
+        run.hra,
+        run.otherAllowance,
+        run.pfDeduction,
+        run.esicDeduction,
+        run.ptDeduction,
+        run.otherDeduction,
+        run.accountAdvance,
+        run.mlwlDeduction,
+        run.totalDeductions,
+        run.netSalary
+      ]);
+
+      totalBasic += run.basicPay;
+      totalGross += run.grossSalary;
+      totalBasicDa += run.basicDa;
+      totalPf += run.pfDeduction;
+      totalEsic += run.esicDeduction;
+      totalPt += run.ptDeduction;
+      totalDeductions += run.totalDeductions;
+      totalNet += run.netSalary;
+
+      // Format currency cells
+      [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22].forEach((colIdx) => {
+        const cell = row.getCell(colIdx);
+        cell.numFmt = '#,##0.00';
+      });
+    });
+
+    // Summary Row
+    const summaryRow = worksheet.addRow([
+      'TOTAL', '', '', '', '', '', '', '',
+      totalBasic, 0, totalGross, totalBasicDa, 0, 0,
+      totalPf, totalEsic, totalPt, 0, 0, 0,
+      totalDeductions, totalNet
+    ]);
+    summaryRow.font = { bold: true, name: 'Arial', size: 10 };
+    summaryRow.height = 22;
+
+    // Employer Contribution Rows
+    const empPfRow = worksheet.addRow(['EMPLOYER PF CONTRIBUTION (13%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalBasicDa * 0.13)]);
+    empPfRow.font = { bold: true, color: { argb: 'FF166534' } };
+
+    const empEsicRow = worksheet.addRow(['EMPLOYER ESIC CONTRIBUTION (3.75%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalGross * 0.0375)]);
+    empEsicRow.font = { bold: true, color: { argb: 'FF166534' } };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename=Statutory_Wages_Register_${m}_${y}.xlsx`);
+
+    await workbook.xlsx.write(res);
+    res.end();
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
 
 // Helper: Convert 1-based column index to Excel column string (1='A', 2='B', 27='AA', etc.)
 function getExcelColLetter(colIdx: number): string {
