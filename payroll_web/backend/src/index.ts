@@ -2019,7 +2019,7 @@ app.get('/api/attendance/export', async (req, res) => {
     res.status(500).json({ error: (err as Error).message });
   }
 });
-// REST Route: Export Statutory Wages Register (PF/ESIC)
+// REST Route: Export Statutory Wages Register (PF/ESIC) - 10th Sheet Format
 app.get('/api/payroll/statutory-report', async (req, res) => {
   const { month, year } = req.query;
   if (!month || !year) {
@@ -2034,80 +2034,232 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
   }
 
   try {
-    const list = await prisma.payrollRun.findMany({
-      where: { month: m, year: y },
-      include: { employee: true },
+    const daysInMonth = new Date(y, m, 0).getDate();
+    const monthPattern = `${m}/`;
+    const yearPattern = `/${y}`;
+
+    // Fetch master employees
+    const employees = await prisma.employee.findMany({
       orderBy: { employeeId: 'asc' }
+    });
+
+    // Fetch attendance logs for the month/year
+    const attendanceRecords = await prisma.attendance.findMany({
+      where: {
+        date: {
+          startsWith: monthPattern,
+          endsWith: yearPattern
+        }
+      }
+    });
+
+    // Group attendance logs by employeeId
+    const attendanceMap = new Map<string, any[]>();
+    attendanceRecords.forEach(att => {
+      const list = attendanceMap.get(att.employeeId) || [];
+      list.push(att);
+      attendanceMap.set(att.employeeId, list);
+    });
+
+    // Fetch supervisor job logs for the month/year
+    const jobs = await prisma.jobLog.findMany({
+      where: {
+        date: {
+          startsWith: monthPattern,
+          endsWith: yearPattern
+        }
+      },
+      include: {
+        employees: true
+      }
+    });
+
+    // Group job allocations by employeeId and date
+    const jobEmpMap = new Map<string, number>(); // employeeId_date -> splitEarnings
+    const empTotalTonnagePayMap = new Map<string, number>(); // employeeId -> total job earnings
+    const empJobDatesSet = new Map<string, Set<string>>(); // employeeId -> Set of dates worked on jobs
+
+    jobs.forEach(j => {
+      j.employees.forEach(je => {
+        const key = `${je.employeeId}_${j.date}`;
+        const prevSplit = jobEmpMap.get(key) || 0;
+        jobEmpMap.set(key, prevSplit + je.splitEarnings);
+
+        const prevTotal = empTotalTonnagePayMap.get(je.employeeId) || 0;
+        empTotalTonnagePayMap.set(je.employeeId, prevTotal + je.splitEarnings);
+
+        const datesSet = empJobDatesSet.get(je.employeeId) || new Set<string>();
+        datesSet.add(j.date);
+        empTotalTonnagePayMap.set(je.employeeId, prevTotal + je.splitEarnings);
+        empJobDatesSet.set(je.employeeId, datesSet);
+      });
     });
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Statutory Wages ${MONTH_NAMES[m - 1] || m} ${y}`);
 
     // Title Row
-    worksheet.mergeCells('A1:V1');
+    worksheet.mergeCells('A1:Y1');
     const titleCell = worksheet.getCell('A1');
-    titleCell.value = `KFIL SOLAPUR - Statutory Wages Register (PF & ESIC) for ${MONTH_NAMES[m - 1] || m} ${y}`;
+    titleCell.value = `KFIL SOLAPUR Wages Register for the Month of ${MONTH_NAMES[m - 1] || m}-${y}`;
     titleCell.font = { name: 'Arial', size: 12, bold: true, color: { argb: 'FFFFFFFF' } };
-    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF581C87' } }; // Deep Purple 900
+    titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; // Slate 800
     titleCell.alignment = { vertical: 'middle', horizontal: 'center' };
     worksheet.getRow(1).height = 30;
 
-    // Headers
+    // Header Row 2
     worksheet.getRow(2).values = [
-      'Sr No', 'UAN NO', 'ESIC NO', 'Employee Name', 'Punching Code', 'Employee Type', 'Rate Per Day',
-      'Days Worked', 'Basic Pay', 'Tonnage Pay', 'Gross Wages', 'Basic + DA', 'HRA', 'Other Allowance',
-      'PF Deduction (12%)', 'ESIC (0.75%)', 'Professional Tax', 'Canteen Charge', 'Account Advance',
-      'MLWL (LWF)', 'Total Deductions', 'Net Salary'
+      'Sr No',                      // A
+      'UAN NO',                     // B
+      'ESIC NO',                    // C
+      'FULL NAME OF EMPLOYEE',      // D
+      'Employee Type',              // E
+      'Rate Per Day',               // F
+      'Total Days Worked',          // G
+      'BASIC PAY',                  // H
+      'Tonnage Pay',                // I
+      'Daily Pay (Idle)',           // J
+      'GROSS WAGES PAYABLE',        // K
+      'BASIC + DA',                 // L
+      'HRA',                        // M
+      'OTHER ALLOWANCE',            // N
+      'LEGAL GROSS WAGES',          // O
+      'PF Deduction (12%)',         // P
+      'Professional Tax (PT)',      // Q
+      'ESIC (0.75%)',               // R
+      'Canteen Charge',             // S
+      'Account Advance',            // T
+      'MLWL (LWF)',                 // U
+      'Total Deductions',           // V
+      'Net Wages',                  // W
+      'Other Deduction',            // X
+      'FINAL PAY'                   // Y
     ];
 
     const headerRow = worksheet.getRow(2);
     headerRow.height = 25;
     headerRow.eachCell((cell) => {
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF7E22CE' } }; // Purple 700
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF334155' } }; // Slate 700
       cell.font = { color: { argb: 'FFFFFFFF' }, bold: true, name: 'Arial', size: 9 };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
     });
 
-    let totalBasic = 0, totalGross = 0, totalBasicDa = 0, totalPf = 0, totalEsic = 0, totalPt = 0, totalDeductions = 0, totalNet = 0;
+    let totalBasic = 0, totalTonnage = 0, totalIdle = 0, totalGross = 0;
+    let totalBasicDa = 0, totalHra = 0, totalOtherAllow = 0, totalLegalGross = 0;
+    let totalPf = 0, totalPt = 0, totalEsic = 0, totalCanteen = 0, totalAdvance = 0, totalMlwl = 0;
+    let totalDeductions = 0, totalNet = 0, totalOtherDeduct = 0, totalFinal = 0;
 
-    list.forEach((run, idx) => {
-      const isLoad = run.employee.salaryPerDay === 0.0;
+    employees.forEach((emp, idx) => {
+      const isLoadBasis = emp.salaryPerDay === 0.0;
+      const empType = isLoadBasis ? 'Load basis' : 'Day basis';
+      const ratePerDay = isLoadBasis ? (emp.deductionPerDay || 0.0) : emp.salaryPerDay;
+
+      // Attendance logs for this employee
+      const empAtt = attendanceMap.get(emp.employeeId) || [];
+      
+      let pCount = 0, hdCount = 0, lateCount = 0;
+      let idleDailyPay = 0.0;
+
+      const empJobDates = empJobDatesSet.get(emp.employeeId) || new Set<string>();
+
+      empAtt.forEach(att => {
+        const st = (att.status || '').toUpperCase();
+        if (st.includes('PRESENT')) pCount++;
+        else if (st.includes('HALF') || (att.hoursWorked > 0 && att.hoursWorked < 4.0)) hdCount++;
+        else if (st.includes('LATE')) lateCount++;
+
+        // For Load Basis: Check idle fallback days (present in attendance but no job assigned)
+        if (isLoadBasis && !st.includes('ABSENT') && att.hoursWorked > 0) {
+          if (!empJobDates.has(att.date)) {
+            const isHalfDay = st.includes('HALF') || att.hoursWorked < 4.0;
+            const dayWage = isHalfDay ? (ratePerDay * 0.5) : ratePerDay;
+            idleDailyPay += dayWage;
+          }
+        }
+      });
+
+      const totalDaysWorked = pCount + lateCount + (hdCount * 0.5);
+
+      // Skip employees who did not work at all in this month
+      if (totalDaysWorked === 0 && !isLoadBasis) return;
+
+      const basicPay = isLoadBasis ? 0.0 : (totalDaysWorked * ratePerDay);
+      const tonnagePay = isLoadBasis ? (empTotalTonnagePayMap.get(emp.employeeId) || 0.0) : 0.0;
+      const grossWages = isLoadBasis ? (tonnagePay + idleDailyPay) : basicPay;
+
+      // Statutory Salary Components
+      const basicDa = Math.round(totalDaysWorked * (15746 / 26));
+      const hra = Math.round(basicDa * 0.05);
+      const otherAllowance = Math.max(0, grossWages - basicDa - hra);
+      const legalGross = basicDa + hra + otherAllowance;
+
+      // Deductions
+      const pfDeduction = Math.round(basicDa * 0.12); // Calculated for ALL employees
+      
+      let ptDeduction = 0;
+      if (grossWages > 10000) ptDeduction = 200;
+      else if (grossWages > 7500) ptDeduction = 175;
+
+      const esicDeduction = Math.round(legalGross * 0.0075);
+      const canteenDeduction = grossWages > 0 ? 500 : 0;
+      const advanceDeduction = emp.accountAdvance || 0;
+      const mlwlDeduction = (m === 6 || m === 12) ? 25 : 0;
+
+      const totalDeduct = pfDeduction + ptDeduction + esicDeduction + canteenDeduction + advanceDeduction + mlwlDeduction;
+      const netWages = Math.max(0, legalGross - totalDeduct);
+      const otherDeduction = netWages > 0 ? 500 : 0;
+      const finalPay = Math.max(0, netWages - otherDeduction);
+
+      // Accumulate Totals
+      totalBasic += basicPay;
+      totalTonnage += tonnagePay;
+      totalIdle += idleDailyPay;
+      totalGross += grossWages;
+      totalBasicDa += basicDa;
+      totalHra += hra;
+      totalOtherAllow += otherAllowance;
+      totalLegalGross += legalGross;
+      totalPf += pfDeduction;
+      totalPt += ptDeduction;
+      totalEsic += esicDeduction;
+      totalCanteen += canteenDeduction;
+      totalAdvance += advanceDeduction;
+      totalMlwl += mlwlDeduction;
+      totalDeductions += totalDeduct;
+      totalNet += netWages;
+      totalOtherDeduct += otherDeduction;
+      totalFinal += finalPay;
+
       const row = worksheet.addRow([
-        idx + 1,
-        run.employee.uan || '-',
-        run.employee.esic || '-',
-        run.employee.name,
-        run.employee.punchingCode,
-        isLoad ? 'LOAD BASIS' : 'DAY BASIS',
-        isLoad ? (run.employee.deductionPerDay || 0) : run.employee.salaryPerDay,
-        run.workedDays,
-        run.basicPay,
-        run.jobEarnings,
-        run.grossSalary,
-        run.basicDa,
-        run.hra,
-        run.otherAllowance,
-        run.pfDeduction,
-        run.esicDeduction,
-        run.ptDeduction,
-        run.otherDeduction,
-        run.accountAdvance,
-        run.mlwlDeduction,
-        run.totalDeductions,
-        run.netSalary
+        idx + 1,                            // A: Sr No
+        emp.uan || '-',                     // B: UAN NO
+        emp.esic || '-',                    // C: ESIC NO
+        emp.name,                           // D: FULL NAME
+        empType,                            // E: Employee Type
+        ratePerDay,                         // F: Rate Per Day
+        totalDaysWorked,                    // G: Total Days Worked
+        basicPay,                           // H: BASIC PAY
+        tonnagePay,                         // I: Tonnage Pay
+        idleDailyPay,                       // J: Daily Pay (Idle)
+        grossWages,                         // K: GROSS WAGES PAYABLE
+        basicDa,                            // L: BASIC + DA
+        hra,                                // M: HRA
+        otherAllowance,                     // N: OTHER ALLOWANCE
+        legalGross,                         // O: LEGAL GROSS WAGES
+        pfDeduction,                        // P: PF (12%)
+        ptDeduction,                        // Q: PT
+        esicDeduction,                      // R: ESIC (0.75%)
+        canteenDeduction,                   // S: Canteen
+        advanceDeduction,                   // T: Account Advance
+        mlwlDeduction,                      // U: MLWL
+        totalDeduct,                        // V: Total Deductions
+        netWages,                           // W: Net Wages
+        otherDeduction,                     // X: Other Deduction
+        finalPay                            // Y: FINAL PAY
       ]);
 
-      totalBasic += run.basicPay;
-      totalGross += run.grossSalary;
-      totalBasicDa += run.basicDa;
-      totalPf += run.pfDeduction;
-      totalEsic += run.esicDeduction;
-      totalPt += run.ptDeduction;
-      totalDeductions += run.totalDeductions;
-      totalNet += run.netSalary;
-
       // Format currency cells
-      [7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22].forEach((colIdx) => {
+      [6, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].forEach((colIdx) => {
         const cell = row.getCell(colIdx);
         cell.numFmt = '#,##0.00';
       });
@@ -2115,19 +2267,24 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
 
     // Summary Row
     const summaryRow = worksheet.addRow([
-      'TOTAL', '', '', '', '', '', '', '',
-      totalBasic, 0, totalGross, totalBasicDa, 0, 0,
-      totalPf, totalEsic, totalPt, 0, 0, 0,
-      totalDeductions, totalNet
+      'TOTAL', '', '', '', '', '', '',
+      totalBasic, totalTonnage, totalIdle, totalGross,
+      totalBasicDa, totalHra, totalOtherAllow, totalLegalGross,
+      totalPf, totalPt, totalEsic, totalCanteen, totalAdvance, totalMlwl,
+      totalDeductions, totalNet, totalOtherDeduct, totalFinal
     ]);
     summaryRow.font = { bold: true, name: 'Arial', size: 10 };
-    summaryRow.height = 22;
+    summaryRow.height = 24;
+    summaryRow.eachCell((cell) => {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } };
+      cell.border = { top: { style: 'medium' }, bottom: { style: 'double' } };
+    });
 
-    // Employer Contribution Rows
+    // Employer Contribution Summaries
     const empPfRow = worksheet.addRow(['EMPLOYER PF CONTRIBUTION (13%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalBasicDa * 0.13)]);
     empPfRow.font = { bold: true, color: { argb: 'FF166534' } };
 
-    const empEsicRow = worksheet.addRow(['EMPLOYER ESIC CONTRIBUTION (3.75%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalGross * 0.0375)]);
+    const empEsicRow = worksheet.addRow(['EMPLOYER ESIC CONTRIBUTION (3.75%)', '', '', '', '', '', '', '', '', '', '', Math.round(totalLegalGross * 0.0375)]);
     empEsicRow.font = { bold: true, color: { argb: 'FF166534' } };
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
