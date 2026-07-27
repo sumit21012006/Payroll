@@ -132,7 +132,7 @@ export default function AdminDashboard() {
   const [addEmpMobile, setAddEmpMobile] = useState('');
   const [addEmpPunchCode, setAddEmpPunchCode] = useState('');
   const [addEmpBasis, setAddEmpBasis] = useState<'Day Basis' | 'Load Basis'>('Day Basis');
-  const [addEmpRate, setAddEmpRate] = useState('636.0');
+  const [addEmpRate, setAddEmpRate] = useState('0.0');
   const [addEmpDeduct, setAddEmpDeduct] = useState('0.0');
   const [addEmpUan, setAddEmpUan] = useState('');
   const [addEmpEsic, setAddEmpEsic] = useState('');
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
   const [editEmpMobile, setEditEmpMobile] = useState('');
   const [editEmpPunchCode, setEditEmpPunchCode] = useState('');
   const [editEmpBasis, setEditEmpBasis] = useState<'Day Basis' | 'Load Basis'>('Day Basis');
-  const [editEmpRate, setEditEmpRate] = useState('636.0');
+  const [editEmpRate, setEditEmpRate] = useState('0.0');
   const [editEmpDeduct, setEditEmpDeduct] = useState('0.0');
   const [editEmpUan, setEditEmpUan] = useState('');
   const [editEmpEsic, setEditEmpEsic] = useState('');

@@ -64,7 +64,8 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
     req.path === '/favicon.ico' ||
     req.path === '/api/auth/login' ||
     req.path.startsWith('/api/auth/employee-preview/') ||
-    req.path.startsWith('/iclock/')
+    req.path.startsWith('/iclock/') ||
+    req.path === '/api/attendance/sync-processed'
   ) {
     return next();
   }
@@ -605,6 +606,8 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   // Load Basis Employee idle day fallback calculation
   let idleFallbackWages = 0.0;
   let fallbackWorkedDays = 0.0;
+  const loaderFallbackRate = employee.deductionPerDay > 0 ? employee.deductionPerDay : (employee.salaryPerDay > 0 ? employee.salaryPerDay : 0.0);
+  
   if (isLoadBasis) {
     for (const log of monthLogs) {
       const status = log.status.toUpperCase();
@@ -615,9 +618,9 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
       // Check if loader was assigned to any job on this date
       const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
       if (!hasJobOnDate) {
-        // Idle loader! Give fallback day wage
+        // Idle loader! Give fallback day wage based on employee's stored rate
         const isHalfDay = status.includes('HALF_DAY') || log.hoursWorked < 4.0;
-        const dayWage = isHalfDay ? (636.0 * 0.5) : 636.0;
+        const dayWage = isHalfDay ? (loaderFallbackRate * 0.5) : loaderFallbackRate;
         idleFallbackWages += dayWage;
         fallbackWorkedDays += isHalfDay ? 0.5 : 1.0;
       }
@@ -628,7 +631,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   const accountAdvance = employee.accountAdvance;
 
   if (!isLoadBasis) {
-    const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : 636.0;
+    const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : (employee.deductionPerDay > 0 ? employee.deductionPerDay : 0.0);
     const workedDays = (presentDays + lateDays) + (halfDays * 0.5);
     const otDays = overtimeDays;
 
@@ -636,19 +639,13 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     otPay = otDays * rate;
     grossSalary = basicPay + otPay + jobEarnings;
 
-    // BASIC+DA = workedDays * (15746 / 26)
-    basicDa = Math.round(workedDays * (15746.0 / 26.0));
+    basicDa = basicPay;
+    hra = 0.0;
+    otherAllowance = 0.0;
 
-    // HRA = 5% of BASIC+DA
-    hra = Math.round(basicDa * 0.05);
-
-    // Other allowance = Gross - BASIC+DA - HRA
-    otherAllowance = grossSalary - basicDa - hra;
-    if (otherAllowance < 0.0) otherAllowance = 0.0;
-
-    // Deductions
-    pfDeduction = Math.round(basicDa * 0.12);
-    esicDeduction = Math.round(grossSalary * 0.0075);
+    // PF calculation disabled as requested
+    pfDeduction = 0.0;
+    esicDeduction = 0.0;
 
     // PT slabs
     if (grossSalary <= 7500.0) {
@@ -672,15 +669,13 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     otPay = 0.0;
     grossSalary = basicPay + jobEarnings;
 
-    if (basicPay > 0.0) {
-      // Calculate benefits/deductions since they received standard basic daily salaries for those idle days
-      basicDa = Math.round(fallbackWorkedDays * (15746.0 / 26.0));
-      hra = Math.round(basicDa * 0.05);
-      otherAllowance = grossSalary - basicDa - hra;
-      if (otherAllowance < 0.0) otherAllowance = 0.0;
+    if (grossSalary > 0.0) {
+      basicDa = basicPay;
+      hra = 0.0;
+      otherAllowance = 0.0;
 
-      pfDeduction = Math.round(basicDa * 0.12);
-      esicDeduction = Math.round(grossSalary * 0.0075);
+      pfDeduction = 0.0;
+      esicDeduction = 0.0;
 
       if (grossSalary <= 7500.0) {
         ptDeduction = 0.0;
@@ -813,6 +808,8 @@ function calculateEmployeeWagesInMemory(
   // Load Basis Employee idle day fallback calculation
   let idleFallbackWages = 0.0;
   let fallbackWorkedDays = 0.0;
+  const loaderFallbackRate = employee.deductionPerDay > 0 ? employee.deductionPerDay : (employee.salaryPerDay > 0 ? employee.salaryPerDay : 0.0);
+
   if (isLoadBasis) {
     for (const log of monthLogs) {
       const status = log.status.toUpperCase();
@@ -823,9 +820,9 @@ function calculateEmployeeWagesInMemory(
       // Check if loader was assigned to any job on this date
       const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
       if (!hasJobOnDate) {
-        // Idle loader! Give fallback day wage
+        // Idle loader! Give fallback day wage based on employee's stored rate
         const isHalfDay = status.includes('HALF_DAY') || log.hoursWorked < 4.0;
-        const dayWage = isHalfDay ? (636.0 * 0.5) : 636.0;
+        const dayWage = isHalfDay ? (loaderFallbackRate * 0.5) : loaderFallbackRate;
         idleFallbackWages += dayWage;
         fallbackWorkedDays += isHalfDay ? 0.5 : 1.0;
       }
@@ -836,7 +833,7 @@ function calculateEmployeeWagesInMemory(
   const accountAdvance = employee.accountAdvance;
 
   if (!isLoadBasis) {
-    const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : 636.0;
+    const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : (employee.deductionPerDay > 0 ? employee.deductionPerDay : 0.0);
     const workedDays = (presentDays + lateDays) + (halfDays * 0.5);
     const otDays = overtimeDays;
 
@@ -844,19 +841,13 @@ function calculateEmployeeWagesInMemory(
     otPay = otDays * rate;
     grossSalary = basicPay + otPay + jobEarnings;
 
-    // BASIC+DA = workedDays * (15746 / 26)
-    basicDa = Math.round(workedDays * (15746.0 / 26.0));
+    basicDa = basicPay;
+    hra = 0.0;
+    otherAllowance = 0.0;
 
-    // HRA = 5% of BASIC+DA
-    hra = Math.round(basicDa * 0.05);
-
-    // Other allowance = Gross - BASIC+DA - HRA
-    otherAllowance = grossSalary - basicDa - hra;
-    if (otherAllowance < 0.0) otherAllowance = 0.0;
-
-    // Deductions
-    pfDeduction = Math.round(basicDa * 0.12);
-    esicDeduction = Math.round(grossSalary * 0.0075);
+    // PF calculation disabled as requested
+    pfDeduction = 0.0;
+    esicDeduction = 0.0;
 
     // PT slabs
     if (grossSalary <= 7500.0) {
@@ -880,15 +871,13 @@ function calculateEmployeeWagesInMemory(
     otPay = 0.0;
     grossSalary = basicPay + jobEarnings;
 
-    if (basicPay > 0.0) {
-      // Calculate benefits/deductions since they received standard basic daily salaries for those idle days
-      basicDa = Math.round(fallbackWorkedDays * (15746.0 / 26.0));
-      hra = Math.round(basicDa * 0.05);
-      otherAllowance = grossSalary - basicDa - hra;
-      if (otherAllowance < 0.0) otherAllowance = 0.0;
+    if (grossSalary > 0.0) {
+      basicDa = basicPay;
+      hra = 0.0;
+      otherAllowance = 0.0;
 
-      pfDeduction = Math.round(basicDa * 0.12);
-      esicDeduction = Math.round(grossSalary * 0.0075);
+      pfDeduction = 0.0;
+      esicDeduction = 0.0;
 
       if (grossSalary <= 7500.0) {
         ptDeduction = 0.0;
@@ -1079,16 +1068,23 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
       const { employeeId, date, checkIn, checkOut, status, hoursWorked } = log;
       if (!employeeId || !date) continue;
 
-      // Find employee to make sure they exist
-      const employee = await prisma.employee.findUnique({
+      // Find employee by employeeId OR punchingCode
+      let employee = await prisma.employee.findUnique({
         where: { employeeId }
       });
+      if (!employee) {
+        employee = await prisma.employee.findFirst({
+          where: { punchingCode: employeeId }
+        });
+      }
       if (!employee) continue;
+
+      const targetEmpId = employee.employeeId;
 
       await prisma.attendance.upsert({
         where: {
           employeeId_date: {
-            employeeId,
+            employeeId: targetEmpId,
             date
           }
         },
@@ -1099,7 +1095,7 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
           status: status || 'PRESENT'
         },
         create: {
-          employeeId,
+          employeeId: targetEmpId,
           date,
           checkIn: checkIn || '',
           checkOut: checkOut || '',
@@ -1170,7 +1166,7 @@ app.post('/api/jobs', async (req, res) => {
     let totalDayWagesToDeduct = 0.0;
     for (const de of dayBasisCrew) {
       const att = attendanceMap.get(de.employeeId);
-      const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : 636.0;
+      const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : (de.deductionPerDay > 0 ? de.deductionPerDay : 0.0);
       const isHalfDay = att ? (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) : false;
       
       totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
@@ -1540,7 +1536,7 @@ app.get('/api/jobs/export', async (req, res) => {
             cellWage.numFormat = '₹#,##0.00';
             cellWage.font = { name: 'Segoe UI', size: 8.5, bold: true, color: { argb: 'FFE65100' } };
           } else {
-            const baseRate = empObj.salaryPerDay > 0 ? empObj.salaryPerDay : 636.0;
+            const baseRate = empObj.salaryPerDay > 0 ? empObj.salaryPerDay : (empObj.deductionPerDay > 0 ? empObj.deductionPerDay : 0.0);
             const att = attendanceMap.get(`${empObj.employeeId}_${job.date}`);
             const isHalfDay = att ? (att.status === 'HALF_DAY' || att.hoursWorked < 4.0) : false;
             const finalWage = isHalfDay ? (baseRate * 0.5) : baseRate;

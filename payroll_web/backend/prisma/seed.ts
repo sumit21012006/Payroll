@@ -61,7 +61,8 @@ async function main() {
 
     // Classify as Load Basis if jobType explicitly contains "load" or matches common load depts
     const isLoadBasis = jobType.toLowerCase().includes('load');
-    const salaryPerDay = isLoadBasis ? 0.0 : (rate || 636.0);
+    const salaryPerDay = isLoadBasis ? 0.0 : (rate || 0.0);
+    const deductionPerDay = isLoadBasis ? (rate || 0.0) : 0.0;
 
     // Create Employee record
     await prisma.employee.create({
@@ -70,10 +71,10 @@ async function main() {
         name: name,
         department: dept.toUpperCase(),
         salaryPerDay: salaryPerDay,
-        deductionPerDay: 0.0,
+        deductionPerDay: deductionPerDay,
         uan: '',
         esic: '',
-        bankName: bankAcc ? 'Associated Bank' : '',
+        bankName: '',
         ifscCode: ifsc,
         bankAcc: bankAcc,
         punchingCode: punchCode,

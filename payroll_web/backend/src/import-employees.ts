@@ -21,16 +21,8 @@ function getCellValueString(cell: ExcelJS.Cell): string {
 async function main() {
   console.log('--- STARTING INITIAL WORKFORCE DATABASE RESET & SEED ---');
 
-  // 1. Clean Database (respecting Cascade deletes)
-  console.log('Clearing existing records from tables (PayrollRun, JobLogEmployee, JobLog, Attendance, Employee)...');
-  await prisma.payrollRun.deleteMany({});
-  await prisma.jobLogEmployee.deleteMany({});
-  await prisma.jobLog.deleteMany({});
-  await prisma.attendance.deleteMany({});
-  await prisma.employee.deleteMany({});
-  await prisma.casting.deleteMany({});
-  await prisma.jobTemplate.deleteMany({});
-  console.log('Database cleared successfully.');
+  // 1. Employee Master Sync (upserting to preserve existing Attendance and Job logs)
+  console.log('Syncing employee master records...');
 
   // 2. Open and Read Employee_List.xlsx
   const filePath = path.join(__dirname, '..', '..', 'frontend', 'Dataset', 'Employee_List.xlsx');
@@ -44,7 +36,7 @@ async function main() {
 
   let seededCount = 0;
 
-  // 3. Loop through rows and insert employees
+  // 3. Loop through rows and upsert employees
   for (let i = 2; i <= sheet.rowCount; i++) {
     const row = sheet.getRow(i);
     const punchCode = getCellValueString(row.getCell(1));
@@ -63,19 +55,30 @@ async function main() {
 
     // Classify as Load Basis if jobType explicitly contains "load" or matches common load depts
     const isLoadBasis = jobType.toLowerCase().includes('load');
-    const salaryPerDay = isLoadBasis ? 0.0 : (rate || 636.0);
+    const salaryPerDay = isLoadBasis ? 0.0 : (rate || 0.0);
+    const deductionPerDay = isLoadBasis ? (rate || 0.0) : 0.0;
 
-    // Create Employee record
-    await prisma.employee.create({
-      data: {
-        employeeId: punchCode, // Set unique Punching Code as employeeId
+    // Upsert Employee record to preserve existing Attendance and Job logs
+    await prisma.employee.upsert({
+      where: { employeeId: punchCode },
+      update: {
         name: name,
         department: dept.toUpperCase(),
         salaryPerDay: salaryPerDay,
-        deductionPerDay: 0.0,
+        deductionPerDay: deductionPerDay,
+        ifscCode: ifsc,
+        bankAcc: bankAcc,
+        punchingCode: punchCode
+      },
+      create: {
+        employeeId: punchCode,
+        name: name,
+        department: dept.toUpperCase(),
+        salaryPerDay: salaryPerDay,
+        deductionPerDay: deductionPerDay,
         uan: '',
         esic: '',
-        bankName: bankAcc ? 'Associated Bank' : '', // Mock bank name if account exists
+        bankName: '',
         ifscCode: ifsc,
         bankAcc: bankAcc,
         punchingCode: punchCode,
@@ -118,7 +121,8 @@ async function main() {
   ];
 
   await prisma.casting.createMany({
-    data: defaultCastings
+    data: defaultCastings,
+    skipDuplicates: true
   });
 
   // 5. Seed job templates
@@ -133,7 +137,8 @@ async function main() {
   ];
 
   await prisma.jobTemplate.createMany({
-    data: defaultTemplates
+    data: defaultTemplates,
+    skipDuplicates: true
   });
 
   console.log(`\n✅ Database seed completed successfully!`);

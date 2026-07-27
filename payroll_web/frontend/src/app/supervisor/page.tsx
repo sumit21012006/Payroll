@@ -13,6 +13,7 @@ interface Employee {
   name: string;
   department: string;
   salaryPerDay: number;
+  deductionPerDay?: number;
 }
 
 interface JobLogEmployee {
@@ -346,7 +347,7 @@ export default function SupervisorDashboard() {
     let totalDayWagesToDeduct = 0.0;
     for (const de of dayCrew) {
       const att = attendanceMap.get(de.employeeId);
-      const baseRate = de.salaryPerDay > 0 ? de.salaryPerDay : 636.0;
+      const baseRate: number = de.salaryPerDay > 0 ? de.salaryPerDay : (de.deductionPerDay && de.deductionPerDay > 0 ? de.deductionPerDay : 0.0);
       const isHalfDay = att ? (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) : false;
       totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
     }
@@ -426,7 +427,7 @@ export default function SupervisorDashboard() {
           isLoad,
           hours,
           wage: isLoad ? (finalSplits.get(emp.employeeId) || 0.0) : (
-            (emp.salaryPerDay > 0 ? emp.salaryPerDay : 636.0) * (att && (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) ? 0.5 : 1.0)
+            (emp.salaryPerDay > 0 ? emp.salaryPerDay : (emp.deductionPerDay && emp.deductionPerDay > 0 ? emp.deductionPerDay : 0.0)) * (att && (att.status === 'HALF_DAY' || (att.checkOut !== '' && att.hoursWorked < 4.0)) ? 0.5 : 1.0)
           )
         };
       })
