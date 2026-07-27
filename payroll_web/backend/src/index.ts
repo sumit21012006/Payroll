@@ -2062,33 +2062,40 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       orderBy: { name: 'asc' }
     });
 
-    // Fetch attendance logs for the year
-    const attendanceRecords = await prisma.attendance.findMany({
-      where: {
-        date: {
-          endsWith: `/${y}`
+    // Helper for format-agnostic date parsing
+    const parseMonthAndYear = (dateStr: string): { month: number; year: number } | null => {
+      if (!dateStr) return null;
+      if (dateStr.includes('-')) {
+        const p = dateStr.split('-');
+        if (p.length === 3) return { month: parseInt(p[1], 10), year: parseInt(p[0], 10) };
+      }
+      if (dateStr.includes('/')) {
+        const p = dateStr.split('/');
+        if (p.length === 3) {
+          const v0 = parseInt(p[0], 10), v1 = parseInt(p[1], 10), v2 = parseInt(p[2], 10);
+          if (v2 > 1000 && v0 >= 1 && v0 <= 12) return { month: v0, year: v2 };
+          if (v0 > 1000) return { month: v1, year: v0 };
         }
       }
-    });
+      return null;
+    };
+
+    // Fetch attendance logs
+    const attendanceRecords = await prisma.attendance.findMany();
 
     // Group attendance logs by employeeId and punchingCode
     const attendanceMap = new Map<string, any[]>();
     attendanceRecords.forEach(att => {
-      const parts = att.date.split('/');
-      if (parts.length === 3 && parseInt(parts[0]) === m && parseInt(parts[2]) === y) {
+      const pInfo = parseMonthAndYear(att.date);
+      if (pInfo && pInfo.month === m && pInfo.year === y) {
         const list = attendanceMap.get(att.employeeId) || [];
         list.push(att);
         attendanceMap.set(att.employeeId, list);
       }
     });
 
-    // Fetch supervisor job logs for the year
+    // Fetch supervisor job logs
     const jobs = await prisma.jobLog.findMany({
-      where: {
-        date: {
-          endsWith: `/${y}`
-        }
-      },
       include: {
         employees: {
           include: {
@@ -2104,10 +2111,15 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     const empJobDatesSet = new Map<string, Set<string>>(); // employeeId -> Set of dates worked on jobs
 
     jobs.forEach(j => {
-      const parts = j.date.split('/');
-      if (parts.length === 3 && parseInt(parts[0]) === m && parseInt(parts[2]) === y) {
+      const pInfo = parseMonthAndYear(j.date);
+      if (pInfo && pInfo.month === m && pInfo.year === y) {
         j.employees.forEach(je => {
-          const keys = [je.employeeId, je.employee ? je.employee.punchingCode : '', je.employee ? je.employee.employeeId : ''].filter(Boolean);
+          const keys = Array.from(new Set([
+            je.employeeId,
+            je.employee ? je.employee.punchingCode : '',
+            je.employee ? je.employee.employeeId : ''
+          ].filter(Boolean)));
+
           keys.forEach(k => {
             const key = `${k}_${j.date}`;
             jobEmpMap.set(key, (jobEmpMap.get(key) || 0) + je.splitEarnings);
@@ -2207,9 +2219,9 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       let pCount = 0, hdCount = 0, lateCount = 0;
       let idleDailyPay = 0.0;
 
-      // Dual-key lookup for job dates & tonnage earnings
+      // Dual-key lookup for job dates & tonnage earnings (universal for ALL employees)
       const empJobDates = empJobDatesSet.get(emp.employeeId) || empJobDatesSet.get(emp.punchingCode) || new Set<string>();
-      const tonnagePay = isLoadBasis ? (empTotalTonnagePayMap.get(emp.employeeId) || empTotalTonnagePayMap.get(emp.punchingCode) || 0.0) : 0.0;
+      const tonnagePay = (empTotalTonnagePayMap.get(emp.employeeId) || empTotalTonnagePayMap.get(emp.punchingCode) || 0.0);
 
       empAtt.forEach(att => {
         const st = (att.status || '').toUpperCase();
@@ -2247,7 +2259,7 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
         isLoadBasis ? 0 : { formula: `ROUND(G${r}*F${r},0)` }, // H: BASIC PAY
         tonnagePay,                         // I: Tonnage Pay
         idleDailyPay,                       // J: Daily Pay (Idle)
-        isLoadBasis ? { formula: `I${r}+J${r}` } : { formula: `H${r}` }, // K: GROSS WAGES
+        isLoadBasis ? { formula: `I${r}+J${r}` } : { formula: `H${r}+I${r}` }, // K: GROSS WAGES
         { formula: `ROUND(G${r}*550,0)` }, // L: BASIC + DA (Worked Days * 550)
         { formula: `ROUND(L${r}*0.05,0)` }, // M: HRA
         { formula: `MAX(0, K${r}-L${r}-M${r})` }, // N: OTHER ALLOWANCE
