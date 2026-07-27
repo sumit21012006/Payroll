@@ -2098,6 +2098,9 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Statutory Wages ${MONTH_NAMES[m - 1] || m} ${y}`);
 
+    // Freeze first 3 rows (Top 3) and first 5 columns (A-E)
+    worksheet.views = [{ state: 'frozen', xSplit: 5, ySplit: 3 }];
+
     // Title Row 1
     worksheet.mergeCells('A1:Y1');
     const titleCell = worksheet.getCell('A1');
@@ -2120,7 +2123,7 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     worksheet.getCell('V2').value = 'SUMMARY & NET PAY';
 
     const groupHeaderRow = worksheet.getRow(2);
-    groupHeaderRow.height = 24;
+    groupHeaderRow.height = 25;
     groupHeaderRow.eachCell((cell) => {
       cell.font = { name: 'Arial', size: 10, bold: true, color: { argb: 'FF000000' } };
       cell.alignment = { vertical: 'middle', horizontal: 'center' };
@@ -2142,7 +2145,7 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       'BASIC + DA',                 // L
       'HRA',                        // M
       'OTHER\nALLOWANCE',           // N
-      'LEGAL GROSS\nWAGES',         // O
+      'LEGAL\nGROSS\nWAGES',        // O (3 Lines as requested)
       'PF Deduction\n(12%)',        // P
       'Professional\nTax (PT)',     // Q
       'ESIC\n(0.75%)',              // R
@@ -2156,12 +2159,13 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     ];
 
     const subHeaderRow = worksheet.getRow(3);
-    subHeaderRow.height = 32;
+    subHeaderRow.height = 36;
     subHeaderRow.eachCell((cell) => {
       cell.font = { color: { argb: 'FF000000' }, bold: true, name: 'Arial', size: 9 };
       cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
     });
 
+    // Number format that hides 0 by formatting 0 as empty string
     const blankZeroFmt = '#,##0.00;-#,##0.00;""';
 
     let activeDataRowIdx = 4;
@@ -2211,26 +2215,26 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
         emp.esic || '',                     // C: ESIC NO
         emp.name,                           // D: FULL NAME
         empType,                            // E: Employee Type
-        ratePerDay > 0 ? ratePerDay : '',   // F: Rate Per Day
-        totalDaysWorked > 0 ? totalDaysWorked : '', // G: Total Days Worked
-        isLoadBasis ? '' : { formula: `IF(G${r}>0, ROUND(G${r}*F${r},0), "")` }, // H: BASIC PAY
-        tonnagePay > 0 ? tonnagePay : '',   // I: Tonnage Pay
-        idleDailyPay > 0 ? idleDailyPay : '', // J: Daily Pay (Idle)
-        isLoadBasis ? { formula: `IF(OR(I${r}>0,J${r}>0), I${r}+J${r}, "")` } : { formula: `IF(H${r}>0, H${r}, "")` }, // K: GROSS WAGES
-        { formula: `IF(G${r}>0, ROUND(G${r}*550,0), "")` }, // L: BASIC + DA (Worked Days * 550)
-        { formula: `IF(L${r}>0, ROUND(L${r}*0.05,0), "")` }, // M: HRA
-        { formula: `IF(K${r}>0, MAX(0, K${r}-L${r}-M${r}), "")` }, // N: OTHER ALLOWANCE
-        { formula: `IF(L${r}>0, L${r}+M${r}+N${r}, "")` }, // O: LEGAL GROSS WAGES
-        { formula: `IF(L${r}>0, ROUND(L${r}*0.12,0), "")` }, // P: PF (12%)
-        { formula: `IF(K${r}>10000, 200, IF(K${r}>7500, 175, ""))` }, // Q: PT
-        { formula: `IF(O${r}>0, ROUND(O${r}*0.0075,0), "")` }, // R: ESIC (0.75%)
-        { formula: `IF(K${r}>0, 500, "")` }, // S: Canteen
-        advanceDeduction > 0 ? advanceDeduction : '', // T: Account Advance
-        mlwlDeduction > 0 ? mlwlDeduction : '',       // U: MLWL
-        { formula: `IF(OR(P${r}>0,Q${r}>0,R${r}>0,S${r}>0,T${r}>0,U${r}>0), P${r}+Q${r}+R${r}+S${r}+T${r}+U${r}, "")` }, // V: Total Deductions
-        { formula: `IF(O${r}>0, O${r}-V${r}, "")` }, // W: Net Wages
-        { formula: `IF(W${r}>0, 500, "")` }, // X: Other Deduction
-        { formula: `IF(W${r}>0, MAX(0, W${r}-X${r}), "")` } // Y: FINAL PAY
+        ratePerDay,                         // F: Rate Per Day
+        totalDaysWorked,                    // G: Total Days Worked
+        isLoadBasis ? 0 : { formula: `ROUND(G${r}*F${r},0)` }, // H: BASIC PAY
+        tonnagePay,                         // I: Tonnage Pay
+        idleDailyPay,                       // J: Daily Pay (Idle)
+        isLoadBasis ? { formula: `I${r}+J${r}` } : { formula: `H${r}` }, // K: GROSS WAGES
+        { formula: `ROUND(G${r}*550,0)` }, // L: BASIC + DA (Worked Days * 550)
+        { formula: `ROUND(L${r}*0.05,0)` }, // M: HRA
+        { formula: `MAX(0, K${r}-L${r}-M${r})` }, // N: OTHER ALLOWANCE
+        { formula: `L${r}+M${r}+N${r}` },   // O: LEGAL GROSS WAGES
+        { formula: `ROUND(L${r}*0.12,0)` }, // P: PF (12%)
+        { formula: `IF(K${r}>10000, 200, IF(K${r}>7500, 175, 0))` }, // Q: PT
+        { formula: `ROUND(O${r}*0.0075,0)` }, // R: ESIC (0.75%)
+        { formula: `IF(K${r}>0, 500, 0)` }, // S: Canteen
+        advanceDeduction,                   // T: Account Advance
+        mlwlDeduction,                      // U: MLWL
+        { formula: `P${r}+Q${r}+R${r}+S${r}+T${r}+U${r}` }, // V: Total Deductions
+        { formula: `MAX(0, O${r}-V${r})` }, // W: Net Wages
+        { formula: `IF(W${r}>0, 500, 0)` }, // X: Other Deduction
+        { formula: `MAX(0, W${r}-X${r})` }  // Y: FINAL PAY
       ]);
 
       // Format currency cells with zero-hiding number format
@@ -2282,16 +2286,16 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     empEsicRow.font = { bold: true, color: { argb: 'FF000000' } };
     empEsicRow.getCell(12).numFmt = blankZeroFmt;
 
-    // Apply plain borders and adjust column widths
+    // Apply crisp black borders around every cell
     for (let r = 1; r <= worksheet.rowCount; r++) {
       const row = worksheet.getRow(r);
       for (let c = 1; c <= 25; c++) {
         const cell = row.getCell(c);
         cell.border = {
-          top: { style: 'thin', color: { argb: 'FF94A3B8' } },
-          bottom: { style: 'thin', color: { argb: 'FF94A3B8' } },
-          left: { style: 'thin', color: { argb: 'FF94A3B8' } },
-          right: { style: 'thin', color: { argb: 'FF94A3B8' } }
+          top: { style: 'thin', color: { argb: 'FF000000' } },
+          bottom: { style: 'thin', color: { argb: 'FF000000' } },
+          left: { style: 'thin', color: { argb: 'FF000000' } },
+          right: { style: 'thin', color: { argb: 'FF000000' } }
         };
       }
     }
@@ -2312,7 +2316,7 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       14, // L: BASIC + DA
       12, // M: HRA
       14, // N: OTHER ALLOWANCE
-      16, // O: LEGAL GROSS WAGES
+      14, // O: LEGAL GROSS WAGES
       14, // P: PF Deduction (12%)
       14, // Q: Professional Tax (PT)
       12, // R: ESIC (0.75%)
