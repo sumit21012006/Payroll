@@ -2038,9 +2038,9 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
     const monthPattern = `${m}/`;
     const yearPattern = `/${y}`;
 
-    // Fetch master employees
+    // Fetch master employees sorted alphabetically by name
     const employees = await prisma.employee.findMany({
-      orderBy: { employeeId: 'asc' }
+      orderBy: { name: 'asc' }
     });
 
     // Fetch attendance logs for the year
