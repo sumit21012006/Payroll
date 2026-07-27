@@ -2043,56 +2043,63 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       orderBy: { employeeId: 'asc' }
     });
 
-    // Fetch attendance logs for the month/year
+    // Fetch attendance logs for the year
     const attendanceRecords = await prisma.attendance.findMany({
       where: {
         date: {
-          startsWith: monthPattern,
-          endsWith: yearPattern
+          endsWith: `/${y}`
         }
       }
     });
 
-    // Group attendance logs by employeeId
+    // Group attendance logs by employeeId and punchingCode
     const attendanceMap = new Map<string, any[]>();
     attendanceRecords.forEach(att => {
-      const list = attendanceMap.get(att.employeeId) || [];
-      list.push(att);
-      attendanceMap.set(att.employeeId, list);
+      const parts = att.date.split('/');
+      if (parts.length === 3 && parseInt(parts[0]) === m && parseInt(parts[2]) === y) {
+        const list = attendanceMap.get(att.employeeId) || [];
+        list.push(att);
+        attendanceMap.set(att.employeeId, list);
+      }
     });
 
-    // Fetch supervisor job logs for the month/year
+    // Fetch supervisor job logs for the year
     const jobs = await prisma.jobLog.findMany({
       where: {
         date: {
-          startsWith: monthPattern,
-          endsWith: yearPattern
+          endsWith: `/${y}`
         }
       },
       include: {
-        employees: true
+        employees: {
+          include: {
+            employee: true
+          }
+        }
       }
     });
 
-    // Group job allocations by employeeId and date
+    // Group job allocations by employeeId / punchingCode and date
     const jobEmpMap = new Map<string, number>(); // employeeId_date -> splitEarnings
     const empTotalTonnagePayMap = new Map<string, number>(); // employeeId -> total job earnings
     const empJobDatesSet = new Map<string, Set<string>>(); // employeeId -> Set of dates worked on jobs
 
     jobs.forEach(j => {
-      j.employees.forEach(je => {
-        const key = `${je.employeeId}_${j.date}`;
-        const prevSplit = jobEmpMap.get(key) || 0;
-        jobEmpMap.set(key, prevSplit + je.splitEarnings);
+      const parts = j.date.split('/');
+      if (parts.length === 3 && parseInt(parts[0]) === m && parseInt(parts[2]) === y) {
+        j.employees.forEach(je => {
+          const keys = [je.employeeId, je.employee ? je.employee.punchingCode : '', je.employee ? je.employee.employeeId : ''].filter(Boolean);
+          keys.forEach(k => {
+            const key = `${k}_${j.date}`;
+            jobEmpMap.set(key, (jobEmpMap.get(key) || 0) + je.splitEarnings);
+            empTotalTonnagePayMap.set(k, (empTotalTonnagePayMap.get(k) || 0) + je.splitEarnings);
 
-        const prevTotal = empTotalTonnagePayMap.get(je.employeeId) || 0;
-        empTotalTonnagePayMap.set(je.employeeId, prevTotal + je.splitEarnings);
-
-        const datesSet = empJobDatesSet.get(je.employeeId) || new Set<string>();
-        datesSet.add(j.date);
-        empTotalTonnagePayMap.set(je.employeeId, prevTotal + je.splitEarnings);
-        empJobDatesSet.set(je.employeeId, datesSet);
-      });
+            const datesSet = empJobDatesSet.get(k) || new Set<string>();
+            datesSet.add(j.date);
+            empJobDatesSet.set(k, datesSet);
+          });
+        });
+      }
     });
 
     const workbook = new ExcelJS.Workbook();
@@ -2175,13 +2182,15 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       const empType = isLoadBasis ? 'Load basis' : 'Day basis';
       const ratePerDay = isLoadBasis ? (emp.deductionPerDay || 0.0) : emp.salaryPerDay;
 
-      // Attendance logs for this employee
-      const empAtt = attendanceMap.get(emp.employeeId) || [];
+      // Dual-key lookup for attendance logs
+      const empAtt = attendanceMap.get(emp.employeeId) || attendanceMap.get(emp.punchingCode) || [];
       
       let pCount = 0, hdCount = 0, lateCount = 0;
       let idleDailyPay = 0.0;
 
-      const empJobDates = empJobDatesSet.get(emp.employeeId) || new Set<string>();
+      // Dual-key lookup for job dates & tonnage earnings
+      const empJobDates = empJobDatesSet.get(emp.employeeId) || empJobDatesSet.get(emp.punchingCode) || new Set<string>();
+      const tonnagePay = isLoadBasis ? (empTotalTonnagePayMap.get(emp.employeeId) || empTotalTonnagePayMap.get(emp.punchingCode) || 0.0) : 0.0;
 
       empAtt.forEach(att => {
         const st = (att.status || '').toUpperCase();
@@ -2201,11 +2210,10 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
 
       const totalDaysWorked = pCount + lateCount + (hdCount * 0.5);
 
-      // Skip employees who did not work at all in this month
-      if (totalDaysWorked === 0 && !isLoadBasis) return;
+      // Skip employees who did not work at all and have no tonnage pay in this month
+      if (totalDaysWorked === 0 && tonnagePay === 0 && !isLoadBasis) return;
 
       const r = activeDataRowIdx;
-      const tonnagePay = isLoadBasis ? (empTotalTonnagePayMap.get(emp.employeeId) || 0.0) : 0.0;
       const advanceDeduction = emp.accountAdvance || 0;
       const mlwlDeduction = (m === 6 || m === 12) ? 25 : 0;
 
