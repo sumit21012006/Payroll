@@ -1,0 +1,302 @@
+Total ESSL Biometric Records: 242
+Total Payroll Records: 138
+
+================================================================================
+CATEGORY 1: EMPLOYEES IN ESSL BUT NOT IN PAYROLL (102)
+================================================================================
+
+  A) ACTUALLY PRESENT IN ESSL BUT MISSING FROM PAYROLL (24) — CRITICAL
+    L1-001       | GANGADHAR TUKARAM WAGHU             | ESSL: Present    | In: 17:13:59   | Out: 17:20:51   | WorkDur: 8:15
+    L1-002       | NILKANTH NAGANNA BAGALE             | ESSL: Present    | In: 17:13:52   | Out: 17:21:12   | WorkDur: 8:15
+    L1-117       | SURAJ WALMIK BHOSALE                | ESSL: Present    | In: 14:51:06   | Out: 23:30:58   | WorkDur: 8:39
+    L1-138       | SWAPNIL SANJAY BHOPALE              | ESSL: Present    | In: 15:01:20   | Out: 06:59:21   | WorkDur: 8:15
+    L2-0014      | KULDEEP SANTOSH GOUND               | ESSL: Present    | In: 22:37:42   | Out: 07:08:51   | WorkDur: 8:31
+    L2-037       | DEEPAK RAMPRATAP PAL                | ESSL: Present  (No OutPunch) | In: 14:37:30   | Out:            | WorkDur: 8:23
+    L2-044       | KAIF ISMAIL PAGDIWALE               | ESSL: Present    | In: 15:12:30   | Out: 06:58:57   | WorkDur: 8:15
+    L2-121       | SHIVANAND IRAPPA BANSOD             | ESSL: Present  (No OutPunch) | In: 15:27:38   | Out:            | WorkDur: 7:33
+    L2-122       | BABU HUCHAPPA BANSODE               | ESSL: Present  (No OutPunch) | In: 15:02:38   | Out:            | WorkDur: 7:58
+    L2-124       | VASIM SAJID SHAIKH                  | ESSL: Present  (No OutPunch) | In: 15:04:42   | Out:            | WorkDur: 7:56
+    L2-125       | ISHTIYAAQUE AHMAD ASGAR             | ESSL: Present    | In: 14:44:19   | Out: 23:26:08   | WorkDur: 8:42
+    L2-126       | MUSTAKIN ANSARI                     | ESSL: Present    | In: 14:39:57   | Out: 23:05:28   | WorkDur: 8:26
+    L2-127       | SANJAY DEVIPRASAD PATIL             | ESSL: Present    | In: 14:43:48   | Out: 23:02:02   | WorkDur: 8:19
+    L2-129       | SALMAN ALAM                         | ESSL: Present    | In: 14:40:11   | Out: 23:04:59   | WorkDur: 8:24
+    L2-130       | DILSHAD ALI                         | ESSL: Present    | In: 14:40:38   | Out: 23:06:43   | WorkDur: 8:26
+    L2-131       | SIDRAM MALKARI KOLI                 | ESSL: Present    | In: 15:09:50   | Out: 06:59:16   | WorkDur: 8:15
+    L2-132       | L2-132                              | ESSL: Present  (No OutPunch) | In: 14:52:45   | Out:            | WorkDur: 8:08
+    L2-133       | L2-133                              | ESSL: Present    | In: 14:37:37   | Out: 23:02:07   | WorkDur: 8:25
+    L2-134       | L2-134                              | ESSL: Present    | In: 14:55:24   | Out: 07:04:26   | WorkDur: 8:15
+    L2-135       | L2-135                              | ESSL: Present    | In: 15:44:42   | Out: 08:42:32   | WorkDur: 8:15
+    L2-136       | L2-136                              | ESSL: Present    | In: 14:46:07   | Out: 23:04:21   | WorkDur: 8:18
+    L2-137       | L2-137                              | ESSL: Present  (No OutPunch) | In: 14:40:26   | Out:            | WorkDur: 8:20
+    L2-138       | L2-138                              | ESSL: Present    | In: 14:40:17   | Out: 23:06:16   | WorkDur: 8:26
+    L2-140       | REVANSIDDHA GOTALE                  | ESSL: Present    | In: 15:24:50   | Out: 23:02:12   | WorkDur: 7:38
+
+  B) ABSENT IN ESSL AND NOT IN PAYROLL (78) — Expected behavior
+    L2-001       | AKASH LAXMAN KALE                   | ESSL: Absent
+    L1001        | GANGADHAR TUKARAM WAGHU             | ESSL: Absent
+    L1002        | NILKANTH NAGANNA BAGALE             | ESSL: Absent
+    L2009        | MALIK CHAND  PATEL                  | ESSL: Absent
+    L-026        | L-026                               | ESSL: Absent
+    L1-003       | SANTOSH GURUNATH PATIL              | ESSL: Absent
+    L1-029       | HEMANT ANAVIRAPPA NANDUR            | ESSL: Absent
+    L1-033       | HUSEN BABULAL NADAF                 | ESSL: Absent
+    L1-034       | GURURAJ MAHANTESH PAGA              | ESSL: Absent
+    L1-036       | DARGAPPA SHIVANAND ARAVA            | ESSL: Absent
+    L1-042       | VIJAY ARJUN BHARLE                  | ESSL: Absent
+    L1-044       | KASHINATH JAGANATH BIRAJ            | ESSL: Absent
+    L1-059       | AJAY SHRINIVAS PENTA                | ESSL: Absent
+    L1-063       | AMOL TEJU RATHOD                    | ESSL: Absent
+    L1-064       | ABHISHEK SUNIL RATHOD               | ESSL: Absent
+    L1-076       | SAISAMARTH VITTHAL ZAMPA            | ESSL: Absent
+    L1-080       | ARJUN HIRACHAND BANDAGAR            | ESSL: Absent
+    L1-083       | KISHOR JYOTIBA MORE                 | ESSL: Absent
+    L1-088       | BASVRAJ SOMNATH KARKALE             | ESSL: Absent
+    L1-091       | SAGAR BASVRAJ ARJUN                 | ESSL: Absent
+    L1-098       | SIDRAM MAHANINGAPPA DOMB            | ESSL: Absent
+    L1-108       | GENSIDHHA AMASIDHHA VAMA            | ESSL: Absent
+    L1-109       | BASVRAJ SHRISHAIL SODDE             | ESSL: Absent
+    L1-113       | NAGESH REVANSIDHHA BIRAJ            | ESSL: Absent
+    L1-121       | DATTATRAY MAREPPA LAMBAT            | ESSL: Absent
+    L1-123       | CHANDRAKANT PARMESHWAR W            | ESSL: Absent
+    L1-124       | PRAMOD ASHOK POTDAR                 | ESSL: Absent
+    L1-135       | BASAVARAJ BHIMASHANKAR B            | ESSL: Absent
+    L1-136       | SHUBHAM SHIVASHARAN TURB            | ESSL: Absent
+    L1_120       | PRAVIN NILAPPA HIRAPURE             | ESSL: Absent
+    L-2 0037     | DEEPAK PAL                          | ESSL: Absent
+    L-2- 0044    | KAIF ISMAIL PAGADIWALE              | ESSL: Absent
+    L-2 -0044    | KAIF ISMAIL PAGDIWALE               | ESSL: Absent
+    L2-002       | MAHESH  CHANDRAKANT MANE            | ESSL: Absent
+    L2-003       | KALYANRAO PUARI                     | ESSL: Absent
+    L2-004       | SANTOSH SHIVAJI VHANKADE            | ESSL: Absent
+    L2- 004      | L2- 004                             | ESSL: Absent
+    L2-005       | SAMARTH BASAVARAJ BONDAG            | ESSL: Absent
+    L2- 005      | L2- 005                             | ESSL: Absent
+    L2-006       | JOTINATH SATAVANATH DEVG            | ESSL: Absent
+    L2-013       | ANKUSH VISHWNATH MAMURE             | ESSL: Absent
+    L2-022       | WAEED NABILAL MULLA                 | ESSL: Absent
+    L2-024       | KHATALSAB A GODIKAT                 | ESSL: Absent
+    L2-027       | AMAN M PAIGAMBAR SHETSAN            | ESSL: Absent
+    L2-030       | KUMAR ARJUN RATHOD                  | ESSL: Absent
+    L2-038       | ANKIT KUSAWA                        | ESSL: Absent
+    L2-039       | BHUPENDER PATEL                     | ESSL: Absent
+    L2-042       | AYUSH BADIWA                        | ESSL: Absent
+    L2-045       | NIKHIL PRAKASH THAKUR               | ESSL: Absent
+    L2-046       | NARENDRA PATEL                      | ESSL: Absent
+    L2-047       | SANJAY KACHHI PATEL                 | ESSL: Absent
+    L2-049       | RAJA GORELAL PATEL                  | ESSL: Absent
+    L2-050       | IMRAT PATEL                         | ESSL: Absent
+    L2-051       | PRAMOD PATEL                        | ESSL: Absent
+    L2-052       | AAKASH PATEL                        | ESSL: Absent
+    L2-053       | ANAD RATAN PATEL                    | ESSL: Absent
+    L2-057       | BASAVARAJ BHIMASHANKAR              | ESSL: Absent
+    L2-072       | SHRISHAILGAURISHANKAR HE            | ESSL: Absent
+    L2-076       | AMOL HANUMANTU BHASGI               | ESSL: Absent
+    L2-099       | BASAVRAJ LAXMAN KOLI                | ESSL: Absent
+    L2-103       | SHAMRAO MALLAPA KESARI              | ESSL: Absent
+    L2-108       | ALTAMASH ABDUL SHAIKH               | ESSL: Absent
+    L2-109       | SHRINIVAS BHALCHANDRA KU            | ESSL: Absent
+    L2-110       | SHIVAJI RAM RATHOD                  | ESSL: Absent
+    L2-116       | GANESH KALLAPPA SAVLE               | ESSL: Absent
+    L2-117       | FAZAL RAFIK JAHAGIRDAR              | ESSL: Absent
+    L2-123       | MANGESH DILIPSINGH DIXIT            | ESSL: Absent
+    L2-128       | VAIJINATH MALLINATH BIRA            | ESSL: Absent
+    L2-139       | L2-139                              | ESSL: Absent
+    L2-141       | MALLINATH SANGAPPA SOLAP            | ESSL: Absent
+    L1003        | SANTOSH GURUNATH PATIL              | ESSL: Absent
+    L1039        | REVANSHIDDH SHIVAPPA IS             | ESSL: Absent
+    L1052        | NAMDEV DURGAPPA BANDGAR             | ESSL: Absent
+    L1053        | DATTATRAY ASHOK WAGHMODE            | ESSL: Absent
+    L1054        | KHALID ILAHI SHIAK                  | ESSL: Absent
+    L1058        | SAGAR RAMESH GHERSANGI              | ESSL: Absent
+    L1061        | HARUN BASHA MULLA                   | ESSL: Absent
+    L1072        | RAJKUMAR BADIGER                    | ESSL: Absent
+
+================================================================================
+CATEGORY 2: IN PAYROLL BUT NOT IN ESSL (0)
+================================================================================
+
+================================================================================
+CATEGORY 3: STATUS CONTRADICTIONS (3)
+================================================================================
+    L1-005       | YASH SUNIL PAWAR                    | ESSL: Absent       InTime:            | Payroll: PRESENT      CheckIn: 14:46
+    L2-036       | HARIOM THAKUR                       | ESSL: Absent       InTime:            | Payroll: LATE         CheckIn: 15:03
+    L2-043       | OMPRAKASH THAKUR                    | ESSL: Absent       InTime:            | Payroll: LATE         CheckIn: 15:04
+
+================================================================================
+CATEGORY 4: PAYROLL CHECK-IN == CHECK-OUT (0 hours, 65 records)
+================================================================================
+  These employees had their check-in and check-out recorded as the SAME timestamp.
+  This means 0 hours worked was calculated, even though ESSL shows they worked a full shift.
+
+  A) NIGHT SHIFT (Check-in 22:00-06:00) — 15 records
+    L1-004       | ANIKET SHRIPATI DANGE               | Payroll: In 22:47 Out 22:47 Hrs: 0 | ESSL Out: 07:09:11   WorkDur: 8:22
+    L1-018       | MAHESH SURESH SHENDGE               | Payroll: In 22:47 Out 22:47 Hrs: 0 | ESSL Out: 07:21:19   WorkDur: 8:34
+    L1-027       | Bsavraj Iranna Talwar               | Payroll: In 22:49 Out 22:49 Hrs: 0 | ESSL Out: 07:03:53   WorkDur: 8:14
+    L1-089       | SUFIYAN SHEKULAL FULARI             | Payroll: In 22:52 Out 22:52 Hrs: 0 | ESSL Out: 07:01:12   WorkDur: 8:09
+    L1-092       | SACHIN BHAGWAN GHANTE               | Payroll: In 23:08 Out 23:08 Hrs: 0 | ESSL Out: 07:09:02   WorkDur: 8:01
+    L1-104       | NAGANATH KASHINATH SONWANE          | Payroll: In 22:23 Out 22:23 Hrs: 0 | ESSL Out: 07:03:37   WorkDur: 8:40
+    L1-115       | AKASH KALE                          | Payroll: In 22:58 Out 22:58 Hrs: 0 | ESSL Out: 07:04:56   WorkDur: 8:06
+    L1-119       | SACHIN SHANTARAM MASHALKAR          | Payroll: In 22:38 Out 22:38 Hrs: 0 | ESSL Out: 07:02:01   WorkDur: 8:24
+    L1-126       | MD TAQI ZAKIR ALIM                  | Payroll: In 23:09 Out 23:09 Hrs: 0 | ESSL Out: 07:04:21   WorkDur: 7:55
+    L1-137       | GANGADHAR MAYANALE                  | Payroll: In 22:47 Out 22:47 Hrs: 0 | ESSL Out: 07:02:51   WorkDur: 8:15
+    L2-075       | SHIVARAJ MARUTI NARUTE              | Payroll: In 22:46 Out 22:46 Hrs: 0 | ESSL Out: 07:07:25   WorkDur: 8:21
+    L2-078       | JYOTIBA BHIM AVATADE                | Payroll: In 22:46 Out 22:46 Hrs: 0 | ESSL Out: 07:04:49   WorkDur: 8:18
+    L2-083       | MOHAMMAD KAIF TAMBOLI               | Payroll: In 22:52 Out 22:52 Hrs: 0 | ESSL Out: 20:17:10   WorkDur: 8:15
+    L2-093       | Shahbaj Baktawar Mulla              | Payroll: In 22:56 Out 22:56 Hrs: 0 | ESSL Out: 07:04:36   WorkDur: 8:08
+    L2-115       | PRAVIN REVALSIDHA SHENDG            | Payroll: In 22:46 Out 22:46 Hrs: 0 | ESSL Out: 07:04:16   WorkDur: 8:18
+
+  B) DAY SHIFT (Check-in 06:00-22:00) — 50 records
+    L1-006       | SAMEER NAGURE                       | Payroll: In 15:47 Out 15:47 Hrs: 0 | ESSL Out: 07:13:49   WorkDur: 8:15
+    L1-012       | SANTOSH LAXMAN KOLI                 | Payroll: In 15:09 Out 15:09 Hrs: 0 | ESSL Out: 06:59:51   WorkDur: 8:15
+    L1-014       | MAHESH BABUSHA LANDAGE              | Payroll: In 15:00 Out 15:00 Hrs: 0 | ESSL Out: 11:08:06   WorkDur: 8:15
+    L1-016       | VISHAL KOLI                         | Payroll: In 14:59 Out 14:59 Hrs: 0 | ESSL Out: 06:48:48   WorkDur: 8:15
+    L1-031       | IRANNA SIDDHARAM KANNI              | Payroll: In 15:00 Out 15:00 Hrs: 0 | ESSL Out: 06:58:51   WorkDur: 8:15
+    L1-032       | SAKIB SALIM SAYYED                  | Payroll: In 17:00 Out 17:00 Hrs: 0 | ESSL Out: 17:01:37   WorkDur: 8:15
+    L1-038       | Anil G Mali                         | Payroll: In 15:15 Out 15:15 Hrs: 0 | ESSL Out: 06:43:53   WorkDur: 8:15
+    L1-039       | REVANASIDDH SHIVAPPA ISHWARKATTI    | Payroll: In 15:15 Out 15:15 Hrs: 0 | ESSL Out: 11:54:58   WorkDur: 8:15
+    L1-041       | GIRISH SIDDHARAM MADYAL             | Payroll: In 15:16 Out 15:16 Hrs: 0 | ESSL Out: 06:59:56   WorkDur: 8:15
+    L1-043       | Jitendra Sidram Koli                | Payroll: In 15:09 Out 15:09 Hrs: 0 | ESSL Out: 08:41:07   WorkDur: 8:15
+    L1-052       | NAMDEV DURGAPPA BANDGAR             | Payroll: In 15:06 Out 15:06 Hrs: 0 | ESSL Out: 06:43:37   WorkDur: 8:15
+    L1-053       | DATTATRAYWAGHMODE                   | Payroll: In 15:03 Out 15:03 Hrs: 0 | ESSL Out: 06:37:25   WorkDur: 8:15
+    L1-054       | KHALID ILAI SHAIKH                  | Payroll: In 15:07 Out 15:07 Hrs: 0 | ESSL Out: 06:51:28   WorkDur: 8:15
+    L1-055       | AKASH JAGNNATH TENGALE              | Payroll: In 15:08 Out 15:08 Hrs: 0 | ESSL Out: 06:40:20   WorkDur: 8:15
+    L1-057       | SATISH SHIVAJI SHINDE               | Payroll: In 15:08 Out 15:08 Hrs: 0 | ESSL Out: 06:40:26   WorkDur: 8:15
+    L1-058       | Sagar Ramesh Gharsangi              | Payroll: In 14:58 Out 14:58 Hrs: 0 | ESSL Out: 06:43:23   WorkDur: 8:15
+    L1-061       | HARUN MULLA                         | Payroll: In 15:07 Out 15:07 Hrs: 0 | ESSL Out: 06:53:51   WorkDur: 8:15
+    L1-077       | MANGESH NAVNATH ANKUSHRAO           | Payroll: In 15:10 Out 15:10 Hrs: 0 | ESSL Out: 07:01:35   WorkDur: 8:15
+    L1-081       | Ajay Kanaki                         | Payroll: In 15:11 Out 15:11 Hrs: 0 | ESSL Out: 06:58:38   WorkDur: 8:15
+    L1-084       | SHAVRSIDDHA KHANDAPP LANDAGE        | Payroll: In 15:07 Out 15:07 Hrs: 0 | ESSL Out: 06:54:16   WorkDur: 8:15
+    L1-097       | MANIK GURULINGAYA HIREMATH          | Payroll: In 15:01 Out 15:01 Hrs: 0 | ESSL Out: 06:58:13   WorkDur: 8:15
+    L1-100       | DHANRAJ DATTATRAY SHINDE            | Payroll: In 15:00 Out 15:00 Hrs: 0 | ESSL Out: 06:49:36   WorkDur: 8:15
+    L1-105       | SUDHAKAR BHIMASHANKAR KOGANURE      | Payroll: In 15:14 Out 15:14 Hrs: 0 | ESSL Out: 06:49:26   WorkDur: 8:15
+    L1-106       | BASAVRAJ SHIVANNA KOLI              | Payroll: In 15:13 Out 15:13 Hrs: 0 | ESSL Out: 06:48:04   WorkDur: 8:15
+    L1-112       | GANNESH CHANDRASHEKHAR KAULAGI      | Payroll: In 15:01 Out 15:01 Hrs: 0 | ESSL Out: 06:49:51   WorkDur: 8:15
+    L1-116       | SIDDHARTH SURESH RAJAGURU           | Payroll: In 15:12 Out 15:12 Hrs: 0 | ESSL Out: 07:01:42   WorkDur: 8:15
+    L1-122       | RIZWAN KHATIB                       | Payroll: In 15:00 Out 15:00 Hrs: 0 | ESSL Out: 06:47:44   WorkDur: 8:15
+    L1-128       | ARBAJ NADAF                         | Payroll: In 17:00 Out 17:00 Hrs: 0 | ESSL Out: 17:01:18   WorkDur: 8:15
+    L1-130       | KUNDAN SANJAY GAIKWAD               | Payroll: In 17:00 Out 17:00 Hrs: 0 | ESSL Out: 17:01:05   WorkDur: 8:15
+    L1-132       | SAGAR TELI                          | Payroll: In 14:59 Out 14:59 Hrs: 0 | ESSL Out: 06:58:28   WorkDur: 8:15
+    L1-134       | TUKARAM NAGNATH MANGARULE           | Payroll: In 15:00 Out 15:00 Hrs: 0 | ESSL Out: 06:58:33   WorkDur: 8:15
+    L2-043       | OMPRAKASH THAAKUR                   | Payroll: In 15:04 Out 15:04 Hrs: 0 | ESSL Out: N/A        WorkDur: 00:00
+    L2-055       | MAHESH BASAVRAJ INDE                | Payroll: In 15:19 Out 15:19 Hrs: 0 | ESSL Out: 06:59:32   WorkDur: 8:15
+    L2-059       | BASAVRAJ GENSIDDHA KOLI             | Payroll: In 15:25 Out 15:25 Hrs: 0 | ESSL Out: 06:59:13   WorkDur: 8:15
+    L2-060       | BASAVARAJ SHIVAPPA MAYANALE         | Payroll: In 15:25 Out 15:25 Hrs: 0 | ESSL Out: 07:01:47   WorkDur: 8:15
+    L2-061       | VIKAS SHANKAR JADHAV                | Payroll: In 15:20 Out 15:20 Hrs: 0 | ESSL Out: 06:54:10   WorkDur: 8:15
+    L2-062       | PRITISHIKUMAR SHRISHAIL SWAMI       | Payroll: In 15:16 Out 15:16 Hrs: 0 | ESSL Out: 07:01:15   WorkDur: 8:15
+    L2-063       | IRFAN KUDLE                         | Payroll: In 15:12 Out 15:12 Hrs: 0 | ESSL Out: 06:53:12   WorkDur: 8:15
+    L2-064       | NIKHIL SHIVLING BAKLE               | Payroll: In 15:17 Out 15:17 Hrs: 0 | ESSL Out: 06:35:24   WorkDur: 8:15
+    L2-074       | SHUBHAM RATHOD                      | Payroll: In 15:02 Out 15:02 Hrs: 0 | ESSL Out: 06:50:31   WorkDur: 8:15
+    L2-080       | USMAN GANI RAFIK MULLA              | Payroll: In 15:00 Out 15:00 Hrs: 0 | ESSL Out: 06:51:40   WorkDur: 8:15
+    L2-082       | GANESH JETTEPPA SHIRANAL            | Payroll: In 15:11 Out 15:11 Hrs: 0 | ESSL Out: 06:43:49   WorkDur: 8:15
+    L2-084       | PAVAN SAMBHAJI VHARADE              | Payroll: In 15:16 Out 15:16 Hrs: 0 | ESSL Out: 06:43:44   WorkDur: 8:15
+    L2-087       | Mohammad Tajoddin Salahuddin Shaikh | Payroll: In 15:12 Out 15:12 Hrs: 0 | ESSL Out: 06:53:26   WorkDur: 8:15
+    L2-088       | SHASHIKANT DATTATRAY ALURE          | Payroll: In 15:01 Out 15:01 Hrs: 0 | ESSL Out: 06:53:32   WorkDur: 8:15
+    L2-090       | DHAREPPA PANCHAPPA ARAVAT           | Payroll: In 15:05 Out 15:05 Hrs: 0 | ESSL Out: 06:53:56   WorkDur: 8:15
+    L2-091       | VASANT VENKAT RAO MANE              | Payroll: In 15:10 Out 15:10 Hrs: 0 | ESSL Out: 06:59:03   WorkDur: 8:15
+    L2-092       | SHASHIKANT MALLESHI REDDI           | Payroll: In 15:01 Out 15:01 Hrs: 0 | ESSL Out: 06:47:58   WorkDur: 8:15
+    L2-100       | IRESH RAMAPPA SHEDSHAL              | Payroll: In 15:10 Out 15:10 Hrs: 0 | ESSL Out: 06:59:09   WorkDur: 8:15
+    L2-114       | MALLINATH PANDT IKKALKI             | Payroll: In 15:05 Out 15:05 Hrs: 0 | ESSL Out: 06:52:26   WorkDur: 8:15
+
+================================================================================
+CATEGORY 5: HOURS WORKED COMPARISON (both present in both systems)
+================================================================================
+    L1-004       | ANIKET SHRIPATI DANGE               | ESSL Hrs:   8.4 | Payroll Hrs:   0.0 | Diff: 8.4h | ESSL In: 22:47:08 Out: 07:09:11 | Pay In: 22:47 Out: 22:47
+    L1-006       | SAMEER SAYYAD NAGURE                | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:47:49 Out: 07:13:49 | Pay In: 15:47 Out: 15:47
+    L1-012       | SANTOSH LAXMAN KOLI                 | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:09:28 Out: 06:59:51 | Pay In: 15:09 Out: 15:09
+    L1-014       | MAHESH BABUSHA LANDAGE              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:00:58 Out: 11:08:06 | Pay In: 15:00 Out: 15:00
+    L1-016       | VISHAL RAJKUMAR KOLI                | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:59:35 Out: 06:48:48 | Pay In: 14:59 Out: 14:59
+    L1-018       | MAHESH SURESH SHENDGE               | ESSL Hrs:   8.6 | Payroll Hrs:   0.0 | Diff: 8.6h | ESSL In: 22:47:22 Out: 07:21:19 | Pay In: 22:47 Out: 22:47
+    L1-026       | BANDENAWAJ SAIPAN MULLA             | ESSL Hrs:   8.0 | Payroll Hrs:   0.0 | Diff: 8.0h | ESSL In: 15:00:44 Out:  | Pay In: 15:00 Out: -
+    L1-027       | BASAVARAJ IRANNA MULLA              | ESSL Hrs:   8.2 | Payroll Hrs:   0.0 | Diff: 8.2h | ESSL In: 22:49:11 Out: 07:03:53 | Pay In: 22:49 Out: 22:49
+    L1-031       | IRANNA SIDDHARAM KANNI              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:00:54 Out: 06:58:51 | Pay In: 15:00 Out: 15:00
+    L1-032       | SAQIB SALIM SAYYED                  | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 17:00:38 Out: 17:01:37 | Pay In: 17:00 Out: 17:00
+    L1-038       | ANIL GOVIND MALI                    | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:15:14 Out: 06:43:53 | Pay In: 15:15 Out: 15:15
+    L1-039       | REVANSHIDDH SHIVAPPA IS             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:15:09 Out: 11:54:58 | Pay In: 15:15 Out: 15:15
+    L1-040       | DIPAK DATTATRY KUMBHAR              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:11:41 Out: 07:22:27 | Pay In: 15:11 Out: -
+    L1-041       | GIRISH SIDDHRAM MADYAL              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:16:28 Out: 06:59:56 | Pay In: 15:16 Out: 15:16
+    L1-043       | JITENDRA SIDRAM KOLI                | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:09:38 Out: 08:41:07 | Pay In: 15:09 Out: 15:09
+    L1-052       | NAMDEV DURGAPPA BANDGAR             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:06:59 Out: 06:43:37 | Pay In: 15:06 Out: 15:06
+    L1-053       | DATTATRAY ASHOK WAGHMODE            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:03:44 Out: 06:37:25 | Pay In: 15:03 Out: 15:03
+    L1-054       | KHALID ILAHI SHIAK                  | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:07:37 Out: 06:51:28 | Pay In: 15:07 Out: 15:07
+    L1-055       | AKASH JAGNNATH TENAGLE              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:08:15 Out: 06:40:20 | Pay In: 15:08 Out: 15:08
+    L1-057       | SATISH SHIVAJI SHINDE               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:08:05 Out: 06:40:26 | Pay In: 15:08 Out: 15:08
+    L1-058       | SAGAR RAMESH GHERSANGI              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:58:46 Out: 06:43:23 | Pay In: 14:58 Out: 14:58
+    L1-061       | HARUN BASHA MULLA                   | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:07:12 Out: 06:53:51 | Pay In: 15:07 Out: 15:07
+    L1-065       | ROHAN BABURAO PANDIT                | ESSL Hrs:   8.1 | Payroll Hrs:   0.0 | Diff: 8.1h | ESSL In: 14:55:15 Out:  | Pay In: 14:55 Out: -
+    L1-069       | ANKUSH SANJAY BHALE                 | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:58:39 Out: 07:00:27 | Pay In: 14:58 Out: -
+    L1-071       | ANIL RAMLAL RAWAT                   | ESSL Hrs:   7.8 | Payroll Hrs:   0.0 | Diff: 7.8h | ESSL In: 15:09:05 Out:  | Pay In: 15:09 Out: -
+    L1-074       | RAKESH ASHOK RAUT                   | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:01:03 Out: 07:01:54 | Pay In: 15:01 Out: -
+    L1-077       | MANGESH NAVNATH ANKUSHR             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:10:46 Out: 07:01:35 | Pay In: 15:10 Out: 15:10
+    L1-079       | PRABHAKAR BIRAPPA NAYKU             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:58:31 Out: 07:00:33 | Pay In: 14:58 Out: -
+    L1-081       | AJAY SHRINIVAS KANAKI               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:11:49 Out: 06:58:38 | Pay In: 15:11 Out: 15:11
+    L1-084       | SHAVRSIDDHA KHANDAPPA L             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:07:44 Out: 06:54:16 | Pay In: 15:07 Out: 15:07
+    L1-089       | SUFIYAN UMAR FULARI                 | ESSL Hrs:   8.2 | Payroll Hrs:   0.0 | Diff: 8.2h | ESSL In: 22:52:11 Out: 07:01:12 | Pay In: 22:52 Out: 22:52
+    L1-092       | SACHIN BHAGWAN GHANTE               | ESSL Hrs:   8.0 | Payroll Hrs:   0.0 | Diff: 8.0h | ESSL In: 23:08:55 Out: 07:09:02 | Pay In: 23:08 Out: 23:08
+    L1-093       | HRUSHIKESH CHANDRAKANT C            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:59:31 Out: 06:59:43 | Pay In: 14:59 Out: -
+    L1-097       | MANIK GURULINGAYA HIREMA            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:01:50 Out: 06:58:13 | Pay In: 15:01 Out: 15:01
+    L1-100       | DHANRAJ DATTATRAY SHINDE            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:00:12 Out: 06:49:36 | Pay In: 15:00 Out: 15:00
+    L1-104       | NAGNATH KASHINATH SONAWA            | ESSL Hrs:   8.7 | Payroll Hrs:   0.0 | Diff: 8.7h | ESSL In: 22:23:59 Out: 07:03:37 | Pay In: 22:23 Out: 22:23
+    L1-105       | SUDHAKAR BHIMASHANKAR KO            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:14:59 Out: 06:49:26 | Pay In: 15:14 Out: 15:14
+    L1-106       | BASAVRAJ SHIVANNA KOLI              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:13:00 Out: 06:48:04 | Pay In: 15:13 Out: 15:13
+    L1-107       | PRAKASH SOMALING KAMBAR             | ESSL Hrs:   7.9 | Payroll Hrs:   0.0 | Diff: 7.9h | ESSL In: 15:04:48 Out:  | Pay In: 15:04 Out: -
+    L1-112       | GANESH CHANDRASHEKHAR KA            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:01:08 Out: 06:49:51 | Pay In: 15:01 Out: 15:01
+    L1-115       | AKASH KRISHNA KALE                  | ESSL Hrs:   8.1 | Payroll Hrs:   0.0 | Diff: 8.1h | ESSL In: 22:58:52 Out: 07:04:56 | Pay In: 22:58 Out: 22:58
+    L1-116       | SIDDHARTH SURESH RAJGURU            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:12:48 Out: 07:01:42 | Pay In: 15:12 Out: 15:12
+    L1-119       | SACHIN SHANTARAM MASHALK            | ESSL Hrs:   8.4 | Payroll Hrs:   0.0 | Diff: 8.4h | ESSL In: 22:38:18 Out: 07:02:01 | Pay In: 22:38 Out: 22:38
+    L1-122       | RIZWAN BARKAT KHATIB                | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:00:19 Out: 06:47:44 | Pay In: 15:00 Out: 15:00
+    L1-126       | MD TAQI ZAKIR ALIM                  | ESSL Hrs:   7.9 | Payroll Hrs:   0.0 | Diff: 7.9h | ESSL In: 23:09:06 Out: 07:04:21 | Pay In: 23:09 Out: 23:09
+    L1-128       | ARBAZ ILAHI NADAF                   | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 17:00:30 Out: 17:01:18 | Pay In: 17:00 Out: 17:00
+    L1-130       | KUNDAN SANJAY GAIKWAD               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 17:00:41 Out: 17:01:05 | Pay In: 17:00 Out: 17:00
+    L1-132       | SAGAR RAMCHANDRA TELI               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:59:45 Out: 06:58:28 | Pay In: 14:59 Out: 14:59
+    L1-134       | TUKARAM NAGANATH MANGRUL            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:00:29 Out: 06:58:33 | Pay In: 15:00 Out: 15:00
+    L1-137       | GANGADHAR SIDDHARAM MAY             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 22:47:42 Out: 07:02:51 | Pay In: 22:47 Out: 22:47
+    L2-010       | YUSUF ISMAIL FULARI                 | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:41:37 Out:  | Pay In: 14:41 Out: -
+    L2-011       | MALLIKARJUN REVANSHIDDH             | ESSL Hrs:   8.5 | Payroll Hrs:   0.1 | Diff: 8.4h | ESSL In: 22:33:33 Out: 07:03:44 | Pay In: 22:33 Out: 22:41
+    L2-016       | SHRISHAIL SHIVANAND KORE            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:38:14 Out: 07:03:23 | Pay In: 14:38 Out: -
+    L2-020       | UMESH NAGENDRA BHALE                | ESSL Hrs:   8.0 | Payroll Hrs:   0.0 | Diff: 8.0h | ESSL In: 15:03:30 Out:  | Pay In: 15:03 Out: -
+    L2-021       | ASLAM GUDULA SHEKH                  | ESSL Hrs:   7.8 | Payroll Hrs:   0.0 | Diff: 7.8h | ESSL In: 15:12:25 Out:  | Pay In: 15:12 Out: -
+    L2-023       | GULCHAND CHULERAM BHOI              | ESSL Hrs:   7.9 | Payroll Hrs:   0.0 | Diff: 7.9h | ESSL In: 15:04:02 Out:  | Pay In: 15:04 Out: -
+    L2-025       | ROHIT CHADARKANT SALE               | ESSL Hrs:   7.9 | Payroll Hrs:   0.0 | Diff: 7.9h | ESSL In: 15:04:39 Out:  | Pay In: 15:04 Out: -
+    L2-055       | MAHESH BASAVARAJ INDE               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:19:41 Out: 06:59:32 | Pay In: 15:19 Out: 15:19
+    L2-056       | ARBAZ JILANI PATHAN                 | ESSL Hrs:   8.4 | Payroll Hrs:   0.0 | Diff: 8.4h | ESSL In: 14:36:47 Out:  | Pay In: 14:36 Out: -
+    L2-059       | BASAVRAJ GENSIDDHA KOLI             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:25:25 Out: 06:59:13 | Pay In: 15:25 Out: 15:25
+    L2-060       | BASAVARAJ SHIVAPPA MAYAN            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:25:39 Out: 07:01:47 | Pay In: 15:25 Out: 15:25
+    L2-061       | VIKAS SHANKAR JADHAV                | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:20:11 Out: 06:54:10 | Pay In: 15:20 Out: 15:20
+    L2-062       | PRITISHKUMAR SHRISHAIL S            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:16:46 Out: 07:01:15 | Pay In: 15:16 Out: 15:16
+    L2-063       | IRFAN KUDLE                         | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:12:36 Out: 06:53:12 | Pay In: 15:12 Out: 15:12
+    L2-064       | NIKHIL SHIVALING BAKALE             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:17:18 Out: 06:35:24 | Pay In: 15:17 Out: 15:17
+    L2-065       | NAGANATH SURYAKANT PATIL            | ESSL Hrs:   8.4 | Payroll Hrs:   0.0 | Diff: 8.4h | ESSL In: 14:37:48 Out:  | Pay In: 14:37 Out: -
+    L2-066       | JANBAJ IBRAHIM SHAIKH               | ESSL Hrs:   8.2 | Payroll Hrs:   0.0 | Diff: 8.2h | ESSL In: 14:48:47 Out:  | Pay In: 14:48 Out: -
+    L2-067       | BIRAPPA PANDIT ISHWARKAT            | ESSL Hrs:   8.1 | Payroll Hrs:   0.0 | Diff: 8.1h | ESSL In: 14:53:14 Out:  | Pay In: 14:53 Out: -
+    L2-068       | VISHAL DATTATRAY BHARALE            | ESSL Hrs:   8.2 | Payroll Hrs:   0.0 | Diff: 8.2h | ESSL In: 14:51:31 Out:  | Pay In: 14:51 Out: -
+    L2-069       | KRUSHNA RAMU RATHOD                 | ESSL Hrs:   8.2 | Payroll Hrs:   0.0 | Diff: 8.2h | ESSL In: 14:48:41 Out:  | Pay In: 14:48 Out: -
+    L2-070       | AJAY ARJUN BHARLE                   | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:44:13 Out:  | Pay In: 14:44 Out: -
+    L2-074       | SHUBHAM RATHOD                      | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:02:32 Out: 06:50:31 | Pay In: 15:02 Out: 15:02
+    L2-075       | SHIVARAJ MARUTI NARUTE              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 22:46:24 Out: 07:07:25 | Pay In: 22:46 Out: 22:46
+    L2-078       | JYOTIBA BHIM AWATADE                | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 22:46:36 Out: 07:04:49 | Pay In: 22:46 Out: 22:46
+    L2-080       | USMAN GANI RAFIK MULLA              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:00:06 Out: 06:51:40 | Pay In: 15:00 Out: 15:00
+    L2-082       | GANESH JETTEPPA SHIRANAL            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:11:28 Out: 06:43:49 | Pay In: 15:11 Out: 15:11
+    L2-083       | MOHAMMAD KAIF TAMBOLI               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 22:52:19 Out: 20:17:10 | Pay In: 22:52 Out: 22:52
+    L2-084       | PAVAN SAMBHAJI VHARADE              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:16:23 Out: 06:43:44 | Pay In: 15:16 Out: 15:16
+    L2-086       | MAHMADARAJAIODDI K KHATA            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 14:57:34 Out: 07:03:27 | Pay In: 14:57 Out: -
+    L2-087       | MHAMADTAJODDIN SALAODDIN            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:12:44 Out: 06:53:26 | Pay In: 15:12 Out: 15:12
+    L2-088       | SHASHIKANT DATTATRAY ALU            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:01:57 Out: 06:53:32 | Pay In: 15:01 Out: 15:01
+    L2-090       | DHAREPPA PANCHAPPA ARAVA            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:05:31 Out: 06:53:56 | Pay In: 15:05 Out: 15:05
+    L2-091       | VASANT VENKATRAO MANE               | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:10:11 Out: 06:59:03 | Pay In: 15:10 Out: 15:10
+    L2-092       | SHASHIKANT MALLESHI REDD            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:01:14 Out: 06:47:58 | Pay In: 15:01 Out: 15:01
+    L2-093       | SHAHBAJ BAKTAWAR MULLA              | ESSL Hrs:   8.1 | Payroll Hrs:   0.0 | Diff: 8.1h | ESSL In: 22:56:40 Out: 07:04:36 | Pay In: 22:56 Out: 22:56
+    L2-100       | IRESH RAMAPPA SHEDSHAL              | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:10:16 Out: 06:59:09 | Pay In: 15:10 Out: 15:10
+    L2-114       | MALLINATH PANDT IKKALKI             | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 15:05:06 Out: 06:52:26 | Pay In: 15:05 Out: 15:05
+    L2-115       | PRAVIN REVALSIDHA SHENDG            | ESSL Hrs:   8.3 | Payroll Hrs:   0.0 | Diff: 8.3h | ESSL In: 22:46:59 Out: 07:04:16 | Pay In: 22:46 Out: 22:46
+  Total with >2hr difference: 88
+
+================================================================================
+SUMMARY
+================================================================================
+  ESSL Total:            242 employees
+  Payroll Total:         138 records
+  Missing from Payroll:  102 (24 were PRESENT, 78 were ABSENT)
+  Missing from ESSL:     0
+  Status Contradictions: 3
+  Same Check-in/out:     65 (Hours = 0 despite working)
+  Major Hours Diff:      88

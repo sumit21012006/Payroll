@@ -101,17 +101,60 @@ app.use((req, res, next) => {
   }
 });
 
-// Helper: Calculate hours worked from check-in and check-out strings
-function calculateHours(checkIn: string, checkOut: string): number {
+// Helper: Normalize employee punching codes (e.g. KFIL-L1-001 -> L1-001)
+function normalizeBiometricCode(code: string): string {
+  if (!code) return '';
+  return code.replace(/^KFIL[\/-_]/i, '').trim().toUpperCase();
+}
+
+// Helper: Parse IST date & time strings into UTC Epoch Milliseconds
+function parseISTEpoch(dateStr: string, timeStr: string): number | null {
+  if (!dateStr || !timeStr) return null;
+  try {
+    let m = 0, d = 0, y = 0;
+    if (dateStr.includes('/')) {
+      const parts = dateStr.split('/').map(Number);
+      m = parts[0]; d = parts[1]; y = parts[2];
+    } else if (dateStr.includes('-')) {
+      const parts = dateStr.split('-').map(Number);
+      y = parts[0]; m = parts[1]; d = parts[2];
+    }
+    const [h, min] = timeStr.split(':').map(Number);
+    if (!m || !d || !y || isNaN(h) || isNaN(min)) return null;
+
+    const isoStr = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}T${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}:00+05:30`;
+    const dt = new Date(isoStr);
+    return isNaN(dt.getTime()) ? null : dt.getTime();
+  } catch (_) {
+    return null;
+  }
+}
+
+// Helper: Calculate hours worked from check-in and check-out using linear epoch math
+function calculateHours(checkIn: string, checkOut: string, checkInDate?: string, checkOutDate?: string): number {
   if (!checkIn || !checkOut) return 0.0;
   try {
-    const inParts = checkIn.split(':').map(Number);
-    const outParts = checkOut.split(':').map(Number);
-    if (inParts.length >= 2 && outParts.length >= 2) {
-      const start = inParts[0] + inParts[1] / 60.0;
-      const end = outParts[0] + outParts[1] / 60.0;
-      const diff = end >= start ? (end - start) : (24.0 - start + end);
-      return Number(diff.toFixed(2));
+    const refDate = checkInDate || '2026-07-01';
+    const inEpoch = parseISTEpoch(refDate, checkIn);
+    
+    let outDateStr = checkOutDate;
+    if (!outDateStr) {
+      const [inH] = checkIn.split(':').map(Number);
+      const [outH] = checkOut.split(':').map(Number);
+      if (outH < inH || (inH >= 20 && outH <= 12)) {
+        if (inEpoch) {
+          const dt = new Date(inEpoch);
+          dt.setDate(dt.getDate() + 1);
+          outDateStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
+        }
+      } else {
+        outDateStr = refDate;
+      }
+    }
+    const outEpoch = parseISTEpoch(outDateStr || refDate, checkOut);
+    if (inEpoch && outEpoch && outEpoch > inEpoch) {
+      const diffHours = (outEpoch - inEpoch) / (1000 * 60 * 60);
+      return Number(diffHours.toFixed(2));
     }
   } catch (_) {
     // Fail-safe
@@ -161,14 +204,23 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
     try {
       const lines = rawText.split(/\r?\n/).filter(line => line.trim().length > 0);
       
-      // 1. Fetch all employees in a single query to map punchingCode -> Employee in-memory
+      // 1. Fetch all employees in a single query to map punchingCode & employeeId -> Employee in-memory
       const dbEmployees = await prisma.employee.findMany();
-      const employeeMap = new Map(dbEmployees.map(e => [e.punchingCode, e]));
+      const employeeMap = new Map<string, typeof dbEmployees[0]>();
+      dbEmployees.forEach(e => {
+        if (e.punchingCode) {
+          employeeMap.set(e.punchingCode, e);
+          employeeMap.set(normalizeBiometricCode(e.punchingCode), e);
+        }
+        employeeMap.set(e.employeeId, e);
+        employeeMap.set(normalizeBiometricCode(e.employeeId), e);
+      });
       
       // 2. Parse all punches from the batch
       interface ParsedPunch {
         employee: typeof dbEmployees[0];
         timestamp: Date;
+        punchEpoch: number;
         dateStr: string;
         timeStr: string;
       }
@@ -178,12 +230,13 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
         const parts = line.split(/\t/);
         if (parts.length < 2) continue;
 
-        const punchingCode = parts[0].trim();
+        const rawCode = parts[0].trim();
         const timestampStr = parts[1].trim();
+        const normCode = normalizeBiometricCode(rawCode);
 
-        const employee = employeeMap.get(punchingCode);
+        const employee = employeeMap.get(normCode) || employeeMap.get(rawCode);
         if (!employee) {
-          console.warn(`[ADMS] Punch logged for unknown BiometricUID: ${punchingCode}`);
+          console.warn(`[ADMS] Punch logged for unknown BiometricUID: ${rawCode}`);
           continue;
         }
 
@@ -192,24 +245,26 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
 
         const dateStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
         const timeStr = `${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+        const punchEpoch = parseISTEpoch(dateStr, timeStr) || dt.getTime();
 
         parsedPunches.push({
           employee,
           timestamp: dt,
+          punchEpoch,
           dateStr,
           timeStr
         });
       }
 
-      // 3. Sort punches chronologically to ensure pairing logic processes check-ins before check-outs
-      parsedPunches.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      // 3. Sort punches chronologically by linear epoch timestamp
+      parsedPunches.sort((a, b) => a.punchEpoch - b.punchEpoch);
 
       // 4. Local cache for lastLog of each employee to avoid redundant findFirst queries
       const lastLogCache = new Map<string, any>();
       let insertedCount = 0;
 
       for (const punch of parsedPunches) {
-        const { employee, timestamp, dateStr, timeStr } = punch;
+        const { employee, punchEpoch, dateStr, timeStr } = punch;
 
         // Retrieve most recent log from cache or database
         let lastLog = lastLogCache.get(employee.employeeId);
@@ -223,29 +278,29 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
 
         let shouldPair = false;
         let targetLog = lastLog;
+        let lastCheckInEpoch = 0;
 
         if (lastLog) {
-          const lastDateParts = lastLog.date.split('/').map(Number);
-          const lastTimeParts = lastLog.checkIn.split(':').map(Number);
-          const lastCheckInDate = new Date(lastDateParts[2], lastDateParts[0] - 1, lastDateParts[1], lastTimeParts[0], lastTimeParts[1], 0);
+          const epoch = parseISTEpoch(lastLog.date, lastLog.checkIn);
+          if (epoch) {
+            lastCheckInEpoch = epoch;
+            const diffHours = (punchEpoch - lastCheckInEpoch) / (1000 * 60 * 60);
 
-          const diffMs = timestamp.getTime() - lastCheckInDate.getTime();
-          const diffHours = diffMs / (1000 * 60 * 60);
-
-          // If last log has no check-out, and the gap is less than 16 hours (and at least 5 minutes), we pair it
-          if (lastLog.checkOut === '' && diffHours > 0.083 && diffHours < 16) {
-            shouldPair = true;
-          }
-          // Double-scanning safeguard: update check-out if same/close shift within 2 hours
-          else if (lastLog.checkOut !== '' && diffHours > 0.083 && diffHours < 2) {
-            shouldPair = true;
+            // If last log has no check-out, and the gap is 5 mins to 16 hours, pair it across midnight!
+            if (lastLog.checkOut === '' && diffHours >= 0.083 && diffHours <= 16) {
+              shouldPair = true;
+            }
+            // Double-scanning safeguard: update check-out if same/close shift within 2 hours
+            else if (lastLog.checkOut !== '' && diffHours >= 0.083 && diffHours < 2) {
+              shouldPair = true;
+            }
           }
         }
 
         if (shouldPair && targetLog) {
           const checkIn = targetLog.checkIn;
           const checkOut = timeStr;
-          const hours = calculateHours(checkIn, checkOut);
+          const hours = Number(((punchEpoch - lastCheckInEpoch) / (1000 * 60 * 60)).toFixed(2));
 
           let status = 'PRESENT';
           if (hours > 0.0 && hours < 4.0) {
@@ -276,7 +331,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           });
           lastLogCache.set(employee.employeeId, updatedLog);
         } else {
-          // Check if a record already exists for this date to prevent unique constraint failures
+          // Check if an existing record already exists for this date to prevent unique constraint failures
           let existingRecord = null;
           if (lastLog && lastLog.date === dateStr) {
             existingRecord = lastLog;
@@ -292,83 +347,37 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           }
 
           if (existingRecord) {
-            if (existingRecord.checkOut === '') {
-              const [inH, inM] = existingRecord.checkIn.split(':').map(Number);
-              const [newH, newM] = timeStr.split(':').map(Number);
-              const inMin = inH * 60 + inM;
-              const newMin = newH * 60 + newM;
-              
-              if (newMin > inMin) {
-                const checkOut = timeStr;
-                const hours = calculateHours(existingRecord.checkIn, checkOut);
-                
-                let status = 'PRESENT';
-                if (hours > 0.0 && hours < 4.0) {
-                  status = 'HALF_DAY';
-                } else if (hours > 9.0) {
-                  status = 'OVERTIME';
-                } else {
-                  if (inH >= 5 && inH <= 11) {
-                    const isLate = inH > 7 || (inH === 7 && inM > 0);
-                    if (isLate) status = 'LATE';
-                  } else if (inH >= 13 && inH <= 18) {
-                    const isLate = inH > 15 || (inH === 15 && inM > 0);
-                    if (isLate) status = 'LATE';
-                  } else if (inH >= 21 || inH <= 2) {
-                    const isLate = (inH === 23 && inM > 0) || (inH >= 0 && inH <= 2);
-                    if (isLate) status = 'LATE';
-                  }
+            const inEpoch = parseISTEpoch(existingRecord.date, existingRecord.checkIn);
+            if (inEpoch && punchEpoch > inEpoch) {
+              const hours = Number(((punchEpoch - inEpoch) / (1000 * 60 * 60)).toFixed(2));
+              let status = 'PRESENT';
+              if (hours > 0.0 && hours < 4.0) {
+                status = 'HALF_DAY';
+              } else if (hours > 9.0) {
+                status = 'OVERTIME';
+              } else {
+                const [inH, inM] = existingRecord.checkIn.split(':').map(Number);
+                if (inH >= 5 && inH <= 11) {
+                  const isLate = inH > 7 || (inH === 7 && inM > 0);
+                  if (isLate) status = 'LATE';
+                } else if (inH >= 13 && inH <= 18) {
+                  const isLate = inH > 15 || (inH === 15 && inM > 0);
+                  if (isLate) status = 'LATE';
+                } else if (inH >= 21 || inH <= 2) {
+                  const isLate = (inH === 23 && inM > 0) || (inH >= 0 && inH <= 2);
+                  if (isLate) status = 'LATE';
                 }
-
-                const updatedLog = await prisma.attendance.update({
-                  where: { id: existingRecord.id },
-                  data: {
-                    checkOut,
-                    hoursWorked: hours,
-                    status
-                  }
-                });
-                lastLogCache.set(employee.employeeId, updatedLog);
               }
-            } else {
-              const [outH, outM] = existingRecord.checkOut.split(':').map(Number);
-              const [newH, newM] = timeStr.split(':').map(Number);
-              const outMin = outH * 60 + outM;
-              const newMin = newH * 60 + newM;
-              
-              if (newMin > outMin) {
-                const checkOut = timeStr;
-                const hours = calculateHours(existingRecord.checkIn, checkOut);
-                
-                let status = 'PRESENT';
-                if (hours > 0.0 && hours < 4.0) {
-                  status = 'HALF_DAY';
-                } else if (hours > 9.0) {
-                  status = 'OVERTIME';
-                } else {
-                  const [inH, inM] = existingRecord.checkIn.split(':').map(Number);
-                  if (inH >= 5 && inH <= 11) {
-                    const isLate = inH > 7 || (inH === 7 && inM > 0);
-                    if (isLate) status = 'LATE';
-                  } else if (inH >= 13 && inH <= 18) {
-                    const isLate = inH > 15 || (inH === 15 && inM > 0);
-                    if (isLate) status = 'LATE';
-                  } else if (inH >= 21 || inH <= 2) {
-                    const isLate = (inH === 23 && inM > 0) || (inH >= 0 && inH <= 2);
-                    if (isLate) status = 'LATE';
-                  }
+
+              const updatedLog = await prisma.attendance.update({
+                where: { id: existingRecord.id },
+                data: {
+                  checkOut: timeStr,
+                  hoursWorked: hours,
+                  status
                 }
-
-                const updatedLog = await prisma.attendance.update({
-                  where: { id: existingRecord.id },
-                  data: {
-                    checkOut,
-                    hoursWorked: hours,
-                    status
-                  }
-                });
-                lastLogCache.set(employee.employeeId, updatedLog);
-              }
+              });
+              lastLogCache.set(employee.employeeId, updatedLog);
             }
           } else {
             const checkIn = timeStr;
