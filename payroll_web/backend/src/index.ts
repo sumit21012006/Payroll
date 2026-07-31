@@ -162,6 +162,81 @@ function calculateHours(checkIn: string, checkOut: string, checkInDate?: string,
   return 0.0;
 }
 
+/**
+ * Determine Shift Status Code:
+ * Shift 1 (Day / Morning Shift): Check-in between 05:00 and 12:59 -> P1, L1, HD1, OT1
+ * Shift 2 (Evening / Night Shift): Check-in between 13:00 and 04:59 -> P2, L2, HD2, OT2
+ * Absent -> A
+ */
+function determineShiftStatus(checkIn: string, hoursWorked: number): string {
+  if (!checkIn || checkIn === '-' || checkIn === '') return 'A';
+  
+  const [inHour, inMin] = checkIn.split(':').map(Number);
+  const isShift1 = (inHour >= 5 && inHour <= 12);
+  const shiftNum = isShift1 ? '1' : '2';
+
+  let isLate = false;
+  if (isShift1) {
+    isLate = inHour > 7 || (inHour === 7 && inMin > 0);
+  } else {
+    if (inHour >= 13 && inHour <= 18) {
+      isLate = inHour > 15 || (inHour === 15 && inMin > 0);
+    } else if (inHour >= 21 || inHour <= 2) {
+      isLate = (inHour === 23 && inMin > 0) || (inHour >= 0 && inHour <= 2);
+    }
+  }
+
+  if (hoursWorked > 0.0 && hoursWorked < 4.0) {
+    return `HD${shiftNum}`;
+  } else if (hoursWorked > 9.0) {
+    return `OT${shiftNum}`;
+  } else if (isLate) {
+    return `L${shiftNum}`;
+  } else {
+    return `P${shiftNum}`;
+  }
+}
+
+/**
+ * Auto Check-Out Unclosed Shifts (> 9 hours elapsed since checkIn)
+ */
+async function autoCheckoutUnclosedShifts() {
+  try {
+    const unclosed = await prisma.attendance.findMany({
+      where: { checkOut: '' }
+    });
+
+    const nowEpoch = Date.now();
+
+    for (const log of unclosed) {
+      const inEpoch = parseISTEpoch(log.date, log.checkIn);
+      if (!inEpoch) continue;
+
+      const elapsedHours = (nowEpoch - inEpoch) / (1000 * 60 * 60);
+
+      // Auto check-out if more than 9 hours passed since check-in
+      if (elapsedHours >= 9.0) {
+        const outEpoch = inEpoch + (8 * 60 * 60 * 1000);
+        const outDt = new Date(outEpoch);
+        const checkOut = `${String(outDt.getHours()).padStart(2, '0')}:${String(outDt.getMinutes()).padStart(2, '0')}`;
+        const hoursWorked = 8.0;
+        const status = determineShiftStatus(log.checkIn, hoursWorked);
+
+        await prisma.attendance.update({
+          where: { id: log.id },
+          data: {
+            checkOut,
+            hoursWorked,
+            status
+          }
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[AUTO-CHECKOUT] Error auto-closing shifts:', err);
+  }
+}
+
 // Root Route: Welcome & System Status
 app.get('/', (req, res) => {
   res.json({
@@ -301,25 +376,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
           const checkIn = targetLog.checkIn;
           const checkOut = timeStr;
           const hours = Number(((punchEpoch - lastCheckInEpoch) / (1000 * 60 * 60)).toFixed(2));
-
-          let status = 'PRESENT';
-          if (hours > 0.0 && hours < 4.0) {
-            status = 'HALF_DAY';
-          } else if (hours > 9.0) {
-            status = 'OVERTIME';
-          } else {
-            const [inHour, inMin] = checkIn.split(':').map(Number);
-            if (inHour >= 5 && inHour <= 11) {
-              const isLate = inHour > 7 || (inHour === 7 && inMin > 0);
-              if (isLate) status = 'LATE';
-            } else if (inHour >= 13 && inHour <= 18) {
-              const isLate = inHour > 15 || (inHour === 15 && inMin > 0);
-              if (isLate) status = 'LATE';
-            } else if (inHour >= 21 || inHour <= 2) {
-              const isLate = (inHour === 23 && inMin > 0) || (inHour >= 0 && inHour <= 2);
-              if (isLate) status = 'LATE';
-            }
-          }
+          const status = determineShiftStatus(checkIn, hours);
 
           const updatedLog = await prisma.attendance.update({
             where: { id: targetLog.id },
@@ -350,24 +407,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
             const inEpoch = parseISTEpoch(existingRecord.date, existingRecord.checkIn);
             if (inEpoch && punchEpoch > inEpoch) {
               const hours = Number(((punchEpoch - inEpoch) / (1000 * 60 * 60)).toFixed(2));
-              let status = 'PRESENT';
-              if (hours > 0.0 && hours < 4.0) {
-                status = 'HALF_DAY';
-              } else if (hours > 9.0) {
-                status = 'OVERTIME';
-              } else {
-                const [inH, inM] = existingRecord.checkIn.split(':').map(Number);
-                if (inH >= 5 && inH <= 11) {
-                  const isLate = inH > 7 || (inH === 7 && inM > 0);
-                  if (isLate) status = 'LATE';
-                } else if (inH >= 13 && inH <= 18) {
-                  const isLate = inH > 15 || (inH === 15 && inM > 0);
-                  if (isLate) status = 'LATE';
-                } else if (inH >= 21 || inH <= 2) {
-                  const isLate = (inH === 23 && inM > 0) || (inH >= 0 && inH <= 2);
-                  if (isLate) status = 'LATE';
-                }
-              }
+              const status = determineShiftStatus(existingRecord.checkIn, hours);
 
               const updatedLog = await prisma.attendance.update({
                 where: { id: existingRecord.id },
@@ -383,19 +423,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
             const checkIn = timeStr;
             const checkOut = '';
             const hours = 0.0;
-
-            let status = 'PRESENT';
-            const [inHour, inMin] = checkIn.split(':').map(Number);
-            if (inHour >= 5 && inHour <= 11) {
-              const isLate = inHour > 7 || (inHour === 7 && inMin > 0);
-              if (isLate) status = 'LATE';
-            } else if (inHour >= 13 && inHour <= 18) {
-              const isLate = inHour > 15 || (inHour === 15 && inMin > 0);
-              if (isLate) status = 'LATE';
-            } else if (inHour >= 21 || inHour <= 2) {
-              const isLate = (inHour === 23 && inMin > 0) || (inHour >= 0 && inHour <= 2);
-              if (isLate) status = 'LATE';
-            }
+            const status = determineShiftStatus(checkIn, hours);
 
             const newLog = await prisma.attendance.create({
               data: {
@@ -1032,6 +1060,9 @@ app.get('/api/employees', async (req, res) => {
 app.get('/api/attendance', async (req, res) => {
   const { employeeId, month, year } = req.query;
   try {
+    // Automatically check out any unclosed shifts older than 9 hours
+    await autoCheckoutUnclosedShifts();
+
     const filter: any = {};
     if (employeeId) {
       filter.employeeId = employeeId as string;
@@ -1106,6 +1137,8 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
         computedHours = calculateHours(cIn, cOut, date);
       }
 
+      const finalStatus = status || determineShiftStatus(cIn, computedHours);
+
       await prisma.attendance.upsert({
         where: {
           employeeId_date: {
@@ -1117,7 +1150,7 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
           checkIn: cIn,
           checkOut: cOut,
           hoursWorked: computedHours,
-          status: status || (computedHours > 0 ? 'PRESENT' : 'ABSENT')
+          status: finalStatus
         },
         create: {
           employeeId: targetEmpId,
@@ -1125,7 +1158,7 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
           checkIn: cIn,
           checkOut: cOut,
           hoursWorked: computedHours,
-          status: status || (computedHours > 0 ? 'PRESENT' : 'ABSENT')
+          status: finalStatus
         }
       });
       upsertedCount++;
@@ -1954,6 +1987,9 @@ app.get('/api/attendance/export', async (req, res) => {
   }
 
   try {
+    // Automatically check out unclosed shifts older than 9 hours
+    await autoCheckoutUnclosedShifts();
+
     const start = new Date(startDate as string);
     const end = new Date(endDate as string);
 
@@ -2020,6 +2056,7 @@ app.get('/api/attendance/export', async (req, res) => {
 
     // Add data rows
     filteredLogs.forEach((log) => {
+      const formattedStatus = determineShiftStatus(log.checkIn, log.hoursWorked) || log.status;
       worksheet.addRow({
         date: log.date,
         employeeId: log.employeeId,
@@ -2028,7 +2065,7 @@ app.get('/api/attendance/export', async (req, res) => {
         checkIn: log.checkIn || '-',
         checkOut: log.checkOut || '-',
         hours: log.hoursWorked,
-        status: log.status
+        status: formattedStatus
       });
     });
 
