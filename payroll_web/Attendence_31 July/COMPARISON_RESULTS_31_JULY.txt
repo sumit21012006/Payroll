@@ -1,0 +1,128 @@
+===============================================================================
+  ATTENDANCE COMPARISON: 31-JUL-2026 (ESSL vs Payroll Script Output)
+===============================================================================
+ESSL Total: 237 employees | Payroll Total: 132 records
+
+CATEGORY 1: PRESENT IN ESSL BUT MISSING FROM PAYROLL (20) — CRITICAL
+    L1-001       | GANGADHAR TUKARAM WAGHU             | In: 06:57:53   | Out: 17:10:27  | Dur: 9:00
+    L1-002       | NILKANTH NAGANNA BAGALE             | In: 08:02:19   | Out: 16:12:15  | Dur: 8:10
+    L1-059       | AJAY SHRINIVAS PENTA                | In: 06:50:42   | Out: 15:06:38  | Dur: 8:16
+    L1-138       | SWAPNIL SANJAY BHOPALE              | In: 07:00:54   | Out: 15:01:43  | Dur: 8:01
+    L2-121       | SHIVANAND IRAPPA BANSOD             | In: 14:59:23   | Out: -         | Dur: 8:01
+    L2-122       | BABU HUCHAPPA BANSODE               | In: 06:52:38   | Out: 15:07:16  | Dur: 8:15
+    L2-123       | MANGESH DILIPSINGH DIXIT            | In: 08:02:54   | Out: -         | Dur: 9:00
+    L2-125       | ISHTIYAAQUE AHMAD ASGAR             | In: 14:38:18   | Out: -         | Dur: 8:22
+    L2-126       | MUSTAKIN ANSARI                     | In: 14:51:29   | Out: -         | Dur: 8:09
+    L2-129       | SALMAN ALAM                         | In: 14:51:34   | Out: -         | Dur: 8:09
+    L2-130       | DILSHAD ALI                         | In: 14:57:00   | Out: -         | Dur: 8:03
+    L2-131       | SIDRAM MALKARI KOLI                 | In: 07:08:47   | Out: 15:02:32  | Dur: 7:54
+    L2-132       | L2-132                              | In: 07:08:27   | Out: 14:59:33  | Dur: 7:51
+    L2-133       | L2-133                              | In: 14:38:24   | Out: -         | Dur: 8:22
+    L2-137       | L2-137                              | In: 14:55:31   | Out: -         | Dur: 8:05
+    L2-138       | L2-138                              | In: 14:55:05   | Out: -         | Dur: 8:05
+    L2-141       | MALLINATH SANGAPPA SOLAP            | In: 07:03:07   | Out: 14:59:38  | Dur: 7:56
+    L2-142       | MARUF MASUD SHAIKH                  | In: 14:58:39   | Out: -         | Dur: 8:02
+    L2-143       | SHOUKATALI SALIM SHAIKH             | In: 14:59:04   | Out: -         | Dur: 8:01
+    L2-144       | SHUSHANT ARUN NAVALE                | In: 14:53:07   | Out: -         | Dur: 8:07
+
+CATEGORY 2: ABSENT IN ESSL AND NOT IN PAYROLL (85) — Expected
+
+CATEGORY 3: PAYROLL RECORDS PENDING CHECKOUT — NO CHECKOUT YET (76)
+  (These are night shift workers whose checkout will come tomorrow morning)
+    L1-086       | ABHIJIT PIRAPPA WAGHMARE            | PayIn: 14:56  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-060       | ABHISEK RAJENDRA LANGOTE            | PayIn: 14:56  | ESSL In: 14:56:15   Out: -         | Dur: 8:04
+    L2-070       | AJAY BHARALE                        | PayIn: 14:48  | ESSL In: 14:48:35   Out: -         | Dur: 8:12
+    L1-030       | AKIB SHAIKH                         | PayIn: 07:00  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-027       | AMAN M PAIGAMBAR SHETSANDI          | PayIn: 14:53  | ESSL In: 14:53:02   Out: -         | Dur: 8:07
+    L2-029       | AMIN ISMAIL NAGURE                  | PayIn: 14:52  | ESSL In: 14:52:40   Out: -         | Dur: 8:08
+    L1-004       | ANIKET SHRIPATI DANGE               | PayIn: 16:36  | ESSL In: 16:36:11   Out: -         | Dur: 6:24
+    L1-071       | ANIL KUMAR RAWAT                    | PayIn: 14:34  | ESSL In: 14:34:53   Out: -         | Dur: 8:26
+    L2-013       | ANKUSH VISHWANATH MAAMURE           | PayIn: 14:47  | ESSL In: 14:47:16   Out: -         | Dur: 8:13
+    L1-096       | ARBAJ AMIN JAMADAR                  | PayIn: 06:58  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-056       | ARBAZ JILANI PATHAN                 | PayIn: 14:36  | ESSL In: 14:36:13   Out: -         | Dur: 8:24
+    L1-026       | BANDENAWAJ SAIPAN MULLA             | PayIn: 06:57  | ESSL In: 06:57:27   Out: -         | Dur: 9:00
+    L1-133       | BANSIDDHA SHIVAPAD CHABU            | PayIn: 14:56  | ESSL In: 14:56:39   Out: -         | Dur: 8:04
+    L1-102       | BHARAT SANTOSH SARADE               | PayIn: 14:51  | ESSL In: 14:51:24   Out: -         | Dur: 8:09
+    L1-046       | BHIMAHSNKAR SHARNAPPA ISHWARKATTI   | PayIn: 15:04  | ESSL In: 15:04:58   Out: -         | Dur: 7:56
+    L1-027       | Bsavraj Iranna Talwar               | PayIn: 06:02  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-031       | CHAITANYA VILAS KOLI                | PayIn: 14:53  | ESSL In: 14:53:12   Out: -         | Dur: 8:07
+    L1-036       | DARGAPPA SHIVANAND ARWAT            | PayIn: 07:03  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-028       | DAVALSAB MATTU NADAF                | PayIn: 14:44  | ESSL In: 14:44:10   Out: -         | Dur: 8:16
+    L1-085       | DNYANESHWAR BHAGAVANT WAGHAMARE     | PayIn: 14:33  | ESSL In: 14:33:59   Out: -         | Dur: 8:27
+    L2-082       | GANESH JETTEPPA SHIRANAL            | PayIn: 08:18  | ESSL In: 08:18:38   Out: -         | Dur: 9:00
+    L1-137       | GANGADHAR MAYANALE                  | PayIn: 06:59  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-033       | HUSEN BABULAL NADAF                 | PayIn: 14:44  | ESSL In: 14:44:29   Out: -         | Dur: 8:16
+    L2-071       | IMRAN USTAD                         | PayIn: 14:52  | ESSL In: 14:52:55   Out: -         | Dur: 8:08
+    L2-100       | IRESH RAMAPPA SHEDSHAL              | PayIn: 07:07  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-113       | JAGADEV HANMANTRAO SHIVA            | PayIn: 14:54  | ESSL In: 14:54:37   Out: -         | Dur: 8:06
+    L2-066       | JANBAJ IBRHIM SHAIKH                | PayIn: 14:31  | ESSL In: 14:31:51   Out: -         | Dur: 8:29
+    L2-101       | JISHAN SHAIKH                       | PayIn: 14:44  | ESSL In: 14:44:35   Out: -         | Dur: 8:16
+    L2-078       | JYOTIBA BHIM AVATADE                | PayIn: 07:04  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-044       | KASHINATH JAGANATH BIRJADAR         | PayIn: 15:04  | ESSL In: 15:04:44   Out: -         | Dur: 7:56
+    L1-045       | KHAJASAHEB GULAB HIMONE             | PayIn: 14:52  | ESSL In: 14:52:33   Out: -         | Dur: 8:08
+    L2-024       | KHATALSAB ABDULKARIM GADIKAT        | PayIn: 07:01  | ESSL In: 07:01:11   Out: -         | Dur: 9:00
+    L2-030       | KUMAR ARJUN RATHOD                  | PayIn: 14:50  | ESSL In: 14:50:59   Out: -         | Dur: 8:10
+    L2-002       | MAHESH  CHANDRAKANT MANE            | PayIn: 06:57  | ESSL In: 06:57:15   Out: -         | Dur: 9:00
+    L2-055       | MAHESH BASAVRAJ INDE                | PayIn: 07:06  | ESSL In: 07:06:30   Out: -         | Dur: 9:00
+    L1-018       | MAHESH SURESH SHENDGE               | PayIn: 07:15  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-086       | MAHMADAJARODDIN KHOBULSAAB KHATANALLI| PayIn: 14:46  | ESSL In: 14:46:00   Out: -         | Dur: 8:14
+    L1-125       | MALLESH AMBANNA CHAUGULE            | PayIn: 14:45  | ESSL In: 14:45:06   Out: -         | Dur: 8:15
+    L2-015       | MALLIKARJUN GURAPPA PUJARI          | PayIn: 14:58  | ESSL In: 14:58:54   Out: -         | Dur: 8:02
+    L2-011       | MALLIKARJUN REVANSHIDDH             | PayIn: 07:01  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-068       | MALLINATH SHIVARAM VHANAKADE        | PayIn: 14:44  | ESSL In: 14:44:42   Out: -         | Dur: 8:16
+    L2-083       | MOHAMMAD KAIF TAMBOLI               | PayIn: 07:11  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-094       | MUSHTAK RASHID SHAIKH               | PayIn: 14:44  | ESSL In: 14:44:18   Out: -         | Dur: 8:16
+    L1-104       | NAGANATH KASHINATH SONWANE          | PayIn: 07:00  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-065       | Naganath Suryakant Patil            | PayIn: 14:43  | ESSL In: 14:43:38   Out: -         | Dur: 8:17
+    L1-029       | NANDURE HEMANT ANAVIRAPPA           | PayIn: 14:51  | ESSL In: 14:51:47   Out: -         | Dur: 8:09
+    L1-019       | PARSHURAM MARUTI TURBE              | PayIn: 14:50  | ESSL In: 14:50:12   Out: -         | Dur: 8:10
+    L1-129       | PRASHANT RAJU KOLI                  | PayIn: 14:41  | ESSL In: 14:41:37   Out: -         | Dur: 8:19
+    L1_120       | PRAVIN NILAPPA HIRAPURE             | PayIn: 14:42  | ESSL In: 14:42:56   Out: -         | Dur: 8:18
+    L2-115       | PRAVIN REVALSIDHA SHENDG            | PayIn: 07:02  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-072       | RAJKUMAR M BADIGER                  | PayIn: 14:47  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-062       | Rajshekhar Andodgi                  | PayIn: 14:55  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-065       | ROHAN BABURAV PANDIT                | PayIn: 14:56  | ESSL In: 14:56:55   Out: -         | Dur: 8:04
+    L1-092       | SACHIN BHAGWAN GHANTE               | PayIn: 07:03  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-035       | SAGAR CHANDRASHEKHAR PATIL          | PayIn: 14:51  | ESSL In: 14:51:42   Out: -         | Dur: 8:09
+    L1-066       | SAGAR MALAKARI KOLI                 | PayIn: 14:55  | ESSL In: 14:55:43   Out: -         | Dur: 8:05
+    L1-131       | SAIM IRFAN SHAIKH                   | PayIn: 14:46  | ESSL In: 14:46:28   Out: -         | Dur: 8:14
+    L1-006       | SAMEER NAGURE                       | PayIn: 07:12  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-075       | SANDIP CHANDRAKANT KHATAL           | PayIn: 14:51  | ESSL In: 14:51:18   Out: -         | Dur: 8:09
+    L2-094       | SANJAY GANAPATI BODALE              | PayIn: 07:07  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-103       | SHARANAPPA KHEDAGIKAR               | PayIn: 14:52  | ESSL In: 14:52:04   Out: -         | Dur: 8:08
+    L2-077       | SHIVAJI BHILLU RATHOD               | PayIn: 14:49  | ESSL In: 14:49:07   Out: -         | Dur: 8:11
+    L1-048       | SHIVANAND KANTAPPA KOSHTI           | PayIn: 14:49  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-075       | SHIVARAJ MARUTI NARUTE              | PayIn: 07:03  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-033       | SHRIKANT GIREPPA SHIROLE            | PayIn: 14:52  | ESSL In: 14:52:47   Out: -         | Dur: 8:08
+    L2-008       | SHRIKANT KULKARNI                   | PayIn: 14:55  | ESSL In: 14:55:49   Out: -         | Dur: 8:05
+    L2-072       | SHRISHAIL GAURISHANKAR HIRAPURE     | PayIn: 07:07  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-016       | SHRISHAIL SHIVANAND KORE            | PayIn: 14:53  | ESSL In: 14:53:27   Out: -         | Dur: 8:07
+    L2-034       | SIDHARAM BHIMRAO SHIROLE            | PayIn: 14:51  | ESSL In: 14:51:06   Out: -         | Dur: 8:09
+    L1-089       | SUFIYAN SHEKULAL FULARI             | PayIn: 07:00  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-091       | VASANT VENKAT RAO MANE              | PayIn: 07:02  | ESSL In: 07:02:57   Out: -         | Dur: 9:00
+    L1-013       | VIJAY MANE                          | PayIn: 14:50  | ESSL In: -          Out: -         | Dur: 00:00
+    L1-099       | VISHAL MOHAN MANE                   | PayIn: 14:30  | ESSL In: 14:30:29   Out: -         | Dur: 8:30
+    L1-005       | YASH SUNIL PAWAR                    | PayIn: 07:09  | ESSL In: -          Out: -         | Dur: 00:00
+    L2-010       | YUSUF ISMAIL FULARI                 | PayIn: 14:46  | ESSL In: 14:46:45   Out: -         | Dur: 8:14
+    L1-078       | YUVRAJ MALAKARI HIKKURE             | PayIn: 14:46  | ESSL In: 14:46:57   Out: -         | Dur: 8:14
+
+CATEGORY 4: PAYROLL HAS NO CHECKOUT BUT ESSL HAS CHECKOUT (0) — BUG
+  (ESSL shows checkout exists but payroll did not capture it)
+
+CATEGORY 5: HOURS MISMATCH > 1hr (completed records) (1)
+    L1-087       | SHAHANVAJ MURTUJ PATHAN             | ESSL: 6:36 (6.6h) | Payroll: 9.42h
+
+CATEGORY 6: IN PAYROLL BUT NOT IN ESSL (0)
+
+================================================================================
+SUMMARY
+================================================================================
+  ESSL Total:                     237 employees
+  ESSL Present:                   122
+  Payroll Total:                  132 records
+  Payroll with Checkout:          56
+  Payroll pending Checkout:       76 (night shift — checkout tomorrow)
+  Present in ESSL, missing Pay:   20 — CRITICAL
+  ESSL has Out, Payroll doesn't:  0 — BUG
+  Hours mismatch > 1hr:           1
+  In Payroll not in ESSL:         0
