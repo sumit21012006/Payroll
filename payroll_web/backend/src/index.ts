@@ -170,9 +170,12 @@ function calculateHours(checkIn: string, checkOut: string, checkInDate?: string,
  * Absent -> A
  */
 function determineShiftStatus(checkIn: string, hoursWorked: number): string {
-  if (!checkIn || checkIn === '-' || checkIn === '') return 'A';
-  
+  if (!checkIn || checkIn === '-' || checkIn === '' || checkIn === '00:00' || checkIn === '00:00:00') return 'A';
+  if (hoursWorked === 0.0 && (!checkIn || checkIn === '00:00')) return 'A';
+
   const [inHour, inMin] = checkIn.split(':').map(Number);
+  if (isNaN(inHour)) return 'A';
+
   const isShift1 = (inHour >= 5 && inHour <= 12);
   const shiftNum = isShift1 ? '1' : '2';
 
@@ -1269,24 +1272,28 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
         continue;
       }
 
-      // Extract InTime, OutTime, Status
-      let inTime = '';
-      let outTime = '';
-      let statusStr = '';
+      // Extract InTime strictly from Col 8, OutTime strictly from Col 9/10, Status from Col 14/15
+      let rawInVal: any = row.getCell(8).value;
+      let rawOutVal: any = row.getCell(9).value || row.getCell(10).value;
+      let statusStr = String(row.getCell(14).value || row.getCell(15).value || '').trim();
 
-      for (let c = 4; c <= 17; c++) {
-        const v = vals[c] || '';
-        if (/present|absent|weekly off|on leave|late|half/i.test(v)) {
-          statusStr = v;
-        }
-        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)) {
-          if (!inTime) inTime = v.slice(0, 5);
-          else if (!outTime) outTime = v.slice(0, 5);
-        }
+      let rawIn = '';
+      let rawOut = '';
+      if (rawInVal instanceof Date) rawIn = rawInVal.toTimeString().slice(0, 5);
+      else rawIn = String(rawInVal || '').trim();
+
+      if (rawOutVal instanceof Date) rawOut = rawOutVal.toTimeString().slice(0, 5);
+      else rawOut = String(rawOutVal || '').trim();
+
+      let cIn = '';
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawIn) && rawIn !== '00:00' && rawIn !== '00:00:00') {
+        cIn = rawIn.slice(0, 5);
       }
 
-      const cIn = inTime || '';
-      const cOut = outTime || '';
+      let cOut = '';
+      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawOut) && rawOut !== '00:00' && rawOut !== '00:00:00') {
+        cOut = rawOut.slice(0, 5);
+      }
 
       let hoursWorked = 0.0;
       if (cIn && cOut) {
@@ -1294,7 +1301,7 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
       }
 
       let finalStatus = determineShiftStatus(cIn, hoursWorked);
-      if (!cIn && /absent/i.test(statusStr)) {
+      if (!cIn && (/absent/i.test(statusStr) || statusStr === '')) {
         finalStatus = 'A';
       }
 
