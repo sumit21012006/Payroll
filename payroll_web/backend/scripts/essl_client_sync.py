@@ -1,145 +1,133 @@
-"""
-===============================================================================
-eSSL Biometric Attendance Client PC Sync Script
-===============================================================================
-This script runs on the Client PC where eSSL (eTimeTrackLite) is installed.
-It reads processed attendance logs from the local eSSL database and posts them
-to your Payroll Web Cloud Server (/api/attendance/sync-processed).
-
-Supported Local DB Types:
- 1. MS Access (.mdb / .accdb - eTimeTrackLite.mdb)
- 2. MS SQL Server (eTimeTrackLiteDB)
- 3. MySQL / SQLite
-
-Requirements on Client PC:
-  pip install requests pyodbc
-===============================================================================
-"""
-
-import os
-import sys
-import datetime
+import pyodbc
 import requests
+import datetime
 
-# -----------------------------------------------------------------------------
-# CONFIGURATION
-# -----------------------------------------------------------------------------
-# Web Payroll API Endpoint URL (Replace with your live production Vercel/Render URL)
-SERVER_URL = "https://payroll-api.onrender.com/api/attendance/sync-processed"
+# --- CONFIGURATION ---
+DB_CONFIG = {
+    'server': r'DESKTOP-SK78QMO\SQLEXPRESS', # From your settings screen
+    'database': 'eTimeTracklite1',           # From your settings screen
+    'username': 'essl',                      # From your settings screen
+    'password': 'essl'                       # Put the 'essl' user password here
+}
 
-# Authorization Token (matches API_ACCESS_KEY or SYNC_API_TOKEN in backend .env)
-API_TOKEN = "kfil_solapur_secure_api_access_key_2026"
+# The URL of your deployed Render server ADMS endpoint
+RENDER_BACKEND_URL = "https://payroll-backend-v55r.onrender.com/iclock/cdata?sn=ESSL_SYNC_AGENT&table=ATTLOG"
 
-# eSSL Database Connection String (Choose your setup):
-# Option A: MS Access (.mdb)
-DB_PATH = r"C:\Program Files (x86)\eTimeTrackLite\eTimeTrackLite.mdb"
-CONN_STR = f"DRIVER={{Microsoft Access Driver (*.mdb, *.accdb)}};DBQ={DB_PATH};"
-
-# Option B: MS SQL Server (if eSSL is connected to SQL Server)
-# CONN_STR = "DRIVER={SQL Server};SERVER=localhost\\SQLEXPRESS;DATABASE=eTimeTrackLiteDB;UID=sa;PWD=yourpassword;"
-
-
-def fetch_essl_attendance(days_back=2):
+def get_tables_to_query(start_date):
     """
-    Fetch attendance records from local eSSL database for the last N days.
+    Generates monthly table names (e.g., DeviceLogs_7_2026) from start_date
+    up to the current month/year.
     """
-    try:
-        import pyodbc
-    except ImportError:
-        print("[ERROR] pyodbc library not found. Install via: pip install pyodbc")
-        return []
+    now = datetime.datetime.now()
+    curr_year = now.year
+    curr_month = now.month
+    
+    start_year = start_date.year
+    start_month = start_date.month
+    
+    tables = []
+    y = start_year
+    m = start_month
+    while (y < curr_year) or (y == curr_year and m <= curr_month):
+        tables.append(f"DeviceLogs_{m}_{y}")
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return tables
 
-    if not os.path.exists(DB_PATH) and "DRIVER={SQL Server}" not in CONN_STR:
-        print(f"[ERROR] eSSL Database file not found at: {DB_PATH}")
-        return []
-
-    print(f"[INFO] Connecting to local eSSL database...")
-    conn = pyodbc.connect(CONN_STR)
-    cursor = conn.cursor()
-
-    # Calculate date threshold
-    start_date = (datetime.date.today() - datetime.timedelta(days=days_back)).strftime('%Y-%m-%d 00:00:00')
-
-    # Query Attendance logs joined with Employee details
-    query = """
-    SELECT 
-        e.EmpCode AS EmployeeId,
-        e.EmployeeName AS EmployeeName,
-        a.AttendanceDate AS AttDate,
-        a.InTime AS CheckIn,
-        a.OutTime AS CheckOut,
-        a.Duration AS WorkDuration,
-        a.Status AS Status
-    FROM AttendanceLogs a
-    INNER JOIN Employees e ON a.EmployeeId = e.EmployeeId
-    WHERE a.AttendanceDate >= ?
-    ORDER BY a.AttendanceDate ASC
-    """
-
-    cursor.execute(query, (start_date,))
-    rows = cursor.fetchall()
-
-    logs = []
-    for r in rows:
-        emp_code = str(r.EmployeeId).strip() if r.EmployeeId else ""
-        att_date = r.AttDate.strftime('%m/%d/%Y') if hasattr(r.AttDate, 'strftime') else str(r.AttDate)
-        check_in = str(r.CheckIn).strip() if r.CheckIn else ""
-        check_out = str(r.CheckOut).strip() if r.CheckOut else ""
-        status = str(r.Status).strip() if r.Status else "PRESENT"
-
-        if emp_code and check_in:
-            logs.append({
-                "employeeId": emp_code,
-                "date": att_date,
-                "checkIn": check_in,
-                "checkOut": check_out,
-                "status": status,
-                "hoursWorked": 0.0  # Server will automatically calculate linear epoch hours
-            })
-
-    conn.close()
-    print(f"[INFO] Extracted {len(logs)} attendance logs from eSSL.")
-    return logs
-
-
-def sync_to_cloud_server(logs):
-    """
-    Send attendance logs to the Web Payroll API endpoint in batches.
-    """
-    if not logs:
-        print("[INFO] No logs to sync.")
+def sync_punches():
+    # Sync punches since last 3 days (or set specific start date)
+    start_date = datetime.datetime.now() - datetime.timedelta(days=3)
+    start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
+    print(f"[{datetime.datetime.now()}] Starting sync for punches since: {start_date_str}")
+    
+    drivers = [
+        '{ODBC Driver 17 for SQL Server}',
+        '{ODBC Driver 18 for SQL Server}',
+        '{SQL Server Native Client 11.0}',
+        '{SQL Server}'
+    ]
+    
+    conn = None
+    for driver in drivers:
+        try:
+            conn_str = (
+                f"DRIVER={driver};"
+                f"SERVER={DB_CONFIG['server']};"
+                f"DATABASE={DB_CONFIG['database']};"
+                f"UID={DB_CONFIG['username']};"
+                f"PWD={DB_CONFIG['password']};"
+                "TrustServerCertificate=yes;"
+            )
+            conn = pyodbc.connect(conn_str, timeout=5)
+            print(f"Successfully connected to database using driver: {driver}")
+            break
+        except Exception:
+            continue
+            
+    if conn is None:
+        print("❌ Error: Could not connect to SQL Server. Check your password.")
         return
 
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {API_TOKEN}"
-    }
+    try:
+        cursor = conn.cursor()
+        
+        # Determine which tables we need to query based on our start date
+        tables_to_query = get_tables_to_query(start_date)
+        print(f"Tables to inspect for date range: {tables_to_query}")
+        
+        all_records = []
+        
+        for table in tables_to_query:
+            print(f"Querying table: [{table}]...")
+            query = f"""
+                SELECT UserId, LogDate 
+                FROM [{table}] 
+                WHERE LogDate >= ?
+                ORDER BY LogDate ASC
+            """
+            try:
+                cursor.execute(query, (start_date_str,))
+                rows = cursor.fetchall()
+                all_records.extend(rows)
+                print(f"  Found {len(rows)} records in [{table}]")
+            except Exception as e:
+                # If table does not exist yet (e.g. new month just started and no device downloaded yet)
+                print(f"  ⚠️ Could not read table [{table}]: {e}")
+                
+        if not all_records:
+            print("No new punch records found in the database for the given period.")
+            return
 
-    # Send in batches of 100
-    batch_size = 100
-    total_synced = 0
-
-    for i in range(0, len(logs), batch_size):
-        batch = logs[i:i + batch_size]
-        payload = {"logs": batch}
-
-        try:
-            res = requests.post(SERVER_URL, json=payload, headers=headers, timeout=30)
-            if res.status_code == 200:
-                data = res.json()
-                print(f"[SUCCESS] Batch {i//batch_size + 1}: {data.get('message')}")
-                total_synced += len(batch)
-            else:
-                print(f"[FAIL] Batch {i//batch_size + 1} returned status {res.status_code}: {res.text}")
-        except Exception as e:
-            print(f"[ERROR] Failed to send batch to cloud server: {e}")
-
-    print(f"[DONE] Successfully synchronized {total_synced} logs to Cloud Server.")
-
+        print(f"Total retrieved punch records to sync: {len(all_records)}")
+        print("Preparing upload payload...")
+        
+        payload_lines = []
+        for userid, logdate in all_records:
+            timestamp_str = logdate.strftime('%Y-%m-%d %H:%M:%S')
+            row_str = f"{userid}\t{timestamp_str}\t1\t0\t1\t0"
+            payload_lines.append(row_str)
+            
+        payload = "\r\n".join(payload_lines) + "\r\n"
+        
+        # POST to Render backend ADMS endpoint
+        headers = {
+            'Content-Type': 'text/plain'
+        }
+        
+        response = requests.post(RENDER_BACKEND_URL, data=payload, headers=headers)
+        
+        if response.status_code == 200 and 'OK' in response.text:
+            print("✅ Sync Successful! Server response:", response.text.strip())
+        else:
+            print("❌ Sync failed. Server responded with status:", response.status_code, "Body:", response.text)
+            
+        cursor.close()
+        conn.close()
+        
+    except Exception as err:
+        print("❌ Error running sync script:", err)
 
 if __name__ == "__main__":
-    print("==================================================")
-    print("  eSSL CLIENT PC ATTENDANCE SYNC AGENT")
-    print("==================================================")
-    logs = fetch_essl_attendance(days_back=3)
-    sync_to_cloud_server(logs)
+    sync_punches()
