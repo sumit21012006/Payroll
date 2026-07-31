@@ -1077,18 +1077,34 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
       const { employeeId, date, checkIn, checkOut, status, hoursWorked } = log;
       if (!employeeId || !date) continue;
 
-      // Find employee by employeeId OR punchingCode
+      const normId = normalizeBiometricCode(employeeId);
+
+      // Find employee by employeeId OR punchingCode OR normalized code
       let employee = await prisma.employee.findUnique({
         where: { employeeId }
       });
       if (!employee) {
         employee = await prisma.employee.findFirst({
-          where: { punchingCode: employeeId }
+          where: {
+            OR: [
+              { employeeId: normId },
+              { punchingCode: employeeId },
+              { punchingCode: normId }
+            ]
+          }
         });
       }
       if (!employee) continue;
 
       const targetEmpId = employee.employeeId;
+      const cIn = checkIn || '';
+      const cOut = checkOut || '';
+
+      // Use linear epoch calculation if hoursWorked is 0 or missing
+      let computedHours = parseFloat(hoursWorked || 0.0);
+      if ((!computedHours || computedHours === 0.0) && cIn && cOut) {
+        computedHours = calculateHours(cIn, cOut, date);
+      }
 
       await prisma.attendance.upsert({
         where: {
@@ -1098,18 +1114,18 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
           }
         },
         update: {
-          checkIn: checkIn || '',
-          checkOut: checkOut || '',
-          hoursWorked: parseFloat(hoursWorked || 0.0),
-          status: status || 'PRESENT'
+          checkIn: cIn,
+          checkOut: cOut,
+          hoursWorked: computedHours,
+          status: status || (computedHours > 0 ? 'PRESENT' : 'ABSENT')
         },
         create: {
           employeeId: targetEmpId,
           date,
-          checkIn: checkIn || '',
-          checkOut: checkOut || '',
-          hoursWorked: parseFloat(hoursWorked || 0.0),
-          status: status || 'PRESENT'
+          checkIn: cIn,
+          checkOut: cOut,
+          hoursWorked: computedHours,
+          status: status || (computedHours > 0 ? 'PRESENT' : 'ABSENT')
         }
       });
       upsertedCount++;
