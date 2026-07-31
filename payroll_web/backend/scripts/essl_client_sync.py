@@ -37,8 +37,9 @@ def get_tables_to_query(start_date):
     return tables
 
 def sync_punches():
-    # Sync punches since last 3 days (or set specific start date)
+    # Sync punches for the last 3 days of data (recommended for regular running)
     start_date = datetime.datetime.now() - datetime.timedelta(days=3)
+    
     start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
     print(f"[{datetime.datetime.now()}] Starting sync for punches since: {start_date_str}")
     
