@@ -53,8 +53,8 @@ const corsOptions: cors.CorsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Token-based API Authentication Middleware
 const authenticateToken = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -65,7 +65,8 @@ const authenticateToken = (req: express.Request, res: express.Response, next: ex
     req.path === '/api/auth/login' ||
     req.path.startsWith('/api/auth/employee-preview/') ||
     req.path.startsWith('/iclock/') ||
-    req.path === '/api/attendance/sync-processed'
+    req.path === '/api/attendance/sync-processed' ||
+    req.path === '/api/attendance/upload-essl-excel'
   ) {
     return next();
   }
@@ -1165,6 +1166,164 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
     }
 
     res.json({ message: `Successfully synchronized ${upsertedCount} processed attendance records.` });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+// REST Route: Upload & Process ESSL Attendance Excel report (DailyAttendance_BasicReport.xlsx)
+app.post('/api/attendance/upload-essl-excel', async (req, res) => {
+  const { fileBase64, customDate } = req.body;
+  if (!fileBase64) {
+    return res.status(400).json({ error: 'fileBase64 parameter is required.' });
+  }
+
+  try {
+    const cleanBase64 = fileBase64.replace(/^data:.*;base64,/, '');
+    const buffer = Buffer.from(cleanBase64, 'base64');
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer as any);
+
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      return res.status(400).json({ error: 'Uploaded Excel file contains no worksheets.' });
+    }
+
+    // 1. Detect report date from header cells or customDate parameter
+    let targetDateStr = customDate || '';
+    if (!targetDateStr) {
+      for (let r = 1; r <= 10; r++) {
+        const row = worksheet.getRow(r);
+        row.eachCell({ includeEmpty: true }, (cell) => {
+          const v = String(cell.value || '').trim();
+          const m = v.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{4})/i) ||
+                    v.match(/(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})/i) ||
+                    v.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+          if (m && !targetDateStr) {
+            const dt = new Date(v.replace(/.*To\s+/i, '').replace(/.*:\s*/, ''));
+            if (!isNaN(dt.getTime())) {
+              targetDateStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
+            }
+          }
+        });
+      }
+    }
+
+    if (!targetDateStr) {
+      const today = new Date();
+      targetDateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+    }
+
+    // 2. Fetch master employees map from database
+    const dbEmployees = await prisma.employee.findMany();
+    const employeeMap = new Map<string, typeof dbEmployees[0]>();
+    dbEmployees.forEach(e => {
+      if (e.punchingCode) {
+        employeeMap.set(e.punchingCode.toUpperCase(), e);
+        employeeMap.set(normalizeBiometricCode(e.punchingCode), e);
+      }
+      employeeMap.set(e.employeeId.toUpperCase(), e);
+      employeeMap.set(normalizeBiometricCode(e.employeeId), e);
+    });
+
+    // 3. Find data start row (where SNo or E. Code header ends)
+    let startRow = 12;
+    for (let r = 1; r <= 15; r++) {
+      const row = worksheet.getRow(r);
+      const cellVal = String(row.getCell(2).value || row.getCell(3).value || '').trim();
+      if (/^(SNo|S\.No|E\. Code|EmpCode)$/i.test(cellVal)) {
+        startRow = r + 1;
+        break;
+      }
+    }
+
+    let upsertedCount = 0;
+    let skippedCount = 0;
+
+    for (let r = startRow; r <= worksheet.rowCount; r++) {
+      const row = worksheet.getRow(r);
+      const vals: string[] = [];
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        let v = cell.value;
+        if (v instanceof Date) {
+          v = `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}:${String(v.getSeconds()).padStart(2, '0')}`;
+        }
+        vals[col] = String(v || '').trim();
+      });
+
+      const rawCode = vals[3] || vals[2] || '';
+      if (!rawCode || /^(SNo|E\. Code|Department|Name|Status|Total)$/i.test(rawCode)) continue;
+
+      const normCode = normalizeBiometricCode(rawCode);
+      const employee = employeeMap.get(normCode) || employeeMap.get(rawCode.toUpperCase());
+      if (!employee) {
+        skippedCount++;
+        continue;
+      }
+
+      // Extract InTime, OutTime, Status
+      let inTime = '';
+      let outTime = '';
+      let statusStr = '';
+
+      for (let c = 4; c <= 17; c++) {
+        const v = vals[c] || '';
+        if (/present|absent|weekly off|on leave|late|half/i.test(v)) {
+          statusStr = v;
+        }
+        if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(v)) {
+          if (!inTime) inTime = v.slice(0, 5);
+          else if (!outTime) outTime = v.slice(0, 5);
+        }
+      }
+
+      const cIn = inTime || '';
+      const cOut = outTime || '';
+
+      let hoursWorked = 0.0;
+      if (cIn && cOut) {
+        hoursWorked = calculateHours(cIn, cOut, targetDateStr);
+      }
+
+      let finalStatus = determineShiftStatus(cIn, hoursWorked);
+      if (!cIn && /absent/i.test(statusStr)) {
+        finalStatus = 'A';
+      }
+
+      await prisma.attendance.upsert({
+        where: {
+          employeeId_date: {
+            employeeId: employee.employeeId,
+            date: targetDateStr
+          }
+        },
+        update: {
+          checkIn: cIn,
+          checkOut: cOut,
+          hoursWorked,
+          status: finalStatus
+        },
+        create: {
+          employeeId: employee.employeeId,
+          date: targetDateStr,
+          checkIn: cIn,
+          checkOut: cOut,
+          hoursWorked,
+          status: finalStatus
+        }
+      });
+
+      upsertedCount++;
+    }
+
+    res.json({
+      success: true,
+      importedCount: upsertedCount,
+      skippedCount,
+      date: targetDateStr,
+      message: `Successfully processed ESSL Excel report. Updated ${upsertedCount} attendance records for ${targetDateStr}.`
+    });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
   }

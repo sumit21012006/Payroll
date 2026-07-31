@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   Users, DollarSign, Cpu, Settings, LogOut, Calculator,
   Landmark, Layers, Calendar, Sliders, RefreshCw, Activity,
-  Eye, Edit3, Plus, Search, Building, CreditCard, Phone, Shield, X, Download
+  Eye, Edit3, Plus, Search, Building, CreditCard, Phone, Shield, X, Download, Upload
 } from 'lucide-react';
 import { API_URL } from '@/config';
 
@@ -178,6 +178,70 @@ export default function AdminDashboard() {
 
   const [isExportingAtt, setIsExportingAtt] = useState(false);
   const [attExportMessage, setAttExportMessage] = useState('');
+
+  // ESSL Excel Upload State
+  const [isUploadingEssl, setIsUploadingEssl] = useState(false);
+  const [esslUploadStatus, setEsslUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleUploadEsslExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingEssl(true);
+    setEsslUploadStatus(null);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const fileBase64 = reader.result as string;
+          const token = localStorage.getItem('sessionToken') || '';
+          const res = await fetch(`${API_URL}/api/attendance/upload-essl-excel`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ fileBase64 })
+          });
+
+          const data = await res.json();
+          if (!res.ok || !data.success) {
+            throw new Error(data.error || data.message || 'Failed to process ESSL Excel');
+          }
+
+          setEsslUploadStatus({
+            type: 'success',
+            message: data.message || `Successfully imported ${data.importedCount} attendance records for ${data.date}.`
+          });
+          await fetchAttendanceLogs();
+        } catch (err: any) {
+          setEsslUploadStatus({
+            type: 'error',
+            message: err.message || 'An error occurred while processing ESSL Excel.'
+          });
+        } finally {
+          setIsUploadingEssl(false);
+          if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+      };
+      reader.onerror = () => {
+        setEsslUploadStatus({
+          type: 'error',
+          message: 'Failed to read file from browser.'
+        });
+        setIsUploadingEssl(false);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      setEsslUploadStatus({
+        type: 'error',
+        message: err.message || 'Failed to process file.'
+      });
+      setIsUploadingEssl(false);
+    }
+  };
 
   // Reports Center Modal State
   const [showReportsModal, setShowReportsModal] = useState(false);
@@ -1612,6 +1676,46 @@ export default function AdminDashboard() {
                   </>
                 )}
               </button>
+
+              <div className="pt-4 border-t border-slate-200 space-y-2">
+                <div className="text-[10px] font-bold text-slate-500 uppercase flex items-center justify-between">
+                  <span>Upload ESSL Raw Excel</span>
+                  <span className="text-[9px] text-slate-400 font-normal">DailyAttendance_BasicReport</span>
+                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept=".xlsx, .xls"
+                  onChange={handleUploadEsslExcel}
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingEssl}
+                  className="w-full h-10 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold uppercase tracking-wider rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isUploadingEssl ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Uploading & Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-4 h-4" />
+                      <span>Upload ESSL Excel Sheet</span>
+                    </>
+                  )}
+                </button>
+                {esslUploadStatus && (
+                  <p className={`text-[10px] font-semibold p-2.5 rounded-lg border ${
+                    esslUploadStatus.type === 'success'
+                      ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : 'text-rose-600 bg-rose-50 border-rose-100'
+                  }`}>
+                    {esslUploadStatus.message}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
