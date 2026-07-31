@@ -1238,7 +1238,14 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
       }
     }
 
-    let upsertedCount = 0;
+    // 4. Fetch existing records for target date in one single query
+    const existingRecords = await prisma.attendance.findMany({
+      where: { date: targetDateStr }
+    });
+    const existingMap = new Map(existingRecords.map(a => [a.employeeId, a]));
+
+    const toCreate: any[] = [];
+    const toUpdate: any[] = [];
     let skippedCount = 0;
 
     for (let r = startRow; r <= worksheet.rowCount; r++) {
@@ -1291,38 +1298,54 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
         finalStatus = 'A';
       }
 
-      await prisma.attendance.upsert({
-        where: {
-          employeeId_date: {
-            employeeId: employee.employeeId,
-            date: targetDateStr
-          }
-        },
-        update: {
-          checkIn: cIn,
-          checkOut: cOut,
-          hoursWorked,
-          status: finalStatus
-        },
-        create: {
-          employeeId: employee.employeeId,
-          date: targetDateStr,
-          checkIn: cIn,
-          checkOut: cOut,
-          hoursWorked,
-          status: finalStatus
-        }
-      });
+      const item = {
+        employeeId: employee.employeeId,
+        date: targetDateStr,
+        checkIn: cIn,
+        checkOut: cOut,
+        hoursWorked,
+        status: finalStatus
+      };
 
-      upsertedCount++;
+      if (existingMap.has(employee.employeeId)) {
+        toUpdate.push({ id: existingMap.get(employee.employeeId)!.id, ...item });
+      } else {
+        toCreate.push(item);
+      }
     }
+
+    // Execute bulk creates
+    if (toCreate.length > 0) {
+      await prisma.attendance.createMany({ data: toCreate, skipDuplicates: true });
+    }
+
+    // Execute updates in parallel chunks of 25 for maximum speed
+    if (toUpdate.length > 0) {
+      const batchSize = 25;
+      for (let i = 0; i < toUpdate.length; i += batchSize) {
+        const batch = toUpdate.slice(i, i + batchSize);
+        await Promise.all(batch.map(u =>
+          prisma.attendance.update({
+            where: { id: u.id },
+            data: {
+              checkIn: u.checkIn,
+              checkOut: u.checkOut,
+              hoursWorked: u.hoursWorked,
+              status: u.status
+            }
+          })
+        ));
+      }
+    }
+
+    const totalProcessed = toCreate.length + toUpdate.length;
 
     res.json({
       success: true,
-      importedCount: upsertedCount,
+      importedCount: totalProcessed,
       skippedCount,
       date: targetDateStr,
-      message: `Successfully processed ESSL Excel report. Updated ${upsertedCount} attendance records for ${targetDateStr}.`
+      message: `Successfully processed ESSL Excel report. Updated ${totalProcessed} attendance records for ${targetDateStr}.`
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
