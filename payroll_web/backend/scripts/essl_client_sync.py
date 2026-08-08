@@ -15,8 +15,8 @@ RENDER_BACKEND_URL = "https://payroll-backend-v55r.onrender.com/iclock/cdata?sn=
 
 def get_tables_to_query(start_date):
     """
-    Generates monthly table names (e.g., DeviceLogs_7_2026) from start_date
-    up to the current month/year.
+    Generates monthly table names (e.g., DeviceLogs_8_2026, DeviceLogs_08_2026)
+    from start_date up to the current month/year.
     """
     now = datetime.datetime.now()
     curr_year = now.year
@@ -30,15 +30,27 @@ def get_tables_to_query(start_date):
     m = start_month
     while (y < curr_year) or (y == curr_year and m <= curr_month):
         tables.append(f"DeviceLogs_{m}_{y}")
+        tables.append(f"DeviceLogs_{m:02d}_{y}")
         m += 1
         if m > 12:
             m = 1
             y += 1
-    return tables
+    tables.append("DeviceLogs")
+    
+    # Remove duplicates preserving order
+    seen = set()
+    deduped = []
+    for t in tables:
+        if t not in seen:
+            seen.add(t)
+            deduped.append(t)
+    return deduped
 
 def sync_punches():
-    # Sync punches for the last 3 days of data (recommended for regular running)
-    start_date = datetime.datetime.now() - datetime.timedelta(days=3)
+    # Sync punches from 1st of current month or 10 days back to bridge any gap
+    now = datetime.datetime.now()
+    first_of_month = datetime.datetime(now.year, now.month, 1)
+    start_date = min(first_of_month, now - datetime.timedelta(days=10))
     
     start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
     print(f"[{datetime.datetime.now()}] Starting sync for punches since: {start_date_str}")
