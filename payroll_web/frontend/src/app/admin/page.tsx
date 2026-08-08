@@ -392,10 +392,17 @@ export default function AdminDashboard() {
   const [isCalculating, setIsCalculating] = useState(false);
   const [calcMessage, setCalcMessage] = useState('');
 
+  const getAuthHeaders = () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('sessionToken') || '' : '';
+    return { 'Authorization': `Bearer ${token}` };
+  };
+
   // Fetch initial workforce databases
   const fetchEmployees = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/employees`);
+      const res = await fetch(`${API_URL}/api/employees`, {
+        headers: getAuthHeaders()
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setEmployees(data);
@@ -408,7 +415,9 @@ export default function AdminDashboard() {
   // Fetch recent jobs logs
   const fetchJobs = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/jobs?month=${selectedMonth}&year=${selectedYear}`);
+      const res = await fetch(`${API_URL}/api/jobs?month=${selectedMonth}&year=${selectedYear}`, {
+        headers: getAuthHeaders()
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setJobs(data);
@@ -421,7 +430,9 @@ export default function AdminDashboard() {
   // Fetch monthly payroll calculations
   const fetchPayrollRuns = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/payroll/runs?month=${selectedMonth}&year=${selectedYear}`);
+      const res = await fetch(`${API_URL}/api/payroll/runs?month=${selectedMonth}&year=${selectedYear}`, {
+        headers: getAuthHeaders()
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setPayrollRuns(data);
@@ -442,7 +453,9 @@ export default function AdminDashboard() {
   // Fetch monthly attendance logs
   const fetchAttendanceLogs = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/attendance?month=${selectedMonth}&year=${selectedYear}`);
+      const res = await fetch(`${API_URL}/api/attendance?month=${selectedMonth}&year=${selectedYear}`, {
+        headers: getAuthHeaders()
+      });
       const data = await res.json();
       if (Array.isArray(data)) {
         setAttendanceLogs(data);
@@ -482,7 +495,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_URL}/api/payroll/calculate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ month: selectedMonth, year: selectedYear, settings })
       });
       const data = await res.json();
@@ -507,7 +520,7 @@ export default function AdminDashboard() {
       const rate = currentlyLoad ? 636.0 : 0.0; // Day rate set back to default if toggling back to Day-Basis
       const res = await fetch(`${API_URL}/api/employees/${empId}/basis`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ isLoadBasis: !currentlyLoad, rate })
       });
       if (res.ok) {
@@ -536,7 +549,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_URL}/api/employees/${employeeForAdvance.employeeId}/advances`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           accountAdvance: parseFloat(advFormAcc) || 0.0,
           remainingAdvance: parseFloat(advFormRem) || 0.0
@@ -590,7 +603,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_URL}/api/employees`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (res.ok) {
@@ -673,7 +686,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`${API_URL}/api/employees/${selectedEmployee.employeeId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAuthHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       if (res.ok) {

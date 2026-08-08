@@ -494,9 +494,26 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Employee ID is required' });
     }
     try {
-      const employee = await prisma.employee.findUnique({
-        where: { employeeId }
+      const cleanId = String(employeeId).trim();
+      const normId = normalizeBiometricCode(cleanId);
+
+      let employee = await prisma.employee.findUnique({
+        where: { employeeId: cleanId }
       });
+
+      if (!employee) {
+        employee = await prisma.employee.findFirst({
+          where: {
+            OR: [
+              { employeeId: { equals: cleanId, mode: 'insensitive' } },
+              { employeeId: normId },
+              { punchingCode: { equals: cleanId, mode: 'insensitive' } },
+              { punchingCode: normId }
+            ]
+          }
+        });
+      }
+
       if (employee) {
         return res.json({ success: true, token: systemToken, employee });
       }
@@ -511,16 +528,38 @@ app.post('/api/auth/login', async (req, res) => {
 
 // Employee lookup (preview) route before login (safe, only returns name/dept for verified ID)
 app.get('/api/auth/employee-preview/*', async (req, res) => {
-  const employeeId = (req.params as any)[0];
+  const rawId = (req.params as any)[0] || '';
+  const cleanId = String(rawId).trim();
+  const normId = normalizeBiometricCode(cleanId);
+
   try {
-    const employee = await prisma.employee.findUnique({
-      where: { employeeId },
+    let employee = await prisma.employee.findUnique({
+      where: { employeeId: cleanId },
       select: {
         employeeId: true,
         name: true,
         department: true
       }
     });
+
+    if (!employee) {
+      employee = await prisma.employee.findFirst({
+        where: {
+          OR: [
+            { employeeId: { equals: cleanId, mode: 'insensitive' } },
+            { employeeId: normId },
+            { punchingCode: { equals: cleanId, mode: 'insensitive' } },
+            { punchingCode: normId }
+          ]
+        },
+        select: {
+          employeeId: true,
+          name: true,
+          department: true
+        }
+      });
+    }
+
     if (employee) {
       res.json(employee);
     } else {
