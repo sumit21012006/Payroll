@@ -13,6 +13,30 @@ DB_CONFIG = {
 # The URL of your deployed Render server ADMS endpoint
 RENDER_BACKEND_URL = "https://payroll-backend-v55r.onrender.com/iclock/cdata?sn=ESSL_SYNC_AGENT&table=ATTLOG"
 
+import os
+
+SYNC_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'last_synced_time.txt')
+
+def get_last_synced_time():
+    if os.path.exists(SYNC_STATE_FILE):
+        try:
+            with open(SYNC_STATE_FILE, 'r') as f:
+                ts_str = f.read().strip()
+                if ts_str:
+                    return datetime.datetime.strptime(ts_str, '%Y-%m-%d %H:%M:%S')
+        except Exception as e:
+            print(f"⚠️ Reading sync state file failed: {e}")
+    # Default fallback: 2 days back if state file is not created yet
+    return datetime.datetime.now() - datetime.timedelta(days=2)
+
+def save_last_synced_time(latest_dt):
+    try:
+        with open(SYNC_STATE_FILE, 'w') as f:
+            f.write(latest_dt.strftime('%Y-%m-%d %H:%M:%S'))
+        print(f"💾 Sync state updated: Last synced punch at {latest_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+    except Exception as e:
+        print(f"⚠️ Could not save sync state file: {e}")
+
 def get_tables_to_query(start_date):
     """
     Generates monthly table names (e.g., DeviceLogs_8_2026, DeviceLogs_08_2026)
@@ -47,12 +71,11 @@ def get_tables_to_query(start_date):
     return deduped
 
 def sync_punches():
-    # Sync punches for recent 2 days for fast routine scheduled runs
-    now = datetime.datetime.now()
-    start_date = now - datetime.timedelta(days=2)
+    # Fetch pending punches starting from exact timestamp of last successful sync
+    start_date = get_last_synced_time()
     
     start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{datetime.datetime.now()}] Starting sync for punches since: {start_date_str}")
+    print(f"[{datetime.datetime.now()}] Starting sync for pending punches since: {start_date_str}")
     
     drivers = [
         '{ODBC Driver 17 for SQL Server}',
@@ -177,6 +200,9 @@ def sync_punches():
         
         if successful_batches == total_batches:
             print(f"🎉 Complete! All {total_records} punch records successfully uploaded and synced to cloud.")
+            # Save latest timestamp to state file so future runs only fetch newer punches
+            max_logdate = max(logdate for userid, logdate in all_records)
+            save_last_synced_time(max_logdate)
         else:
             print(f"⚠️ Completed with warnings: {successful_batches}/{total_batches} batches succeeded.")
         
