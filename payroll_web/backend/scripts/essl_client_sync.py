@@ -62,25 +62,56 @@ def sync_punches():
         '{SQL Server}'
     ]
     
+    servers = [
+        DB_CONFIG['server'],
+        r'.\SQLEXPRESS',
+        r'localhost\SQLEXPRESS',
+        'localhost'
+    ]
+    
     conn = None
+    last_errors = []
+    
     for driver in drivers:
-        try:
-            conn_str = (
-                f"DRIVER={driver};"
-                f"SERVER={DB_CONFIG['server']};"
-                f"DATABASE={DB_CONFIG['database']};"
-                f"UID={DB_CONFIG['username']};"
-                f"PWD={DB_CONFIG['password']};"
-                "TrustServerCertificate=yes;"
-            )
-            conn = pyodbc.connect(conn_str, timeout=5)
-            print(f"Successfully connected to database using driver: {driver}")
+        for server in servers:
+            # Attempt 1: SQL Server Authentication
+            try:
+                conn_str = (
+                    f"DRIVER={driver};"
+                    f"SERVER={server};"
+                    f"DATABASE={DB_CONFIG['database']};"
+                    f"UID={DB_CONFIG['username']};"
+                    f"PWD={DB_CONFIG['password']};"
+                    "TrustServerCertificate=yes;"
+                )
+                conn = pyodbc.connect(conn_str, timeout=3)
+                print(f"✅ Connected to SQL Server ({server}) using SQL Auth with {driver}")
+                break
+            except Exception as e1:
+                last_errors.append(f"SQL Auth ({server}, {driver}): {e1}")
+                
+            # Attempt 2: Windows Integrated Authentication (Trusted_Connection)
+            try:
+                conn_str = (
+                    f"DRIVER={driver};"
+                    f"SERVER={server};"
+                    f"DATABASE={DB_CONFIG['database']};"
+                    "Trusted_Connection=yes;"
+                    "TrustServerCertificate=yes;"
+                )
+                conn = pyodbc.connect(conn_str, timeout=3)
+                print(f"✅ Connected to SQL Server ({server}) using Windows Auth with {driver}")
+                break
+            except Exception as e2:
+                last_errors.append(f"Windows Auth ({server}, {driver}): {e2}")
+                
+        if conn:
             break
-        except Exception:
-            continue
             
     if conn is None:
-        print("❌ Error: Could not connect to SQL Server. Check your password.")
+        print("❌ Could not connect to SQL Server. Connection diagnostics:")
+        for err in last_errors[:4]:
+            print("  -", err)
         return
 
     try:
