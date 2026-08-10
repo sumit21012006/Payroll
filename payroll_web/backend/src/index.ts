@@ -2723,7 +2723,7 @@ app.get('/api/payroll/salary-report', async (req, res) => {
     // Determine shift for employee on date
     const getEmployeeShift = (empId: string, dateStr: string): string => {
       const att = attMap.get(`${empId}_${dateStr}`);
-      if (!att || !att.checkIn) return 'Shift A';
+      if (!att || !att.checkIn || att.checkIn === '00:00' || att.checkIn === '00:00:00' || att.status === 'A') return 'Shift A';
       const parts = att.checkIn.split(':').map(Number);
       if (parts.length < 2) return 'Shift A';
       const hour = parts[0];
