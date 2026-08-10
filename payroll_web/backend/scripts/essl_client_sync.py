@@ -47,10 +47,9 @@ def get_tables_to_query(start_date):
     return deduped
 
 def sync_punches():
-    # Sync punches from 1st of current month or 10 days back to bridge any gap
+    # Sync punches for recent 2 days for fast routine scheduled runs
     now = datetime.datetime.now()
-    first_of_month = datetime.datetime(now.year, now.month, 1)
-    start_date = min(first_of_month, now - datetime.timedelta(days=10))
+    start_date = now - datetime.timedelta(days=2)
     
     start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
     print(f"[{datetime.datetime.now()}] Starting sync for punches since: {start_date_str}")
