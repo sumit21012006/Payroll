@@ -144,31 +144,42 @@ def sync_punches():
             print("No new punch records found in the database for the given period.")
             return
 
-        print(f"Total retrieved punch records to sync: {len(all_records)}")
-        print("Preparing upload payload...")
-        
-        payload_lines = []
-        for userid, logdate in all_records:
-            timestamp_str = logdate.strftime('%Y-%m-%d %H:%M:%S')
-            row_str = f"{userid}\t{timestamp_str}\t1\t0\t1\t0"
-            payload_lines.append(row_str)
+        total_records = len(all_records)
+        batch_size = 500
+        total_batches = (total_records + batch_size - 1) // batch_size
+        print(f"Uploading {total_records} punch records in {total_batches} batch(es) of {batch_size}...")
+
+        headers = { 'Content-Type': 'text/plain' }
+        successful_batches = 0
+
+        for i in range(0, total_records, batch_size):
+            chunk = all_records[i : i + batch_size]
+            payload_lines = []
+            for userid, logdate in chunk:
+                timestamp_str = logdate.strftime('%Y-%m-%d %H:%M:%S')
+                row_str = f"{userid}\t{timestamp_str}\t1\t0\t1\t0"
+                payload_lines.append(row_str)
+                
+            payload = "\r\n".join(payload_lines) + "\r\n"
+            batch_num = (i // batch_size) + 1
             
-        payload = "\r\n".join(payload_lines) + "\r\n"
-        
-        # POST to Render backend ADMS endpoint
-        headers = {
-            'Content-Type': 'text/plain'
-        }
-        
-        response = requests.post(RENDER_BACKEND_URL, data=payload, headers=headers)
-        
-        if response.status_code == 200 and 'OK' in response.text:
-            print("✅ Sync Successful! Server response:", response.text.strip())
-        else:
-            print("❌ Sync failed. Server responded with status:", response.status_code, "Body:", response.text)
-            
+            try:
+                response = requests.post(RENDER_BACKEND_URL, data=payload, headers=headers, timeout=30)
+                if response.status_code == 200 and 'OK' in response.text:
+                    successful_batches += 1
+                    print(f"  ✅ Batch {batch_num}/{total_batches} synced successfully ({len(chunk)} records).")
+                else:
+                    print(f"  ❌ Batch {batch_num}/{total_batches} failed. Status: {response.status_code}, Body: {response.text}")
+            except Exception as err:
+                print(f"  ❌ Batch {batch_num}/{total_batches} network error: {err}")
+
         cursor.close()
         conn.close()
+        
+        if successful_batches == total_batches:
+            print(f"🎉 Complete! All {total_records} punch records successfully uploaded and synced to cloud.")
+        else:
+            print(f"⚠️ Completed with warnings: {successful_batches}/{total_batches} batches succeeded.")
         
     except Exception as err:
         print("❌ Error running sync script:", err)
