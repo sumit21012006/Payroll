@@ -145,7 +145,7 @@ def sync_punches():
             return
 
         total_records = len(all_records)
-        batch_size = 500
+        batch_size = 50
         total_batches = (total_records + batch_size - 1) // batch_size
         print(f"Uploading {total_records} punch records in {total_batches} batch(es) of {batch_size}...")
 
@@ -164,14 +164,14 @@ def sync_punches():
             batch_num = (i // batch_size) + 1
             
             try:
-                response = requests.post(RENDER_BACKEND_URL, data=payload, headers=headers, timeout=30)
+                response = requests.post(RENDER_BACKEND_URL, data=payload, headers=headers, timeout=60)
                 if response.status_code == 200 and 'OK' in response.text:
                     successful_batches += 1
                     print(f"  ✅ Batch {batch_num}/{total_batches} synced successfully ({len(chunk)} records).")
                 else:
                     print(f"  ❌ Batch {batch_num}/{total_batches} failed. Status: {response.status_code}, Body: {response.text}")
             except Exception as err:
-                print(f"  ❌ Batch {batch_num}/{total_batches} network error: {err}")
+                print(f"  ⚠️ Batch {batch_num}/{total_batches} network error: {err}")
 
         cursor.close()
         conn.close()
