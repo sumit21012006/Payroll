@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -1218,6 +1218,7 @@ app.post('/api/attendance/sync-processed', async (req, res) => {
 });
 
 // REST Route: Upload & Process ESSL Attendance Excel report (DailyAttendance_BasicReport.xlsx)
+// Supports multi-date reports (e.g. Aug 1-11 DailyAttendance_BasicReport.xlsx)
 app.post('/api/attendance/upload-essl-excel', async (req, res) => {
   const { fileBase64, customDate } = req.body;
   if (!fileBase64) {
@@ -1227,41 +1228,14 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
   try {
     const cleanBase64 = fileBase64.replace(/^data:.*;base64,/, '');
     const buffer = Buffer.from(cleanBase64, 'base64');
-
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer as any);
-
     const worksheet = workbook.worksheets[0];
     if (!worksheet) {
       return res.status(400).json({ error: 'Uploaded Excel file contains no worksheets.' });
     }
 
-    // 1. Detect report date from header cells or customDate parameter
-    let targetDateStr = customDate || '';
-    if (!targetDateStr) {
-      for (let r = 1; r <= 10; r++) {
-        const row = worksheet.getRow(r);
-        row.eachCell({ includeEmpty: true }, (cell) => {
-          const v = String(cell.value || '').trim();
-          const m = v.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{1,2})\s+(\d{4})/i) ||
-                    v.match(/(\d{1,2})-(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)-(\d{4})/i) ||
-                    v.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-          if (m && !targetDateStr) {
-            const dt = new Date(v.replace(/.*To\s+/i, '').replace(/.*:\s*/, ''));
-            if (!isNaN(dt.getTime())) {
-              targetDateStr = `${dt.getMonth() + 1}/${dt.getDate()}/${dt.getFullYear()}`;
-            }
-          }
-        });
-      }
-    }
-
-    if (!targetDateStr) {
-      const today = new Date();
-      targetDateStr = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
-    }
-
-    // 2. Fetch master employees map from database
+    // Fetch employee master map
     const dbEmployees = await prisma.employee.findMany();
     const employeeMap = new Map<string, typeof dbEmployees[0]>();
     dbEmployees.forEach(e => {
@@ -1273,129 +1247,108 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
       employeeMap.set(normalizeBiometricCode(e.employeeId), e);
     });
 
-    // 3. Find data start row (where SNo or E. Code header ends)
-    let startRow = 12;
-    for (let r = 1; r <= 15; r++) {
-      const row = worksheet.getRow(r);
-      const cellVal = String(row.getCell(2).value || row.getCell(3).value || '').trim();
-      if (/^(SNo|S\.No|E\. Code|EmpCode)$/i.test(cellVal)) {
-        startRow = r + 1;
-        break;
+    // Month map for ESSL date headers like "01-Aug-2026"
+    const MM: Record<string, number> = { Jan:1,Feb:2,Mar:3,Apr:4,May:5,Jun:6,Jul:7,Aug:8,Sep:9,Oct:10,Nov:11,Dec:12 };
+
+    const parseEsslDate = (raw: string): string | null => {
+      const m = raw.match(/(\d{2})-([A-Za-z]{3})-(\d{4})/);
+      return (m && MM[m[2]]) ? `${MM[m[2]]}/${parseInt(m[1])}/${m[3]}` : null;
+    };
+
+    const extractTime = (v: any): string => {
+      if (!v) return '';
+      if (v instanceof Date) {
+        const h = v.getHours(), mn = v.getMinutes();
+        return (h===0 && mn===0) ? '' : `${String(h).padStart(2,'0')}:${String(mn).padStart(2,'0')}`;
+      }
+      if (typeof v === 'number') {
+        const tm = Math.round(v * 24 * 60);
+        if (tm===0) return '';
+        return `${String(Math.floor(tm/60)%24).padStart(2,'0')}:${String(tm%60).padStart(2,'0')}`;
+      }
+      const s = String(v).trim();
+      return (/^\d{1,2}:\d{2}/.test(s) && s!=='00:00' && s!=='00:00:00') ? s.slice(0,5) : '';
+    };
+
+    // PASS 1: collect all dates found in section headers
+    const allDates = new Set<string>();
+    for (let r = 1; r <= worksheet.rowCount; r++) {
+      if (String(worksheet.getRow(r).getCell(2).value||'').trim() === 'Attendance Date') {
+        const p = parseEsslDate(String(worksheet.getRow(r).getCell(5).value||'').trim());
+        if (p) allDates.add(p);
       }
     }
+    // Fallback for single-day files
+    if (allDates.size === 0) {
+      const fb = customDate || (() => { const t=new Date(); return `${t.getMonth()+1}/${t.getDate()}/${t.getFullYear()}`; })();
+      allDates.add(fb);
+    }
 
-    // 4. Fetch existing records for target date in one single query
-    const existingRecords = await prisma.attendance.findMany({
-      where: { date: targetDateStr }
-    });
-    const existingMap = new Map(existingRecords.map(a => [a.employeeId, a]));
+    // Pre-fetch all existing records for all detected dates in ONE query
+    const existingRecs = await prisma.attendance.findMany({ where: { date: { in: Array.from(allDates) } } });
+    const existingMap = new Map(existingRecs.map(a => [`${a.employeeId}_${a.date}`, a]));
 
     const toCreate: any[] = [];
     const toUpdate: any[] = [];
     let skippedCount = 0;
+    let currentDate: string = Array.from(allDates)[0] || (customDate || '');
 
-    for (let r = startRow; r <= worksheet.rowCount; r++) {
+    // PASS 2: process rows with correct per-section date
+    for (let r = 1; r <= worksheet.rowCount; r++) {
       const row = worksheet.getRow(r);
-      const vals: string[] = [];
-      row.eachCell({ includeEmpty: true }, (cell, col) => {
-        let v = cell.value;
-        if (v instanceof Date) {
-          v = `${String(v.getHours()).padStart(2, '0')}:${String(v.getMinutes()).padStart(2, '0')}:${String(v.getSeconds()).padStart(2, '0')}`;
-        }
-        vals[col] = String(v || '').trim();
-      });
+      const c2 = String(row.getCell(2).value||'').trim();
 
-      const rawCode = vals[3] || vals[2] || '';
-      if (!rawCode || /^(SNo|E\. Code|Department|Name|Status|Total)$/i.test(rawCode)) continue;
-
-      const normCode = normalizeBiometricCode(rawCode);
-      const employee = employeeMap.get(normCode) || employeeMap.get(rawCode.toUpperCase());
-      if (!employee) {
-        skippedCount++;
+      if (c2 === 'Attendance Date') {
+        const p = parseEsslDate(String(row.getCell(5).value||'').trim());
+        if (p) currentDate = p;
         continue;
       }
+      if (c2 === 'SNo' || c2 === 'S.No') continue;
 
-      // Extract InTime strictly from Col 8, OutTime strictly from Col 9/10, Status from Col 14/15
-      let rawInVal: any = row.getCell(8).value;
-      let rawOutVal: any = row.getCell(9).value || row.getCell(10).value;
-      let statusStr = String(row.getCell(14).value || row.getCell(15).value || '').trim();
+      const sno = row.getCell(2).value;
+      if (!sno || isNaN(Number(sno))) continue;
 
-      let rawIn = '';
-      let rawOut = '';
-      if (rawInVal instanceof Date) rawIn = rawInVal.toTimeString().slice(0, 5);
-      else rawIn = String(rawInVal || '').trim();
+      const rawCode = String(row.getCell(3).value||'').trim();
+      if (!rawCode) continue;
 
-      if (rawOutVal instanceof Date) rawOut = rawOutVal.toTimeString().slice(0, 5);
-      else rawOut = String(rawOutVal || '').trim();
+      const employee = employeeMap.get(normalizeBiometricCode(rawCode)) || employeeMap.get(rawCode.toUpperCase());
+      if (!employee) { skippedCount++; continue; }
 
-      let cIn = '';
-      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawIn) && rawIn !== '00:00' && rawIn !== '00:00:00') {
-        cIn = rawIn.slice(0, 5);
-      }
-
-      let cOut = '';
-      if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(rawOut) && rawOut !== '00:00' && rawOut !== '00:00:00') {
-        cOut = rawOut.slice(0, 5);
-      }
-
-      let hoursWorked = 0.0;
-      if (cIn && cOut) {
-        hoursWorked = calculateHours(cIn, cOut, targetDateStr);
-      }
-
+      const cIn  = extractTime(row.getCell(8).value);
+      const cOut = extractTime(row.getCell(9).value) || extractTime(row.getCell(10).value);
+      const statusStr = String(row.getCell(14).value || row.getCell(13).value || '').trim();
+      const hoursWorked = (cIn && cOut) ? calculateHours(cIn, cOut, currentDate) : 0.0;
       let finalStatus = determineShiftStatus(cIn, hoursWorked);
-      if (!cIn && (/absent/i.test(statusStr) || statusStr === '')) {
-        finalStatus = 'A';
-      }
+      if (!cIn && (/absent/i.test(statusStr) || statusStr === '')) finalStatus = 'A';
 
-      const item = {
-        employeeId: employee.employeeId,
-        date: targetDateStr,
-        checkIn: cIn,
-        checkOut: cOut,
-        hoursWorked,
-        status: finalStatus
-      };
-
-      if (existingMap.has(employee.employeeId)) {
-        toUpdate.push({ id: existingMap.get(employee.employeeId)!.id, ...item });
+      const item = { employeeId: employee.employeeId, date: currentDate, checkIn: cIn, checkOut: cOut, hoursWorked, status: finalStatus };
+      const mapKey = `${employee.employeeId}_${currentDate}`;
+      const existing = existingMap.get(mapKey);
+      if (existing) {
+        toUpdate.push({ id: existing.id, ...item });
       } else {
         toCreate.push(item);
+        existingMap.set(mapKey, { id: 'pending' } as any);
       }
     }
 
-    // Execute bulk creates
-    if (toCreate.length > 0) {
-      await prisma.attendance.createMany({ data: toCreate, skipDuplicates: true });
-    }
+    if (toCreate.length > 0) await prisma.attendance.createMany({ data: toCreate, skipDuplicates: true });
 
-    // Execute updates in parallel chunks of 25 for maximum speed
     if (toUpdate.length > 0) {
-      const batchSize = 25;
-      for (let i = 0; i < toUpdate.length; i += batchSize) {
-        const batch = toUpdate.slice(i, i + batchSize);
-        await Promise.all(batch.map(u =>
-          prisma.attendance.update({
-            where: { id: u.id },
-            data: {
-              checkIn: u.checkIn,
-              checkOut: u.checkOut,
-              hoursWorked: u.hoursWorked,
-              status: u.status
-            }
-          })
+      for (let i = 0; i < toUpdate.length; i += 25) {
+        await Promise.all(toUpdate.slice(i, i+25).map(u =>
+          prisma.attendance.update({ where: { id: u.id }, data: { checkIn: u.checkIn, checkOut: u.checkOut, hoursWorked: u.hoursWorked, status: u.status } })
         ));
       }
     }
 
-    const totalProcessed = toCreate.length + toUpdate.length;
-
+    const datesProcessed = Array.from(allDates).sort();
     res.json({
       success: true,
-      importedCount: totalProcessed,
+      importedCount: toCreate.length + toUpdate.length,
       skippedCount,
-      date: targetDateStr,
-      message: `Successfully processed ESSL Excel report. Updated ${totalProcessed} attendance records for ${targetDateStr}.`
+      datesProcessed,
+      message: `Successfully processed ESSL Excel. Updated ${toCreate.length + toUpdate.length} attendance records across ${datesProcessed.length} date(s): ${datesProcessed.join(', ')}.`
     });
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
