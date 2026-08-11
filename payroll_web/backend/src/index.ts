@@ -203,6 +203,7 @@ function determineShiftStatus(checkIn: string, hoursWorked: number): string {
 
 /**
  * Auto Check-Out Unclosed Shifts (> 9 hours elapsed since checkIn)
+ * Checkout time is formatted in IST (+05:30) to avoid UTC offset errors on Render.
  */
 async function autoCheckoutUnclosedShifts() {
   try {
@@ -211,6 +212,7 @@ async function autoCheckoutUnclosedShifts() {
     });
 
     const nowEpoch = Date.now();
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000; // +05:30 in milliseconds
 
     for (const log of unclosed) {
       const inEpoch = parseISTEpoch(log.date, log.checkIn);
@@ -221,8 +223,9 @@ async function autoCheckoutUnclosedShifts() {
       // Auto check-out if more than 9 hours passed since check-in
       if (elapsedHours >= 9.0) {
         const outEpoch = inEpoch + (8 * 60 * 60 * 1000);
-        const outDt = new Date(outEpoch);
-        const checkOut = `${String(outDt.getHours()).padStart(2, '0')}:${String(outDt.getMinutes()).padStart(2, '0')}`;
+        // FIX: Add IST offset before reading UTC fields so result is in IST, not UTC
+        const outDtIST = new Date(outEpoch + IST_OFFSET_MS);
+        const checkOut = `${String(outDtIST.getUTCHours()).padStart(2, '0')}:${String(outDtIST.getUTCMinutes()).padStart(2, '0')}`;
         const hoursWorked = 8.0;
         const status = determineShiftStatus(log.checkIn, hoursWorked);
 
@@ -365,8 +368,9 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
             lastCheckInEpoch = epoch;
             const diffHours = (punchEpoch - lastCheckInEpoch) / (1000 * 60 * 60);
 
-            // If last log has no check-out, and the gap is 5 mins to 16 hours, pair it across midnight!
-            if (lastLog.checkOut === '' && diffHours >= 0.083 && diffHours <= 16) {
+            // Pair as checkout if gap is 5 mins to 18 hours.
+            // 18h window covers afternoon/evening shift workers (e.g. check-in 15:00, check-out 07:00 next day = 16h).
+            if (lastLog.checkOut === '' && diffHours >= 0.083 && diffHours <= 18) {
               shouldPair = true;
             }
             // Double-scanning safeguard: update check-out if same/close shift within 2 hours
