@@ -216,6 +216,7 @@ export default function AdminDashboard() {
             message: data.message || `Successfully imported ${data.importedCount} attendance records for ${data.date}.`
           });
           await fetchAttendanceLogs();
+          await handleCalculatePayroll();
         } catch (err: any) {
           setEsslUploadStatus({
             type: 'error',
