@@ -1,4 +1,4 @@
-﻿import express from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
@@ -1291,6 +1291,7 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
     const toCreate: any[] = [];
     const toUpdate: any[] = [];
     let skippedCount = 0;
+    const createdKeys = new Set<string>(); // tracks keys already queued for create (prevents duplicates)
     let currentDate: string = Array.from(allDates)[0] || (customDate || '');
 
     // PASS 2: process rows with correct per-section date
@@ -1326,9 +1327,9 @@ app.post('/api/attendance/upload-essl-excel', async (req, res) => {
       const existing = existingMap.get(mapKey);
       if (existing) {
         toUpdate.push({ id: existing.id, ...item });
-      } else {
+      } else if (!createdKeys.has(mapKey)) {
         toCreate.push(item);
-        existingMap.set(mapKey, { id: 'pending' } as any);
+        createdKeys.add(mapKey); // prevent duplicate creates within same file
       }
     }
 
