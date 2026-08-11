@@ -1882,6 +1882,99 @@ app.delete('/api/jobs/:id', async (req, res) => {
   }
 });
 
+// Helper: Core Payroll Calculation logic for a given month and year
+async function calculatePayrollForMonth(parsedMonth: number, parsedYear: number, customSettings?: any) {
+  const settings = customSettings || {
+    shiftHours: 9.0,
+    otMultiplier: 1.5,
+    graceMin: 15.0,
+    allowedLeaves: 2,
+    defaultRate: 15.0
+  };
+
+  const startTime = Date.now();
+  const employees = await prisma.employee.findMany();
+
+  const matchPattern = `${parsedMonth}/`;
+  const allAttendance = await prisma.attendance.findMany({
+    where: {
+      date: {
+        startsWith: matchPattern
+      }
+    }
+  });
+
+  const monthLogs = allAttendance.filter(log => {
+    const parts = log.date.split('/');
+    return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+  });
+
+  const attendanceByEmployee: Record<string, any[]> = {};
+  monthLogs.forEach(log => {
+    if (!attendanceByEmployee[log.employeeId]) {
+      attendanceByEmployee[log.employeeId] = [];
+    }
+    attendanceByEmployee[log.employeeId].push(log);
+  });
+
+  const allJobAllocations = await prisma.jobLogEmployee.findMany({
+    where: {
+      jobLog: {
+        date: {
+          startsWith: matchPattern
+        }
+      }
+    },
+    include: {
+      jobLog: true
+    }
+  });
+
+  const yearJobs = allJobAllocations.filter(ja => {
+    const parts = ja.jobLog.date.split('/');
+    return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+  });
+
+  const jobsByEmployee: Record<string, any[]> = {};
+  yearJobs.forEach(ja => {
+    if (!jobsByEmployee[ja.employeeId]) {
+      jobsByEmployee[ja.employeeId] = [];
+    }
+    jobsByEmployee[ja.employeeId].push(ja);
+  });
+
+  const runs: any[] = [];
+  for (const emp of employees) {
+    const empAttendance = attendanceByEmployee[emp.employeeId] || [];
+    const empJobs = jobsByEmployee[emp.employeeId] || [];
+
+    const calc = calculateEmployeeWagesInMemory(emp, empAttendance, empJobs, parsedMonth, parsedYear, settings);
+
+    runs.push({
+      employeeId: emp.employeeId,
+      month: parsedMonth,
+      year: parsedYear,
+      ...calc
+    });
+  }
+
+  await prisma.$transaction([
+    prisma.payrollRun.deleteMany({
+      where: {
+        month: parsedMonth,
+        year: parsedYear
+      }
+    }),
+    prisma.payrollRun.createMany({
+      data: runs
+    })
+  ]);
+
+  const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+  console.log(`[CALCULATE] Finished bulk payroll calculation in ${duration}s for ${runs.length} employees.`);
+  return runs;
+}
+
 // REST Route: Trigger Monthly Payroll Calculation
 app.post('/api/payroll/calculate', async (req, res) => {
   const { month, year, settings } = req.body;
@@ -1891,99 +1984,8 @@ app.post('/api/payroll/calculate', async (req, res) => {
   const parsedYear = parseInt(year);
 
   try {
-    const startTime = Date.now();
+    await calculatePayrollForMonth(parsedMonth, parsedYear, settings);
 
-    // 1. Fetch all employees in one query
-    const employees = await prisma.employee.findMany();
-
-    // 2. Fetch all attendance logs for this month/year in one query
-    const matchPattern = `${parsedMonth}/`;
-    const allAttendance = await prisma.attendance.findMany({
-      where: {
-        date: {
-          startsWith: matchPattern
-        }
-      }
-    });
-
-    // Filter by year in memory
-    const monthLogs = allAttendance.filter(log => {
-      const parts = log.date.split('/');
-      return parts.length === 3 && parseInt(parts[2]) === parsedYear;
-    });
-
-    // Group attendance logs by employeeId for O(1) lookups
-    const attendanceByEmployee: Record<string, any[]> = {};
-    monthLogs.forEach(log => {
-      if (!attendanceByEmployee[log.employeeId]) {
-        attendanceByEmployee[log.employeeId] = [];
-      }
-      attendanceByEmployee[log.employeeId].push(log);
-    });
-
-    // 3. Fetch all job allocations for this month/year in one query
-    const allJobAllocations = await prisma.jobLogEmployee.findMany({
-      where: {
-        jobLog: {
-          date: {
-            startsWith: matchPattern
-          }
-        }
-      },
-      include: {
-        jobLog: true
-      }
-    });
-
-    // Filter by year in memory
-    const yearJobs = allJobAllocations.filter(ja => {
-      const parts = ja.jobLog.date.split('/');
-      return parts.length === 3 && parseInt(parts[2]) === parsedYear;
-    });
-
-    // Group job allocations by employeeId for O(1) lookups
-    const jobsByEmployee: Record<string, any[]> = {};
-    yearJobs.forEach(ja => {
-      if (!jobsByEmployee[ja.employeeId]) {
-        jobsByEmployee[ja.employeeId] = [];
-      }
-      jobsByEmployee[ja.employeeId].push(ja);
-    });
-
-    const runs: any[] = [];
-
-    // 4. Compute payroll runs in-memory (0 database queries inside loop!)
-    for (const emp of employees) {
-      const empAttendance = attendanceByEmployee[emp.employeeId] || [];
-      const empJobs = jobsByEmployee[emp.employeeId] || [];
-
-      const calc = calculateEmployeeWagesInMemory(emp, empAttendance, empJobs, parsedMonth, parsedYear, settings);
-
-      runs.push({
-        employeeId: emp.employeeId,
-        month: parsedMonth,
-        year: parsedYear,
-        ...calc
-      });
-    }
-
-    // 5. Bulk write to database in a single transaction (Delete old, insert new)
-    await prisma.$transaction([
-      prisma.payrollRun.deleteMany({
-        where: {
-          month: parsedMonth,
-          year: parsedYear
-        }
-      }),
-      prisma.payrollRun.createMany({
-        data: runs
-      })
-    ]);
-
-    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-    console.log(`[CALCULATE] Finished bulk payroll calculation in ${duration}s for ${runs.length} employees.`);
-
-    // Fetch the inserted runs to return them
     const savedRuns = await prisma.payrollRun.findMany({
       where: {
         month: parsedMonth,
@@ -1991,28 +1993,42 @@ app.post('/api/payroll/calculate', async (req, res) => {
       }
     });
 
-    res.json({ message: `Successfully computed payroll for ${savedRuns.length} employees in ${duration}s.`, data: savedRuns });
+    res.json({ message: `Successfully computed payroll for ${savedRuns.length} employees.`, data: savedRuns });
   } catch (err) {
     console.error('[CALCULATE] Error in payroll calculation:', err);
     res.status(500).json({ error: (err as Error).message });
   }
 });
 
-// REST Route: Get all payroll runs
+// REST Route: Get all payroll runs (automatically calculates on demand if empty or out-of-date!)
 app.get('/api/payroll/runs', async (req, res) => {
   const { month, year } = req.query;
 
   try {
-    const filter: any = {};
-    if (month) filter.month = parseInt(month as string);
-    if (year) filter.year = parseInt(year as string);
+    const m = month ? parseInt(month as string) : (new Date().getMonth() + 1);
+    const y = year ? parseInt(year as string) : new Date().getFullYear();
 
-    const list = await prisma.payrollRun.findMany({
+    const filter: any = { month: m, year: y };
+
+    let list = await prisma.payrollRun.findMany({
       where: filter,
       include: {
         employee: true
       }
     });
+
+    // Auto-calculate on the fly if runs are empty or if 0 worked days exist across all employees
+    const hasAnyWork = list.some(r => r.workedDays > 0);
+    if (list.length === 0 || !hasAnyWork) {
+      await calculatePayrollForMonth(m, y);
+      list = await prisma.payrollRun.findMany({
+        where: filter,
+        include: {
+          employee: true
+        }
+      });
+    }
+
     res.json(list);
   } catch (err) {
     res.status(500).json({ error: (err as Error).message });
