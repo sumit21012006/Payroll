@@ -611,30 +611,40 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   let overtimeDays = 0;
   let halfDays = 0;
   let overtimeHours = 0.0;
+  let totalWorkedFraction = 0.0;
 
   for (const log of monthLogs) {
     const status = log.status.toUpperCase();
-    if (status.includes('PRESENT')) {
-      presentDays++;
-    } else if (status.includes('LATE')) {
-      lateDays++;
-    } else if (status.includes('OVERTIME')) {
-      overtimeDays++;
-    } else if (status.includes('HALF_DAY')) {
-      halfDays++;
-    }
+    const isWorked = (
+      status.startsWith('P') ||
+      status.startsWith('L') ||
+      status.startsWith('HD') ||
+      status.startsWith('OT') ||
+      status.includes('PRESENT') ||
+      status.includes('LATE') ||
+      status.includes('HALF') ||
+      status.includes('OVERTIME')
+    ) && !status.includes('ABSENT') && status !== 'A';
 
-    if (log.hoursWorked > shiftHours) {
-      overtimeHours += (log.hoursWorked - shiftHours);
-    } else if (status.includes('OVERTIME') && log.hoursWorked > 0.0) {
-      overtimeHours += log.hoursWorked;
+    if (isWorked || log.hoursWorked > 0.0) {
+      if (status.startsWith('P') || status.includes('PRESENT')) presentDays++;
+      else if (status.startsWith('L') || status.includes('LATE')) lateDays++;
+      else if (status.startsWith('OT') || status.includes('OVERTIME')) overtimeDays++;
+      else if (status.startsWith('HD') || status.includes('HALF')) halfDays++;
+      else presentDays++;
+
+      const fraction = log.hoursWorked > 0 ? Math.min(1.0, log.hoursWorked / 8.0) : 1.0;
+      totalWorkedFraction += fraction;
+
+      if (log.hoursWorked > 8.0) {
+        overtimeHours += (log.hoursWorked - 8.0);
+      }
     }
   }
 
   const daysLogged = monthLogs.length;
 
   // Calculate missing weekdays as absent days (excl. weekends)
-  // Generating weekdays in May 2026 (or custom month/year)
   const weekdays: string[] = [];
   const daysInMonth = new Date(year, month, 0).getDate();
   for (let d = 1; d <= daysInMonth; d++) {
@@ -695,18 +705,28 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   if (isLoadBasis) {
     for (const log of monthLogs) {
       const status = log.status.toUpperCase();
-      // Skip if absent
-      if (status.includes('ABSENT') || log.hoursWorked <= 0.0) {
+      const isWorked = (
+        status.startsWith('P') ||
+        status.startsWith('L') ||
+        status.startsWith('HD') ||
+        status.startsWith('OT') ||
+        status.includes('PRESENT') ||
+        status.includes('LATE') ||
+        status.includes('HALF') ||
+        status.includes('OVERTIME')
+      ) && !status.includes('ABSENT') && status !== 'A';
+
+      if (!isWorked && log.hoursWorked <= 0.0) {
         continue;
       }
       // Check if loader was assigned to any job on this date
       const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
       if (!hasJobOnDate) {
-        // Idle loader! Give fallback day wage based on employee's stored rate
-        const isHalfDay = status.includes('HALF_DAY') || log.hoursWorked < 4.0;
-        const dayWage = isHalfDay ? (loaderFallbackRate * 0.5) : loaderFallbackRate;
+        // Idle loader! Give fallback day wage based on employee's stored rate & 8-hour system
+        const workedFraction = log.hoursWorked > 0 ? Math.min(1.0, log.hoursWorked / 8.0) : 1.0;
+        const dayWage = workedFraction * loaderFallbackRate;
         idleFallbackWages += dayWage;
-        fallbackWorkedDays += isHalfDay ? 0.5 : 1.0;
+        fallbackWorkedDays += workedFraction;
       }
     }
   }
@@ -716,11 +736,10 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
 
   if (!isLoadBasis) {
     const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : (employee.deductionPerDay > 0 ? employee.deductionPerDay : 0.0);
-    const workedDays = (presentDays + lateDays) + (halfDays * 0.5);
-    const otDays = overtimeDays;
+    const workedDays = totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5));
 
     basicPay = workedDays * rate;
-    otPay = otDays * rate;
+    otPay = overtimeHours * (rate / 8.0);
     grossSalary = basicPay + otPay + jobEarnings;
 
     basicDa = basicPay;
@@ -784,6 +803,8 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     netSalary = grossSalary - totalDeductions;
   }
 
+  const finalWorkedDays = isLoadBasis ? Number(fallbackWorkedDays.toFixed(2)) : (totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5)));
+
   return {
     employeeId,
     month,
@@ -802,7 +823,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     mlwlDeduction,
     grossSalary,
     netSalary: netSalary < 0 ? 0.0 : netSalary,
-    workedDays: (presentDays + lateDays) + (halfDays * 0.5),
+    workedDays: finalWorkedDays,
     overtimeHours,
     jobEarnings
   };
@@ -831,23 +852,34 @@ function calculateEmployeeWagesInMemory(
   let overtimeDays = 0;
   let halfDays = 0;
   let overtimeHours = 0.0;
+  let totalWorkedFraction = 0.0;
 
   for (const log of monthLogs) {
     const status = log.status.toUpperCase();
-    if (status.includes('PRESENT')) {
-      presentDays++;
-    } else if (status.includes('LATE')) {
-      lateDays++;
-    } else if (status.includes('OVERTIME')) {
-      overtimeDays++;
-    } else if (status.includes('HALF_DAY')) {
-      halfDays++;
-    }
+    const isWorked = (
+      status.startsWith('P') ||
+      status.startsWith('L') ||
+      status.startsWith('HD') ||
+      status.startsWith('OT') ||
+      status.includes('PRESENT') ||
+      status.includes('LATE') ||
+      status.includes('HALF') ||
+      status.includes('OVERTIME')
+    ) && !status.includes('ABSENT') && status !== 'A';
 
-    if (log.hoursWorked > shiftHours) {
-      overtimeHours += (log.hoursWorked - shiftHours);
-    } else if (status.includes('OVERTIME') && log.hoursWorked > 0.0) {
-      overtimeHours += log.hoursWorked;
+    if (isWorked || log.hoursWorked > 0.0) {
+      if (status.startsWith('P') || status.includes('PRESENT')) presentDays++;
+      else if (status.startsWith('L') || status.includes('LATE')) lateDays++;
+      else if (status.startsWith('OT') || status.includes('OVERTIME')) overtimeDays++;
+      else if (status.startsWith('HD') || status.includes('HALF')) halfDays++;
+      else presentDays++;
+
+      const fraction = log.hoursWorked > 0 ? Math.min(1.0, log.hoursWorked / 8.0) : 1.0;
+      totalWorkedFraction += fraction;
+
+      if (log.hoursWorked > 8.0) {
+        overtimeHours += (log.hoursWorked - 8.0);
+      }
     }
   }
 
@@ -897,18 +929,28 @@ function calculateEmployeeWagesInMemory(
   if (isLoadBasis) {
     for (const log of monthLogs) {
       const status = log.status.toUpperCase();
-      // Skip if absent
-      if (status.includes('ABSENT') || log.hoursWorked <= 0.0) {
+      const isWorked = (
+        status.startsWith('P') ||
+        status.startsWith('L') ||
+        status.startsWith('HD') ||
+        status.startsWith('OT') ||
+        status.includes('PRESENT') ||
+        status.includes('LATE') ||
+        status.includes('HALF') ||
+        status.includes('OVERTIME')
+      ) && !status.includes('ABSENT') && status !== 'A';
+
+      if (!isWorked && log.hoursWorked <= 0.0) {
         continue;
       }
       // Check if loader was assigned to any job on this date
       const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
       if (!hasJobOnDate) {
-        // Idle loader! Give fallback day wage based on employee's stored rate
-        const isHalfDay = status.includes('HALF_DAY') || log.hoursWorked < 4.0;
-        const dayWage = isHalfDay ? (loaderFallbackRate * 0.5) : loaderFallbackRate;
+        // Idle loader! Give fallback day wage based on employee's stored rate & 8-hour system
+        const workedFraction = log.hoursWorked > 0 ? Math.min(1.0, log.hoursWorked / 8.0) : 1.0;
+        const dayWage = workedFraction * loaderFallbackRate;
         idleFallbackWages += dayWage;
-        fallbackWorkedDays += isHalfDay ? 0.5 : 1.0;
+        fallbackWorkedDays += workedFraction;
       }
     }
   }
@@ -918,11 +960,10 @@ function calculateEmployeeWagesInMemory(
 
   if (!isLoadBasis) {
     const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : (employee.deductionPerDay > 0 ? employee.deductionPerDay : 0.0);
-    const workedDays = (presentDays + lateDays) + (halfDays * 0.5);
-    const otDays = overtimeDays;
+    const workedDays = totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5));
 
     basicPay = workedDays * rate;
-    otPay = otDays * rate;
+    otPay = overtimeHours * (rate / 8.0);
     grossSalary = basicPay + otPay + jobEarnings;
 
     basicDa = basicPay;
@@ -986,6 +1027,8 @@ function calculateEmployeeWagesInMemory(
     netSalary = grossSalary - totalDeductions;
   }
 
+  const finalWorkedDays = isLoadBasis ? Number(fallbackWorkedDays.toFixed(2)) : (totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5)));
+
   return {
     basicPay,
     otPay,
@@ -1001,7 +1044,7 @@ function calculateEmployeeWagesInMemory(
     mlwlDeduction,
     grossSalary,
     netSalary: netSalary < 0 ? 0.0 : netSalary,
-    workedDays: !isLoadBasis ? ((presentDays + lateDays) + (halfDays * 0.5)) : 0.0,
+    workedDays: finalWorkedDays,
     overtimeHours,
     jobEarnings
   };

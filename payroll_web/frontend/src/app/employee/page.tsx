@@ -508,22 +508,26 @@ function AttendanceCalendar({ employeeId, attendanceLogs, jobs, month, year }: {
 
           if (log) {
             const status = log.status.toUpperCase();
-            if (status.includes('PRESENT')) {
+            if (status.includes('PRESENT') || status.startsWith('P')) {
               cellClass = "bg-emerald-50 text-emerald-700 border-emerald-250 shadow-2xs";
               textColor = "text-emerald-700";
               badgeText = "P";
-            } else if (status.includes('LATE')) {
+            } else if (status.includes('LATE') || status.startsWith('L')) {
               cellClass = "bg-amber-50 text-amber-700 border-amber-250 shadow-2xs";
               textColor = "text-amber-700";
               badgeText = "L";
-            } else if (status.includes('OVERTIME')) {
+            } else if (status.includes('OVERTIME') || status.startsWith('OT')) {
               cellClass = "bg-purple-50 text-purple-700 border-purple-250 shadow-2xs";
               textColor = "text-purple-700";
               badgeText = "OT";
-            } else if (status.includes('HALF_DAY')) {
+            } else if (status.includes('HALF_DAY') || status.startsWith('HD')) {
               cellClass = "bg-cyan-50 text-cyan-700 border-cyan-250 shadow-2xs";
               textColor = "text-cyan-700";
               badgeText = "H";
+            } else if (status === 'A' || status.includes('ABSENT')) {
+              cellClass = "bg-rose-50 text-rose-700 border-rose-250 shadow-2xs";
+              textColor = "text-rose-700";
+              badgeText = "A";
             }
           } else if (!isWeekend) {
             cellClass = "bg-rose-50 text-rose-700 border-rose-250 shadow-2xs";
