@@ -1,6 +1,8 @@
 import pyodbc
 import requests
 import datetime
+import os
+import sys
 
 # --- CONFIGURATION ---
 DB_CONFIG = {
@@ -13,9 +15,19 @@ DB_CONFIG = {
 # The URL of your deployed Render server ADMS endpoint
 RENDER_BACKEND_URL = "https://payroll-backend-v55r.onrender.com/iclock/cdata?sn=ESSL_SYNC_AGENT&table=ATTLOG"
 
-import os
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SYNC_STATE_FILE = os.path.join(SCRIPT_DIR, 'last_synced_time.txt')
+LOG_FILE = os.path.join(SCRIPT_DIR, 'sync.log')
 
-SYNC_STATE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'last_synced_time.txt')
+def log(message):
+    timestamp = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_entry = f"[{timestamp}] {message}"
+    print(log_entry)
+    try:
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            f.write(log_entry + '\n')
+    except Exception as e:
+        pass
 
 def get_last_synced_time():
     if os.path.exists(SYNC_STATE_FILE):
@@ -25,17 +37,17 @@ def get_last_synced_time():
                 if ts_str:
                     return datetime.datetime.strptime(ts_str, '%Y-%m-%d %H:%M:%S')
         except Exception as e:
-            print(f"⚠️ Reading sync state file failed: {e}")
-    # Default fallback: 2 days back if state file is not created yet
-    return datetime.datetime.now() - datetime.timedelta(days=2)
+            log(f"⚠️ Reading sync state file failed: {e}")
+    # Default fallback: Start from 2026-08-21 00:00:00
+    return datetime.datetime(2026, 8, 21, 0, 0, 0)
 
 def save_last_synced_time(latest_dt):
     try:
         with open(SYNC_STATE_FILE, 'w') as f:
             f.write(latest_dt.strftime('%Y-%m-%d %H:%M:%S'))
-        print(f"💾 Sync state updated: Last synced punch at {latest_dt.strftime('%Y-%m-%d %H:%M:%S')}")
+        log(f"💾 Sync state updated: Last synced punch at {latest_dt.strftime('%Y-%m-%d %H:%M:%S')}")
     except Exception as e:
-        print(f"⚠️ Could not save sync state file: {e}")
+        log(f"⚠️ Could not save sync state file: {e}")
 
 def get_tables_to_query(start_date):
     """
@@ -75,7 +87,7 @@ def sync_punches():
     start_date = get_last_synced_time()
     
     start_date_str = start_date.strftime('%Y-%m-%d %H:%M:%S')
-    print(f"[{datetime.datetime.now()}] Starting sync for pending punches since: {start_date_str}")
+    log(f"Starting sync for pending punches since: {start_date_str}")
     
     drivers = [
         '{ODBC Driver 17 for SQL Server}',
@@ -107,7 +119,7 @@ def sync_punches():
                     "TrustServerCertificate=yes;"
                 )
                 conn = pyodbc.connect(conn_str, timeout=3)
-                print(f"✅ Connected to SQL Server ({server}) using SQL Auth with {driver}")
+                log(f"✅ Connected to SQL Server ({server}) using SQL Auth with {driver}")
                 break
             except Exception as e1:
                 last_errors.append(f"SQL Auth ({server}, {driver}): {e1}")
@@ -122,7 +134,7 @@ def sync_punches():
                     "TrustServerCertificate=yes;"
                 )
                 conn = pyodbc.connect(conn_str, timeout=3)
-                print(f"✅ Connected to SQL Server ({server}) using Windows Auth with {driver}")
+                log(f"✅ Connected to SQL Server ({server}) using Windows Auth with {driver}")
                 break
             except Exception as e2:
                 last_errors.append(f"Windows Auth ({server}, {driver}): {e2}")
@@ -131,9 +143,9 @@ def sync_punches():
             break
             
     if conn is None:
-        print("❌ Could not connect to SQL Server. Connection diagnostics:")
+        log("❌ Could not connect to SQL Server. Connection diagnostics:")
         for err in last_errors[:4]:
-            print("  -", err)
+            log(f"  - {err}")
         return
 
     try:
@@ -141,12 +153,12 @@ def sync_punches():
         
         # Determine which tables we need to query based on our start date
         tables_to_query = get_tables_to_query(start_date)
-        print(f"Tables to inspect for date range: {tables_to_query}")
+        log(f"Tables to inspect for date range: {tables_to_query}")
         
         all_records = []
         
         for table in tables_to_query:
-            print(f"Querying table: [{table}]...")
+            log(f"Querying table: [{table}]...")
             query = f"""
                 SELECT UserId, LogDate 
                 FROM [{table}] 
@@ -157,19 +169,19 @@ def sync_punches():
                 cursor.execute(query, (start_date_str,))
                 rows = cursor.fetchall()
                 all_records.extend(rows)
-                print(f"  Found {len(rows)} records in [{table}]")
+                log(f"  Found {len(rows)} records in [{table}]")
             except Exception as e:
                 # If table does not exist yet (e.g. new month just started and no device downloaded yet)
-                print(f"  ⚠️ Could not read table [{table}]: {e}")
+                log(f"  ⚠️ Could not read table [{table}]: {e}")
                 
         if not all_records:
-            print("No new punch records found in the database for the given period.")
+            log("No new punch records found in the database for the given period.")
             return
 
         total_records = len(all_records)
         batch_size = 50
         total_batches = (total_records + batch_size - 1) // batch_size
-        print(f"Uploading {total_records} punch records in {total_batches} batch(es) of {batch_size}...")
+        log(f"Uploading {total_records} punch records in {total_batches} batch(es) of {batch_size}...")
 
         headers = { 'Content-Type': 'text/plain' }
         successful_batches = 0
@@ -189,25 +201,28 @@ def sync_punches():
                 response = requests.post(RENDER_BACKEND_URL, data=payload, headers=headers, timeout=60)
                 if response.status_code == 200 and 'OK' in response.text:
                     successful_batches += 1
-                    print(f"  ✅ Batch {batch_num}/{total_batches} synced successfully ({len(chunk)} records).")
+                    log(f"  ✅ Batch {batch_num}/{total_batches} synced successfully ({len(chunk)} records).")
                 else:
-                    print(f"  ❌ Batch {batch_num}/{total_batches} failed. Status: {response.status_code}, Body: {response.text}")
+                    log(f"  ❌ Batch {batch_num}/{total_batches} failed. Status: {response.status_code}, Body: {response.text}")
             except Exception as err:
-                print(f"  ⚠️ Batch {batch_num}/{total_batches} network error: {err}")
+                log(f"  ⚠️ Batch {batch_num}/{total_batches} network error: {err}")
 
         cursor.close()
         conn.close()
         
         if successful_batches == total_batches:
-            print(f"🎉 Complete! All {total_records} punch records successfully uploaded and synced to cloud.")
+            log(f"🎉 Complete! All {total_records} punch records successfully uploaded and synced to cloud.")
             # Save latest timestamp to state file so future runs only fetch newer punches
             max_logdate = max(logdate for userid, logdate in all_records)
             save_last_synced_time(max_logdate)
         else:
-            print(f"⚠️ Completed with warnings: {successful_batches}/{total_batches} batches succeeded.")
+            log(f"⚠️ Completed with warnings: {successful_batches}/{total_batches} batches succeeded.")
         
     except Exception as err:
-        print("❌ Error running sync script:", err)
+        log(f"❌ Error running sync script: {err}")
 
 if __name__ == "__main__":
-    sync_punches()
+    try:
+        sync_punches()
+    except Exception as fatal_e:
+        log(f"💥 Fatal exception in main: {fatal_e}")

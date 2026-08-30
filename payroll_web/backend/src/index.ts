@@ -253,34 +253,25 @@ app.get('/', (req, res) => {
     environment: process.env.NODE_ENV || 'development',
     availableEndpoints: [
       'GET /api/employees',
-      'GET /api/payroll/runs?month=5&year=2026',
-      'GET /iclock/cdata (ADMS)',
-      'GET /iclock/getrequest (ADMS)'
+      'GET /api/payroll/runs',
+      'POST /iclock/cdata (Client Script Sync)',
+      'POST /api/attendance/upload-essl-excel (Manual XLSX Upload)'
     ]
   });
 });
 
 // -------------------------------------------------------------
-// ADMS (BIOMETRIC PUSH) ENPOINTS
+// CLIENT SCRIPT SYNC & ATTENDANCE INGESTION ENDPOINT
 // -------------------------------------------------------------
 
-// 1. ADMS Handshake/Registry (GET /iclock/cdata)
-app.get(['/iclock/cdata', '/iclock/cdata.aspx'], (req, res) => {
-  const { SN, options } = req.query;
-  console.log(`[ADMS] Handshake request from Serial Number: ${SN}`);
-
-  // Respond with registry successful command configuration
-  res.setHeader('Content-Type', 'text/plain');
-  res.send('registry=ok\r\n');
-});
-
-// 2. ADMS Log Uploads (POST /iclock/cdata)
-app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
-  const sn = (req.query.sn || req.query.SN) as string;
-  const table = (req.query.table || req.query.TABLE) as string;
+// Client Script Punch Sync Endpoint (POST /iclock/cdata and POST /api/sync/essl-script)
+// Receives punch logs sent by the client PC sync script (essl_client_sync.py)
+app.post(['/iclock/cdata', '/iclock/cdata.aspx', '/api/sync/essl-script'], async (req, res) => {
+  const sn = (req.query.sn || req.query.SN || 'ESSL_SYNC_AGENT') as string;
+  const table = (req.query.table || req.query.TABLE || 'ATTLOG') as string;
   const rawText = req.body as string;
 
-  console.log(`[ADMS] Log upload received from SN: ${sn}, Table: ${table}`);
+  console.log(`[ESSL-SCRIPT-SYNC] Ingestion batch received from Agent/SN: ${sn}, Table: ${table}`);
 
   if (table === 'ATTLOG') {
     try {
@@ -318,7 +309,7 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
 
         const employee = employeeMap.get(normCode) || employeeMap.get(rawCode);
         if (!employee) {
-          console.warn(`[ADMS] Punch logged for unknown BiometricUID: ${rawCode}`);
+          console.warn(`[ESSL-SCRIPT-SYNC] Punch logged for unknown BiometricUID: ${rawCode}`);
           continue;
         }
 
@@ -449,25 +440,17 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx'], async (req, res) => {
         insertedCount++;
       }
 
-      console.log(`[ADMS] Successfully synced ${insertedCount} biometric entries.`);
+      console.log(`[ESSL-SCRIPT-SYNC] Successfully ingested ${insertedCount} biometric punch entries.`);
       res.setHeader('Content-Type', 'text/plain');
       res.send('OK\r\n');
     } catch (err) {
-      console.error('[ADMS] Error parsing logs:', err);
+      console.error('[ESSL-SCRIPT-SYNC] Error parsing script sync payload:', err);
       res.status(500).send('ERROR\r\n');
     }
   } else {
-    // Return standard OK for config table/operation uploads
     res.setHeader('Content-Type', 'text/plain');
     res.send('OK\r\n');
   }
-});
-
-// 3. ADMS Heartbeat / Command Center (GET /iclock/getrequest)
-app.get(['/iclock/getrequest', '/iclock/getrequest.aspx'], (req, res) => {
-  // Device polls for command requests here
-  res.setHeader('Content-Type', 'text/plain');
-  res.send('OK\r\n');
 });
 
 // -------------------------------------------------------------

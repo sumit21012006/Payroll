@@ -1,26 +1,189 @@
 @echo off
+setlocal EnableDelayedExpansion
 echo ===================================================
 echo   Configuring eSSL Attendance Syncer Scheduled Task
+echo   FIX: Resolves error 0x80070002 (File Not Found)
 echo ===================================================
 echo.
 
-set SCRIPT_DIR=C:\Users\SSD\eSSL_Sync
-set SCRIPT_PATH=C:\Users\SSD\eSSL_Sync\essl_client_sync.py
-
-:: Delete any existing or corrupted task
-schtasks /delete /tn "eSSL Attendance Syncer" /f >nul 2>&1
-
-:: Create clean task running every 60 minutes
-schtasks /create /tn "eSSL Attendance Syncer" /tr "python \"%SCRIPT_PATH%\"" /sc minute /mo 60 /f
-
-echo.
-if %ERRORLEVEL% EQU 0 (
-    echo [SUCCESS] Task created successfully!
-    echo Script Location: %SCRIPT_PATH%
-    echo It will now run automatically every 1 hour.
-) else (
-    echo [ERROR] Failed to create task. Please right-click this setup_task.bat file and select 'Run as Administrator'.
+:: Must run as Administrator
+net session >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] This script must be run as Administrator!
+    echo Please right-click this file and "Run as Administrator".
+    echo.
+    pause
+    exit /b 1
 )
 
+:: -------------------------------------------------------
+:: STEP 1: Detect Python FULL PATH
+::   Task Scheduler does NOT inherit user PATH, so "python"
+::   alone causes error 0x80070002 (file not found).
+::
+::   IMPORTANT: This PC has TWO pythons:
+::     - C:\Users\SSD\AppData\Local\Microsoft\WindowsApps\python.exe  <- FAKE (Store stub, FAILS in Task Scheduler)
+::     - C:\Users\SSD\AppData\Local\Python\bin\python.exe             <- REAL (use this one)
+::   We hardcode the real one first, then fall back to other locations.
+:: -------------------------------------------------------
+set PYTHON_EXE=
+
+:: Priority 1: Known real Python on this PC (NOT the WindowsApps stub)
+if exist "C:\Users\SSD\AppData\Local\Python\bin\python.exe" (
+    set PYTHON_EXE=C:\Users\SSD\AppData\Local\Python\bin\python.exe
+    echo [OK] Using known real Python installation.
+)
+
+:: Priority 2: Scan 'where python' results but SKIP Microsoft Store stubs
+::   (WindowsApps\python.exe is a fake redirect that fails in Task Scheduler)
+if "!PYTHON_EXE!"=="" (
+    for /f "delims=" %%i in ('where python 2^>nul') do (
+        if "!PYTHON_EXE!"=="" (
+            echo %%i | findstr /i "WindowsApps" >nul 2>&1
+            if !ERRORLEVEL! NEQ 0 (
+                if exist "%%i" set PYTHON_EXE=%%i
+            )
+        )
+    )
+)
+
+:: Priority 3: Common install locations
+if "!PYTHON_EXE!"=="" (
+    for %%P in (
+        "C:\Users\SSD\AppData\Local\Python\bin\python.exe"
+        "%LocalAppData%\Python\bin\python.exe"
+        "%ProgramFiles%\Python314\python.exe"
+        "%ProgramFiles%\Python312\python.exe"
+        "%ProgramFiles%\Python311\python.exe"
+        "%ProgramFiles%\Python310\python.exe"
+        "%ProgramFiles%\Python39\python.exe"
+        "%LocalAppData%\Programs\Python\Python314\python.exe"
+        "%LocalAppData%\Programs\Python\Python313\python.exe"
+        "%LocalAppData%\Programs\Python\Python312\python.exe"
+        "%LocalAppData%\Programs\Python\Python311\python.exe"
+        "C:\Python314\python.exe"
+        "C:\Python312\python.exe"
+        "C:\Python311\python.exe"
+    ) do (
+        if "!PYTHON_EXE!"=="" if exist %%P set PYTHON_EXE=%%~P
+    )
+)
+
+:: Validate: make sure the detected python actually executes
+if not "!PYTHON_EXE!"=="" (
+    "!PYTHON_EXE!" --version >nul 2>&1
+    if !ERRORLEVEL! NEQ 0 (
+        echo [WARN] Detected Python at !PYTHON_EXE! but it failed to execute. Clearing...
+        set PYTHON_EXE=
+    )
+)
+
+if "!PYTHON_EXE!"=="" (
+    echo [ERROR] Python was not found on this system!
+    echo Install Python from https://www.python.org/downloads/
+    echo and ensure "Add to PATH" is checked during install.
+    echo.
+    pause
+    exit /b 1
+)
+echo [OK] Python found: !PYTHON_EXE!
+
+:: -------------------------------------------------------
+:: STEP 2: Verify sync script exists
+:: -------------------------------------------------------
+set SCRIPT_DIR=%~dp0
+set SCRIPT_PATH=%~dp0essl_client_sync.py
+
+if not exist "!SCRIPT_PATH!" (
+    echo [ERROR] Sync script not found: !SCRIPT_PATH!
+    echo Ensure essl_client_sync.py is in the same folder.
+    echo.
+    pause
+    exit /b 1
+)
+echo [OK] Script found: !SCRIPT_PATH!
+
+:: -------------------------------------------------------
+:: STEP 3: Ensure pyodbc and requests are installed
+:: -------------------------------------------------------
+echo.
+echo Checking Python packages (pyodbc, requests)...
+"!PYTHON_EXE!" -c "import pyodbc, requests" >nul 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo [INFO] Installing missing packages...
+    "!PYTHON_EXE!" -m pip install pyodbc requests
+    if %ERRORLEVEL% NEQ 0 (
+        echo [ERROR] Failed to install packages. Run manually:
+        echo   pip install pyodbc requests
+        pause
+        exit /b 1
+    )
+    echo [OK] Packages installed.
+) else (
+    echo [OK] pyodbc and requests are installed.
+)
+
+:: -------------------------------------------------------
+:: STEP 4: Create a wrapper BAT with hardcoded full paths
+::   This is the KEY fix -- the wrapper uses absolute paths
+::   so Task Scheduler can find everything even without PATH.
+:: -------------------------------------------------------
+set WRAPPER_BAT=%~dp0run_sync_task.bat
+(
+    echo @echo off
+    echo :: Auto-generated by setup_task.bat -- DO NOT EDIT MANUALLY
+    echo :: Full absolute paths are required for Task Scheduler to work
+    echo cd /d "!SCRIPT_DIR!"
+    echo "!PYTHON_EXE!" "!SCRIPT_PATH!"
+) > "!WRAPPER_BAT!"
+echo [OK] Wrapper BAT created: !WRAPPER_BAT!
+
+:: -------------------------------------------------------
+:: STEP 5: Register the scheduled task
+::   - SYSTEM account: most reliable, no password needed,
+::     no conflicting flags, works even when screen is locked
+::   - SQL Server access works via SQL Auth (UID/PWD in script)
+::     so SYSTEM account is perfectly fine here
+::   - Simple /tr without extra quoting to avoid XML parse errors
+:: -------------------------------------------------------
+echo.
+echo Registering scheduled task...
+schtasks /delete /tn "eSSL Attendance Syncer" /f >nul 2>&1
+
+schtasks /create /tn "eSSL Attendance Syncer" /tr "!WRAPPER_BAT!" /sc minute /mo 60 /ru SYSTEM /f
+
+if %ERRORLEVEL% NEQ 0 (
+    echo [ERROR] Could not register task. Ensure you are running as Administrator!
+    pause
+    exit /b 1
+)
+echo [OK] Task registered (runs as SYSTEM every 60 minutes).
+
+:: -------------------------------------------------------
+:: STEP 6: Trigger an immediate test run
+:: -------------------------------------------------------
+echo.
+echo Triggering immediate test sync (wait 8 seconds)...
+schtasks /run /tn "eSSL Attendance Syncer"
+timeout /t 8 /nobreak >nul
+
+echo.
+echo ===================================================
+echo  SETUP COMPLETE
+echo ===================================================
+echo  Python:   !PYTHON_EXE!
+echo  Script:   !SCRIPT_PATH!
+echo  Wrapper:  !WRAPPER_BAT!
+echo  Schedule: Every 60 minutes
+echo.
+echo  HOW TO VERIFY:
+echo  1. Open Task Scheduler (taskschd.msc)
+echo  2. Find "eSSL Attendance Syncer"
+echo  3. "Last Run Result" must show: 0x0
+echo  4. Check sync.log in this folder for activity.
+echo.
+echo  NOTE: If sync.log shows new entries, setup is working!
+echo ===================================================
 echo.
 pause
+endlocal
