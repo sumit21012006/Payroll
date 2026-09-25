@@ -2045,9 +2045,10 @@ app.get('/api/payroll/runs', async (req, res) => {
       }
     });
 
-    // Auto-calculate on the fly if runs are empty or if 0 worked days exist across all employees
+    // Auto-calculate on the fly if runs are empty, if no work recorded, or if PF is 0 for active employees
     const hasAnyWork = list.some(r => r.workedDays > 0);
-    if (list.length === 0 || !hasAnyWork) {
+    const hasMissingPf = list.some(r => r.workedDays > 0 && r.pfDeduction === 0);
+    if (list.length === 0 || !hasAnyWork || hasMissingPf) {
       await calculatePayrollForMonth(m, y);
       list = await prisma.payrollRun.findMany({
         where: filter,
@@ -2110,11 +2111,22 @@ app.get('/api/payroll/export', async (req, res) => {
     const m = parseInt(month as string);
     const y = parseInt(year as string);
 
-    const list = await prisma.payrollRun.findMany({
+    // Trigger recalculation if stored database records have 0 PF
+    let list = await prisma.payrollRun.findMany({
       where: { month: m, year: y },
       include: { employee: true },
       orderBy: { employeeId: 'asc' }
     });
+
+    const hasMissingPf = list.some(r => r.workedDays > 0 && r.pfDeduction === 0);
+    if (list.length === 0 || hasMissingPf) {
+      await calculatePayrollForMonth(m, y);
+      list = await prisma.payrollRun.findMany({
+        where: { month: m, year: y },
+        include: { employee: true },
+        orderBy: { employeeId: 'asc' }
+      });
+    }
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Payroll ${MONTH_NAMES[m - 1] || m} ${y}`);
@@ -2162,6 +2174,12 @@ app.get('/api/payroll/export', async (req, res) => {
     // Add data rows
     list.forEach((run) => {
       const isLoad = run.employee.salaryPerDay === 0.0;
+      const basicDa = Math.round(run.workedDays * 550.0);
+      const calculatedPf = Math.round(basicDa * 0.12);
+      const pfVal = run.pfDeduction > 0 ? run.pfDeduction : (run.workedDays > 0 ? calculatedPf : 0.0);
+      const totalDeductVal = pfVal + run.esicDeduction + run.ptDeduction + run.otherDeduction + run.accountAdvance + run.mlwlDeduction;
+      const netSalVal = Math.max(0, run.grossSalary - totalDeductVal);
+
       const row = worksheet.addRow({
         id: run.employeeId,
         name: run.employee.name,
@@ -2173,14 +2191,14 @@ app.get('/api/payroll/export', async (req, res) => {
         otPay: run.otPay,
         jobEarnings: run.jobEarnings,
         gross: run.grossSalary,
-        pf: run.pfDeduction,
+        pf: pfVal,
         esic: run.esicDeduction,
         pt: run.ptDeduction,
         canteen: run.otherDeduction,
         advance: run.accountAdvance,
         mlwl: run.mlwlDeduction,
-        deductions: run.totalDeductions,
-        net: run.netSalary
+        deductions: totalDeductVal,
+        net: netSalVal
       });
 
       // Format number format cells
