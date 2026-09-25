@@ -2368,17 +2368,36 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       return null;
     };
 
-    // Fetch attendance logs
-    const attendanceRecords = await prisma.attendance.findMany();
+    // Fetch attendance logs with employee relation for punchingCode lookup
+    const attendanceRecords = await prisma.attendance.findMany({
+      include: { employee: true }
+    });
 
-    // Group attendance logs by employeeId and punchingCode
+    // Normalize a date string to m/d/yyyy format for consistent comparison
+    const normalizeDate = (dateStr: string): string => {
+      if (!dateStr) return dateStr;
+      if (dateStr.includes('-')) {
+        const p = dateStr.split('-');
+        if (p.length === 3) return `${parseInt(p[1])}/${parseInt(p[2])}/${p[0]}`;
+      }
+      return dateStr;
+    };
+
+    // Group attendance logs by BOTH employeeId AND punchingCode as keys (dual indexing)
     const attendanceMap = new Map<string, any[]>();
     attendanceRecords.forEach(att => {
       const pInfo = parseMonthAndYear(att.date);
       if (pInfo && pInfo.month === m && pInfo.year === y) {
-        const list = attendanceMap.get(att.employeeId) || [];
-        list.push(att);
-        attendanceMap.set(att.employeeId, list);
+        // Index by employeeId
+        const listById = attendanceMap.get(att.employeeId) || [];
+        listById.push(att);
+        attendanceMap.set(att.employeeId, listById);
+        // Also index by punchingCode if available
+        if (att.employee?.punchingCode && att.employee.punchingCode !== att.employeeId) {
+          const listByCode = attendanceMap.get(att.employee.punchingCode) || [];
+          listByCode.push(att);
+          attendanceMap.set(att.employee.punchingCode, listByCode);
+        }
       }
     });
 
@@ -2513,14 +2532,24 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
 
       empAtt.forEach(att => {
         const st = (att.status || '').toUpperCase();
-        if (st.includes('PRESENT')) pCount++;
-        else if (st.includes('HALF') || (att.hoursWorked > 0 && att.hoursWorked < 4.0)) hdCount++;
-        else if (st.includes('LATE')) lateCount++;
+        const normalizedAttDate = normalizeDate(att.date);
+
+        // Skip absent records entirely
+        if (st === 'A' || st === 'ABSENT') return;
+
+        if (st.includes('PRESENT') || st === 'P') pCount++;
+        else if (st.includes('HALF') || st === 'HD') hdCount++;
+        else if (st.includes('LATE') || st === 'L') lateCount++;
+        else if (att.hoursWorked > 0 && att.hoursWorked < 4.0) hdCount++;
+        else if (att.hoursWorked >= 4.0) pCount++;
 
         // For Load Basis: Check idle fallback days (present in attendance but no job assigned)
-        if (isLoadBasis && !st.includes('ABSENT') && att.hoursWorked > 0) {
-          if (!empJobDates.has(att.date)) {
-            const isHalfDay = st.includes('HALF') || att.hoursWorked < 4.0;
+        if (isLoadBasis && att.hoursWorked > 0) {
+          // Check if the normalized date matches any job date
+          const hasJobOnDay = empJobDates.has(normalizedAttDate) ||
+            Array.from(empJobDates).some(jd => normalizeDate(jd) === normalizedAttDate);
+          if (!hasJobOnDay) {
+            const isHalfDay = st.includes('HALF') || st === 'HD' || att.hoursWorked < 4.0;
             const dayWage = isHalfDay ? (ratePerDay * 0.5) : ratePerDay;
             idleDailyPay += dayWage;
           }
@@ -2529,8 +2558,8 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
 
       const totalDaysWorked = pCount + lateCount + (hdCount * 0.5);
 
-      // Skip employees who did not work at all and have no tonnage pay in this month
-      if (totalDaysWorked === 0 && tonnagePay === 0 && !isLoadBasis) return;
+      // Skip employees who did not work at all, have no tonnage pay, and no idle pay
+      if (totalDaysWorked === 0 && tonnagePay === 0 && idleDailyPay === 0 && !isLoadBasis) return;
 
       const r = activeDataRowIdx;
       const advanceDeduction = emp.accountAdvance || 0;
