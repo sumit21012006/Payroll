@@ -725,12 +725,12 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     otPay = overtimeHours * (rate / 8.0);
     grossSalary = basicPay + otPay + jobEarnings;
 
-    basicDa = basicPay;
+    basicDa = Math.round(workedDays * 550.0);
     hra = 0.0;
     otherAllowance = 0.0;
 
-    // PF calculation disabled as requested
-    pfDeduction = 0.0;
+    // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
+    pfDeduction = Math.round(basicDa * 0.12);
     esicDeduction = 0.0;
 
     // PT slabs
@@ -756,11 +756,12 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     grossSalary = basicPay + jobEarnings;
 
     if (grossSalary > 0.0) {
-      basicDa = basicPay;
+      basicDa = Math.round(fallbackWorkedDays * 550.0);
       hra = 0.0;
       otherAllowance = 0.0;
 
-      pfDeduction = 0.0;
+      // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
+      pfDeduction = Math.round(basicDa * 0.12);
       esicDeduction = 0.0;
 
       if (grossSalary <= 7500.0) {
@@ -949,12 +950,12 @@ function calculateEmployeeWagesInMemory(
     otPay = overtimeHours * (rate / 8.0);
     grossSalary = basicPay + otPay + jobEarnings;
 
-    basicDa = basicPay;
+    basicDa = Math.round(workedDays * 550.0);
     hra = 0.0;
     otherAllowance = 0.0;
 
-    // PF calculation disabled as requested
-    pfDeduction = 0.0;
+    // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
+    pfDeduction = Math.round(basicDa * 0.12);
     esicDeduction = 0.0;
 
     // PT slabs
@@ -980,11 +981,12 @@ function calculateEmployeeWagesInMemory(
     grossSalary = basicPay + jobEarnings;
 
     if (grossSalary > 0.0) {
-      basicDa = basicPay;
+      basicDa = Math.round(fallbackWorkedDays * 550.0);
       hra = 0.0;
       otherAllowance = 0.0;
 
-      pfDeduction = 0.0;
+      // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
+      pfDeduction = Math.round(basicDa * 0.12);
       esicDeduction = 0.0;
 
       if (grossSalary <= 7500.0) {
