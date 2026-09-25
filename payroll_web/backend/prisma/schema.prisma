@@ -53,11 +53,12 @@ model JobLog {
   jobName     String
   totalTons   Float             // Represents units done (Tons or Pieces)
   ratePerTon  Float             // Represents rate per unit (Tons or Pieces)
-  unit        String            @default("Tons") // "Tons" or "Pieces"
-  castingName String?
-  castingQty  Int?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  unit            String            @default("Tons") // "Tons" or "Pieces"
+  castingName     String?
+  castingQty      Int?
+  deductionAmount Float             @default(0.0)
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 
   employees   JobLogEmployee[]
   @@index([date])

@@ -1414,10 +1414,14 @@ app.put('/api/employees/:id', async (req, res) => {
 
 // REST Route: Create supervisor Job Log and distribute payouts
 app.post('/api/jobs', async (req, res) => {
-  const { id, date, jobName, totalTons, ratePerTon, unit, castingName, castingQty, employeeIds } = req.body;
+  const { id, date, jobName, totalTons, ratePerTon, unit, castingName, castingQty, deductionAmount, employeeIds } = req.body;
 
   try {
-    const totalPayout = totalTons * ratePerTon;
+    const grossPayout = totalTons * ratePerTon;
+    const deduction = Math.max(0.0, parseFloat(deductionAmount) || 0.0);
+    // Split happens strictly on remaining amount after deduction
+    const totalPayout = Math.max(0.0, grossPayout - deduction);
+
     const crewEmployees = await prisma.employee.findMany({
       where: {
         OR: [
@@ -1508,6 +1512,7 @@ app.post('/api/jobs', async (req, res) => {
         unit,
         castingName,
         castingQty,
+        deductionAmount: deduction,
         employees: {
           create: crewEmployees.map(emp => {
             return {
@@ -1737,7 +1742,14 @@ app.get('/api/jobs/export', async (req, res) => {
         
         const castingMeta = job.castingName ? ` (${job.castingName})` : '';
         const qtyFormatted = job.unit === 'Tons' ? `${job.totalTons.toFixed(2)} Tons` : `${job.totalTons} Pcs`;
-        jobTitleCell.value = `🔨 ${displayJobName}${castingMeta}\n  ${qtyFormatted} @ ₹${job.ratePerTon}/${job.unit === 'Tons' ? 'Ton' : 'Pc'} (Total: ₹${(job.totalTons * job.ratePerTon).toLocaleString('en-IN')})`;
+        const grossPayout = job.totalTons * job.ratePerTon;
+        const dedAmount = (job as any).deductionAmount || 0.0;
+        const netPayout = Math.max(0.0, grossPayout - dedAmount);
+        const payoutText = dedAmount > 0
+          ? `(Gross: ₹${grossPayout.toLocaleString('en-IN')} | Ded: -₹${dedAmount.toLocaleString('en-IN')} | Net: ₹${netPayout.toLocaleString('en-IN')})`
+          : `(Total: ₹${grossPayout.toLocaleString('en-IN')})`;
+
+        jobTitleCell.value = `🔨 ${displayJobName}${castingMeta}\n  ${qtyFormatted} @ ₹${job.ratePerTon}/${job.unit === 'Tons' ? 'Ton' : 'Pc'} ${payoutText}`;
         
         jobTitleCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: 'FF4E342E' } };
         jobTitleCell.fill = {

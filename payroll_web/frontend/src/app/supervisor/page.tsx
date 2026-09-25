@@ -28,6 +28,7 @@ interface JobLog {
   jobName: string;
   totalTons: number;
   ratePerTon: number;
+  deductionAmount?: number;
   unit: string;
   castingName: string | null;
   castingQty: number | null;
@@ -89,6 +90,7 @@ export default function SupervisorDashboard() {
   const [isCustomJob, setIsCustomJob] = useState(false);
   const [totalTons, setTotalTons] = useState('');
   const [ratePerTon, setRatePerTon] = useState('320.0');
+  const [deductionAmount, setDeductionAmount] = useState('');
   const [unit, setUnit] = useState('Tons');
   const [crewRecommendation, setCrewRecommendation] = useState('HE Casting: Per Ton - ₹320/-');
   
@@ -330,7 +332,9 @@ export default function SupervisorDashboard() {
   const splitCalculations = useMemo(() => {
     const tons = parseFloat(totalTons) || 0.0;
     const rate = parseFloat(ratePerTon) || 0.0;
-    const totalJobValue = tons * rate;
+    const grossJobValue = tons * rate;
+    const deduction = parseFloat(deductionAmount) || 0.0;
+    const netJobValue = Math.max(0.0, grossJobValue - deduction);
 
     const crewEmployees = employees.filter(emp => selectedCrew.includes(emp.employeeId));
     const loadCrew = crewEmployees.filter(emp => emp.salaryPerDay === 0.0);
@@ -352,7 +356,7 @@ export default function SupervisorDashboard() {
       totalDayWagesToDeduct += isHalfDay ? (baseRate * 0.5) : baseRate;
     }
 
-    const remainingPool = totalJobValue - totalDayWagesToDeduct;
+    const remainingPool = Math.max(0.0, netJobValue - totalDayWagesToDeduct);
     const finalSplits = new Map<string, number>();
 
     // Set defaults: all day-basis crew get 0 split
@@ -411,7 +415,10 @@ export default function SupervisorDashboard() {
       : 0.0;
 
     return {
-      totalJobValue,
+      grossJobValue,
+      deductionAmount: deduction,
+      totalJobValue: netJobValue,
+      remainingPool,
       crewSize: selectedCrew.length,
       individualSplitPay,
       dayCrew,
@@ -432,7 +439,7 @@ export default function SupervisorDashboard() {
         };
       })
     };
-  }, [totalTons, ratePerTon, selectedCrew, employees, date, attendanceLogs]);
+  }, [totalTons, ratePerTon, deductionAmount, selectedCrew, employees, date, attendanceLogs]);
 
   // Log job operation submit
   const handleSubmitJob = async (e: React.FormEvent) => {
@@ -477,6 +484,7 @@ export default function SupervisorDashboard() {
     }
 
     const jobName = isCustomJob ? customJobName.trim() : selectedJobName;
+    const deductionVal = parseFloat(deductionAmount) || 0.0;
 
     const payload = {
       id: jobId,
@@ -484,6 +492,7 @@ export default function SupervisorDashboard() {
       jobName,
       totalTons: tonsVal,
       ratePerTon: rateVal,
+      deductionAmount: deductionVal,
       unit,
       castingName,
       castingQty,
@@ -502,6 +511,7 @@ export default function SupervisorDashboard() {
         // Reset form inputs
         setCustomJobName('');
         setTotalTons('');
+        setDeductionAmount('');
         setSelectedCastings([]);
         setSelectedCrew([]);
         setJobId(`JOB-${Math.floor(100000 + Math.random() * 900000)}`);
@@ -1053,8 +1063,8 @@ export default function SupervisorDashboard() {
                   </div>
                 )}
 
-                {/* Tons & Rate Input Fields */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Tons, Rate & Deduction Input Fields */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-semibold text-slate-700">
                       {unit === 'Tons' ? 'Total Tons Processed' : 'Total Pieces Processed'}
@@ -1088,6 +1098,22 @@ export default function SupervisorDashboard() {
                       onChange={(e) => setRatePerTon(e.target.value)}
                       placeholder="e.g. 320.0"
                       className="w-full h-10 bg-white border border-slate-300 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 rounded-lg px-3.5 text-slate-900 transition-all font-semibold"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs font-semibold text-slate-700">Job Deduction (₹)</label>
+                      <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">Optional</span>
+                    </div>
+                    <input
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={deductionAmount}
+                      onChange={(e) => setDeductionAmount(e.target.value)}
+                      placeholder="e.g. 500.0"
+                      className="w-full h-10 bg-white border border-slate-300 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 rounded-lg px-3.5 text-slate-900 transition-all font-semibold"
                     />
                   </div>
                 </div>
@@ -1230,14 +1256,24 @@ export default function SupervisorDashboard() {
               {/* Dynamic Split Payout Summary Card */}
               {selectedCrew.length > 0 && (
                 <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 text-xs text-slate-600 space-y-4 shadow-2xs">
-                  <div className="grid grid-cols-3 gap-2 text-center divide-x divide-slate-200">
+                  <div className={`grid ${splitCalculations.deductionAmount > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-2 text-center divide-x divide-slate-200`}>
                     <div>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase">Job Value</p>
-                      <p className="text-md font-bold text-slate-900 mt-1">₹{splitCalculations.totalJobValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase">Gross Value</p>
+                      <p className="text-md font-bold text-slate-900 mt-1">₹{splitCalculations.grossJobValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
                     </div>
+                    {splitCalculations.deductionAmount > 0 && (
+                      <div>
+                        <p className="text-[10px] text-rose-500 font-semibold uppercase">Deduction</p>
+                        <p className="text-md font-bold text-rose-600 mt-1">-₹{splitCalculations.deductionAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                      </div>
+                    )}
                     <div>
-                      <p className="text-[10px] text-slate-400 font-semibold uppercase">Crew Size</p>
-                      <p className="text-md font-bold text-slate-900 mt-1">{splitCalculations.crewSize} Workers</p>
+                      <p className="text-[10px] text-slate-400 font-semibold uppercase">{splitCalculations.deductionAmount > 0 ? 'Net Pool' : 'Crew Size'}</p>
+                      <p className="text-md font-bold text-slate-900 mt-1">
+                        {splitCalculations.deductionAmount > 0 
+                          ? `₹${splitCalculations.totalJobValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}` 
+                          : `${splitCalculations.crewSize} Workers`}
+                      </p>
                     </div>
                     <div>
                       <p className="text-[10px] text-indigo-600 font-semibold uppercase">Loader Split</p>
@@ -1247,6 +1283,11 @@ export default function SupervisorDashboard() {
 
                   <div className="border-t border-slate-200 pt-3 space-y-2">
                     <p className="text-[10px] font-bold text-slate-800 uppercase tracking-wider">Calculated Share Breakdown</p>
+                    {splitCalculations.deductionAmount > 0 && (
+                      <p className="text-[10px] text-amber-700 bg-amber-50 p-1.5 rounded border border-amber-200 font-medium">
+                        Deduction of ₹{splitCalculations.deductionAmount.toLocaleString('en-IN')} applied: Net Pool of ₹{splitCalculations.totalJobValue.toLocaleString('en-IN')} is being distributed.
+                      </p>
+                    )}
                     {splitCalculations.dayCrew.length > 0 && splitCalculations.loadCrew.length > 0 && (
                       <p className="text-[10px] text-slate-500 italic">
                         Note: Day-basis employees are paid their fixed daily rate first (₹{splitCalculations.totalDayWagesToDeduct.toFixed(0)} total); remaining pool is split among load-basis workers.
@@ -1335,7 +1376,9 @@ export default function SupervisorDashboard() {
             ) : (
               <div className="flex-1 overflow-y-auto pr-1 space-y-3">
                 {recentJobs.map(job => {
-                  const totalPayout = job.totalTons * job.ratePerTon;
+                  const grossPayout = job.totalTons * job.ratePerTon;
+                  const deduction = job.deductionAmount || 0.0;
+                  const netPayout = Math.max(0.0, grossPayout - deduction);
                   const loadEmployees = job.employees.filter(je => je.employee.salaryPerDay === 0.0);
                   const splitVal = loadEmployees.length > 0 ? job.employees.find(je => je.employee.salaryPerDay === 0.0)?.splitEarnings || 0 : 0;
                   
@@ -1367,8 +1410,23 @@ export default function SupervisorDashboard() {
                           <p className="font-bold text-slate-800 mt-0.5">₹{job.ratePerTon.toFixed(2)}</p>
                         </div>
                         <div className="col-span-2 border-t border-slate-100 pt-1.5 mt-0.5">
-                          <p className="text-slate-400 font-semibold text-[10px] uppercase">Total Job Payout</p>
-                          <p className="font-bold text-indigo-600 text-xs mt-0.5">₹{totalPayout.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-slate-400 font-semibold text-[10px] uppercase">
+                                {deduction > 0 ? 'Net Job Payout' : 'Total Job Payout'}
+                              </p>
+                              <p className="font-bold text-indigo-600 text-xs mt-0.5">
+                                ₹{netPayout.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                              </p>
+                            </div>
+                            {deduction > 0 && (
+                              <div className="text-right">
+                                <span className="text-[10px] text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-semibold">
+                                  Gross: ₹{grossPayout.toLocaleString('en-IN', { maximumFractionDigits: 0 })} | Ded: -₹{deduction.toLocaleString('en-IN', { maximumFractionDigits: 0 })}
+                                </span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
 
