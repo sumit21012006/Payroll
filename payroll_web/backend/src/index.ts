@@ -561,7 +561,39 @@ app.get('/api/auth/employee-preview/*', async (req, res) => {
 // REST API SYSTEM ENDPOINTS
 // -------------------------------------------------------------
 
-// Core Calculation Engine function matching Flutter logic
+// Helper for format-agnostic date parsing
+function parseMonthAndYear(dateStr: string): { month: number; year: number } | null {
+  if (!dateStr) return null;
+  if (dateStr.includes('-')) {
+    const p = dateStr.split('-');
+    if (p.length === 3) return { month: parseInt(p[1], 10), year: parseInt(p[0], 10) };
+  }
+  if (dateStr.includes('/')) {
+    const p = dateStr.split('/');
+    if (p.length === 3) {
+      const v0 = parseInt(p[0], 10), v1 = parseInt(p[1], 10), v2 = parseInt(p[2], 10);
+      if (v2 > 1000 && v0 >= 1 && v0 <= 12) return { month: v0, year: v2 };
+      if (v0 > 1000) return { month: v1, year: v0 };
+    }
+  }
+  return null;
+}
+
+// Normalize a date string to m/d/yyyy format for consistent comparison
+function normalizeDate(dateStr: string): string {
+  if (!dateStr) return dateStr;
+  if (dateStr.includes('-')) {
+    const p = dateStr.split('-');
+    if (p.length === 3) return `${parseInt(p[1], 10)}/${parseInt(p[2], 10)}/${p[0]}`;
+  }
+  if (dateStr.includes('/')) {
+    const p = dateStr.split('/');
+    if (p.length === 3) return `${parseInt(p[0], 10)}/${parseInt(p[1], 10)}/${parseInt(p[2], 10)}`;
+  }
+  return dateStr;
+}
+
+// Core Calculation Engine function matching Flutter & Statutory logic
 async function calculateEmployeeWages(employeeId: string, month: number, year: number, settings?: any) {
   const employee = await prisma.employee.findUnique({
     where: { employeeId }
@@ -571,22 +603,19 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
 
   const isLoadBasis = employee.salaryPerDay === 0.0;
   const shiftHours = settings?.shiftHours ? parseFloat(settings.shiftHours) : 9.0;
+  const empKeys = Array.from(new Set([employee.employeeId, employee.punchingCode].filter(Boolean))) as string[];
 
-  // Retrieve attendance records for the month
-  const matchPattern = `${month}/`;
+  // Retrieve attendance records for the employee (matching both employeeId and punchingCode)
   const attendance = await prisma.attendance.findMany({
     where: {
-      employeeId,
-      date: {
-        startsWith: matchPattern
-      }
+      employeeId: { in: empKeys }
     }
   });
 
-  // Filter valid dates for the specific year
+  // Filter valid dates for the specific month and year
   const monthLogs = attendance.filter(log => {
-    const parts = log.date.split('/');
-    return parts.length === 3 && parseInt(parts[2]) === year;
+    const pInfo = parseMonthAndYear(log.date);
+    return pInfo && pInfo.month === month && pInfo.year === year;
   });
 
   let presentDays = 0;
@@ -625,43 +654,21 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     }
   }
 
-  const daysLogged = monthLogs.length;
-
-  // Calculate missing weekdays as absent days (excl. weekends)
-  const weekdays: string[] = [];
-  const daysInMonth = new Date(year, month, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateObj = new Date(year, month - 1, d);
-    if (dateObj.getDay() !== 0 && dateObj.getDay() !== 6) { // Exclude Sat (6) and Sun (0)
-      weekdays.push(`${month}/${d}/${year}`);
-    }
-  }
-
-  const loggedWeekdays = monthLogs
-    .filter(log => weekdays.includes(log.date))
-    .map(log => log.date);
-
-  const absentDays = weekdays.length - new Set(loggedWeekdays).size;
-
   // Retrieve Supervisor Job Log Splits for this employee
   const jobAllocations = await prisma.jobLogEmployee.findMany({
     where: {
-      employeeId,
-      jobLog: {
-        date: {
-          startsWith: matchPattern
-        }
-      }
+      employeeId: { in: empKeys }
     },
     include: {
       jobLog: true
     }
   });
 
-  // Filter by year
+  // Filter jobs for month and year
   const yearJobs = jobAllocations.filter(ja => {
-    const parts = ja.jobLog.date.split('/');
-    return parts.length === 3 && parseInt(parts[2]) === year;
+    if (!ja.jobLog) return false;
+    const pInfo = parseMonthAndYear(ja.jobLog.date);
+    return pInfo && pInfo.month === month && pInfo.year === year;
   });
 
   const jobEarnings = yearJobs.reduce((sum, item) => sum + item.splitEarnings, 0.0);
@@ -703,7 +710,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
         continue;
       }
       // Check if loader was assigned to any job on this date
-      const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
+      const hasJobOnDate = yearJobs.some(ja => normalizeDate(ja.jobLog.date) === normalizeDate(log.date));
       if (!hasJobOnDate) {
         // Idle loader! Give fallback day wage based on employee's stored rate & 8-hour system
         const workedFraction = log.hoursWorked > 0 ? Math.min(1.0, log.hoursWorked / 8.0) : 1.0;
@@ -715,11 +722,13 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   }
 
   const mlwlDeduction = (month === 6 || month === 12) ? 25.0 : 0.0;
-  const accountAdvance = employee.accountAdvance;
+  const accountAdvance = employee.accountAdvance || 0.0;
+  const attendedDays = (presentDays + lateDays + overtimeDays) + (halfDays * 0.5);
+  const totalDaysWorked = totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : attendedDays;
 
   if (!isLoadBasis) {
     const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : (employee.deductionPerDay > 0 ? employee.deductionPerDay : 0.0);
-    const workedDays = totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5));
+    const workedDays = totalDaysWorked;
 
     basicPay = workedDays * rate;
     otPay = overtimeHours * (rate / 8.0);
@@ -731,9 +740,10 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
 
     // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
     pfDeduction = Math.round(basicDa * 0.12);
-    esicDeduction = 0.0;
+    // Statutory ESIC: 0.75% of Gross Salary
+    esicDeduction = grossSalary > 0.0 ? Math.round(grossSalary * 0.0075) : 0.0;
 
-    // PT slabs
+    // PT slabs matching Statutory Report
     if (grossSalary <= 7500.0) {
       ptDeduction = 0.0;
     } else if (grossSalary <= 10000.0) {
@@ -748,22 +758,24 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     }
 
     totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
-    netSalary = grossSalary - totalDeductions;
+    netSalary = Math.max(0.0, grossSalary - totalDeductions);
   } else {
     // Load Basis Employee
     basicPay = idleFallbackWages;
     otPay = 0.0;
     grossSalary = basicPay + jobEarnings;
 
-    if (grossSalary > 0.0) {
-      basicDa = Math.round(fallbackWorkedDays * 550.0);
+    if (grossSalary > 0.0 || totalDaysWorked > 0.0) {
+      basicDa = Math.round(totalDaysWorked * 550.0);
       hra = 0.0;
       otherAllowance = 0.0;
 
       // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
       pfDeduction = Math.round(basicDa * 0.12);
-      esicDeduction = 0.0;
+      // Statutory ESIC: 0.75% of Gross Salary
+      esicDeduction = grossSalary > 0.0 ? Math.round(grossSalary * 0.0075) : 0.0;
 
+      // PT slabs matching Statutory Report
       if (grossSalary <= 7500.0) {
         ptDeduction = 0.0;
       } else if (grossSalary <= 10000.0) {
@@ -772,7 +784,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
         ptDeduction = 200.0;
       }
 
-      otherDeduction = 500.0; // Canteen flat deduction
+      otherDeduction = grossSalary > 0.0 ? 500.0 : 0.0; // Canteen flat deduction
     } else {
       basicDa = 0.0;
       hra = 0.0;
@@ -784,10 +796,10 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
     }
 
     totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
-    netSalary = grossSalary - totalDeductions;
+    netSalary = Math.max(0.0, grossSalary - totalDeductions);
   }
 
-  const finalWorkedDays = isLoadBasis ? Number(fallbackWorkedDays.toFixed(2)) : (totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5)));
+  const finalWorkedDays = totalDaysWorked;
 
   return {
     employeeId,
@@ -813,7 +825,7 @@ async function calculateEmployeeWages(employeeId: string, month: number, year: n
   };
 }
 
-// Optimized In-Memory Calculation Engine matching calculateEmployeeWages
+// Optimized In-Memory Calculation Engine matching calculateEmployeeWages & Statutory logic
 function calculateEmployeeWagesInMemory(
   employee: any,
   attendanceLogs: any[],
@@ -825,10 +837,10 @@ function calculateEmployeeWagesInMemory(
   const isLoadBasis = employee.salaryPerDay === 0.0;
   const shiftHours = settings?.shiftHours ? parseFloat(settings.shiftHours) : 9.0;
 
-  // Retrieve attendance records for the month and year
+  // Retrieve attendance records for the month and year using format-agnostic parsing
   const monthLogs = attendanceLogs.filter(log => {
-    const parts = log.date.split('/');
-    return parts.length === 3 && parseInt(parts[0]) === month && parseInt(parts[2]) === year;
+    const pInfo = parseMonthAndYear(log.date);
+    return pInfo && pInfo.month === month && pInfo.year === year;
   });
 
   let presentDays = 0;
@@ -867,26 +879,11 @@ function calculateEmployeeWagesInMemory(
     }
   }
 
-  // Calculate missing weekdays as absent days (excl. weekends)
-  const weekdays: string[] = [];
-  const daysInMonth = new Date(year, month - 0, 0).getDate();
-  for (let d = 1; d <= daysInMonth; d++) {
-    const dateObj = new Date(year, month - 1, d);
-    if (dateObj.getDay() !== 0 && dateObj.getDay() !== 6) { // Exclude Sat (6) and Sun (0)
-      weekdays.push(`${month}/${d}/${year}`);
-    }
-  }
-
-  const loggedWeekdays = monthLogs
-    .filter(log => weekdays.includes(log.date))
-    .map(log => log.date);
-
-  const absentDays = weekdays.length - new Set(loggedWeekdays).size;
-
   // Retrieve Supervisor Job Log Splits for this employee from pre-fetched allocations
   const yearJobs = jobAllocations.filter(ja => {
-    const parts = ja.jobLog.date.split('/');
-    return parts.length === 3 && parseInt(parts[0]) === month && parseInt(parts[2]) === year;
+    if (!ja.jobLog) return false;
+    const pInfo = parseMonthAndYear(ja.jobLog.date);
+    return pInfo && pInfo.month === month && pInfo.year === year;
   });
 
   const jobEarnings = yearJobs.reduce((sum, item) => sum + item.splitEarnings, 0.0);
@@ -928,7 +925,7 @@ function calculateEmployeeWagesInMemory(
         continue;
       }
       // Check if loader was assigned to any job on this date
-      const hasJobOnDate = yearJobs.some(ja => ja.jobLog.date === log.date);
+      const hasJobOnDate = yearJobs.some(ja => normalizeDate(ja.jobLog.date) === normalizeDate(log.date));
       if (!hasJobOnDate) {
         // Idle loader! Give fallback day wage based on employee's stored rate & 8-hour system
         const workedFraction = log.hoursWorked > 0 ? Math.min(1.0, log.hoursWorked / 8.0) : 1.0;
@@ -940,11 +937,13 @@ function calculateEmployeeWagesInMemory(
   }
 
   const mlwlDeduction = (month === 6 || month === 12) ? 25.0 : 0.0;
-  const accountAdvance = employee.accountAdvance;
+  const accountAdvance = employee.accountAdvance || 0.0;
+  const attendedDays = (presentDays + lateDays + overtimeDays) + (halfDays * 0.5);
+  const totalDaysWorked = totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : attendedDays;
 
   if (!isLoadBasis) {
     const rate = employee.salaryPerDay > 0 ? employee.salaryPerDay : (employee.deductionPerDay > 0 ? employee.deductionPerDay : 0.0);
-    const workedDays = totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5));
+    const workedDays = totalDaysWorked;
 
     basicPay = workedDays * rate;
     otPay = overtimeHours * (rate / 8.0);
@@ -956,9 +955,10 @@ function calculateEmployeeWagesInMemory(
 
     // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
     pfDeduction = Math.round(basicDa * 0.12);
-    esicDeduction = 0.0;
+    // Statutory ESIC: 0.75% of Gross Salary
+    esicDeduction = grossSalary > 0.0 ? Math.round(grossSalary * 0.0075) : 0.0;
 
-    // PT slabs
+    // PT slabs matching Statutory Report
     if (grossSalary <= 7500.0) {
       ptDeduction = 0.0;
     } else if (grossSalary <= 10000.0) {
@@ -973,22 +973,24 @@ function calculateEmployeeWagesInMemory(
     }
 
     totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
-    netSalary = grossSalary - totalDeductions;
+    netSalary = Math.max(0.0, grossSalary - totalDeductions);
   } else {
     // Load Basis Employee
     basicPay = idleFallbackWages;
     otPay = 0.0;
     grossSalary = basicPay + jobEarnings;
 
-    if (grossSalary > 0.0) {
-      basicDa = Math.round(fallbackWorkedDays * 550.0);
+    if (grossSalary > 0.0 || totalDaysWorked > 0.0) {
+      basicDa = Math.round(totalDaysWorked * 550.0);
       hra = 0.0;
       otherAllowance = 0.0;
 
       // Statutory PF calculation matching Statutory Report: 12% of (Worked Days * 550)
       pfDeduction = Math.round(basicDa * 0.12);
-      esicDeduction = 0.0;
+      // Statutory ESIC: 0.75% of Gross Salary
+      esicDeduction = grossSalary > 0.0 ? Math.round(grossSalary * 0.0075) : 0.0;
 
+      // PT slabs matching Statutory Report
       if (grossSalary <= 7500.0) {
         ptDeduction = 0.0;
       } else if (grossSalary <= 10000.0) {
@@ -997,7 +999,7 @@ function calculateEmployeeWagesInMemory(
         ptDeduction = 200.0;
       }
 
-      otherDeduction = 500.0; // Canteen flat deduction
+      otherDeduction = grossSalary > 0.0 ? 500.0 : 0.0; // Canteen flat deduction
     } else {
       basicDa = 0.0;
       hra = 0.0;
@@ -1009,10 +1011,10 @@ function calculateEmployeeWagesInMemory(
     }
 
     totalDeductions = pfDeduction + esicDeduction + ptDeduction + otherDeduction + accountAdvance + mlwlDeduction;
-    netSalary = grossSalary - totalDeductions;
+    netSalary = Math.max(0.0, grossSalary - totalDeductions);
   }
 
-  const finalWorkedDays = isLoadBasis ? Number(fallbackWorkedDays.toFixed(2)) : (totalWorkedFraction > 0 ? Number(totalWorkedFraction.toFixed(2)) : ((presentDays + lateDays) + (halfDays * 0.5)));
+  const finalWorkedDays = totalDaysWorked;
 
   return {
     basicPay,
@@ -1921,60 +1923,65 @@ async function calculatePayrollForMonth(parsedMonth: number, parsedYear: number,
   };
 
   const startTime = Date.now();
-  const employees = await prisma.employee.findMany();
-
-  const matchPattern = `${parsedMonth}/`;
-  const allAttendance = await prisma.attendance.findMany({
-    where: {
-      date: {
-        startsWith: matchPattern
-      }
-    }
+  const employees = await prisma.employee.findMany({
+    orderBy: { employeeId: 'asc' }
   });
 
-  const monthLogs = allAttendance.filter(log => {
-    const parts = log.date.split('/');
-    return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+  // Fetch attendance with employee relation for dual-key lookup (employeeId & punchingCode)
+  const allAttendance = await prisma.attendance.findMany({
+    include: { employee: true }
   });
 
   const attendanceByEmployee: Record<string, any[]> = {};
-  monthLogs.forEach(log => {
-    if (!attendanceByEmployee[log.employeeId]) {
-      attendanceByEmployee[log.employeeId] = [];
-    }
-    attendanceByEmployee[log.employeeId].push(log);
-  });
-
-  const allJobAllocations = await prisma.jobLogEmployee.findMany({
-    where: {
-      jobLog: {
-        date: {
-          startsWith: matchPattern
-        }
+  allAttendance.forEach(log => {
+    const pInfo = parseMonthAndYear(log.date);
+    if (pInfo && pInfo.month === parsedMonth && pInfo.year === parsedYear) {
+      if (!attendanceByEmployee[log.employeeId]) {
+        attendanceByEmployee[log.employeeId] = [];
       }
-    },
-    include: {
-      jobLog: true
+      attendanceByEmployee[log.employeeId].push(log);
+
+      if (log.employee?.punchingCode && log.employee.punchingCode !== log.employeeId) {
+        if (!attendanceByEmployee[log.employee.punchingCode]) {
+          attendanceByEmployee[log.employee.punchingCode] = [];
+        }
+        attendanceByEmployee[log.employee.punchingCode].push(log);
+      }
     }
   });
 
-  const yearJobs = allJobAllocations.filter(ja => {
-    const parts = ja.jobLog.date.split('/');
-    return parts.length === 3 && parseInt(parts[2]) === parsedYear;
+  // Fetch job allocations with jobLog and employee for dual-key lookup
+  const allJobAllocations = await prisma.jobLogEmployee.findMany({
+    include: {
+      jobLog: true,
+      employee: true
+    }
   });
 
   const jobsByEmployee: Record<string, any[]> = {};
-  yearJobs.forEach(ja => {
-    if (!jobsByEmployee[ja.employeeId]) {
-      jobsByEmployee[ja.employeeId] = [];
+  allJobAllocations.forEach(ja => {
+    if (!ja.jobLog) return;
+    const pInfo = parseMonthAndYear(ja.jobLog.date);
+    if (pInfo && pInfo.month === parsedMonth && pInfo.year === parsedYear) {
+      const keys = Array.from(new Set([
+        ja.employeeId,
+        ja.employee ? ja.employee.punchingCode : '',
+        ja.employee ? ja.employee.employeeId : ''
+      ].filter(Boolean)));
+
+      keys.forEach(k => {
+        if (!jobsByEmployee[k]) {
+          jobsByEmployee[k] = [];
+        }
+        jobsByEmployee[k].push(ja);
+      });
     }
-    jobsByEmployee[ja.employeeId].push(ja);
   });
 
   const runs: any[] = [];
   for (const emp of employees) {
-    const empAttendance = attendanceByEmployee[emp.employeeId] || [];
-    const empJobs = jobsByEmployee[emp.employeeId] || [];
+    const empAttendance = attendanceByEmployee[emp.employeeId] || (emp.punchingCode ? attendanceByEmployee[emp.punchingCode] : []) || [];
+    const empJobs = jobsByEmployee[emp.employeeId] || (emp.punchingCode ? jobsByEmployee[emp.punchingCode] : []) || [];
 
     const calc = calculateEmployeeWagesInMemory(emp, empAttendance, empJobs, parsedMonth, parsedYear, settings);
 
@@ -2111,22 +2118,13 @@ app.get('/api/payroll/export', async (req, res) => {
     const m = parseInt(month as string);
     const y = parseInt(year as string);
 
-    // Trigger recalculation if stored database records have 0 PF
-    let list = await prisma.payrollRun.findMany({
+    // Dynamic recalculation on export so live attendance and supervisor jobs are immediately reflected
+    await calculatePayrollForMonth(m, y);
+    const list = await prisma.payrollRun.findMany({
       where: { month: m, year: y },
       include: { employee: true },
       orderBy: { employeeId: 'asc' }
     });
-
-    const hasMissingPf = list.some(r => r.workedDays > 0 && r.pfDeduction === 0);
-    if (list.length === 0 || hasMissingPf) {
-      await calculatePayrollForMonth(m, y);
-      list = await prisma.payrollRun.findMany({
-        where: { month: m, year: y },
-        include: { employee: true },
-        orderBy: { employeeId: 'asc' }
-      });
-    }
 
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet(`Payroll ${MONTH_NAMES[m - 1] || m} ${y}`);
@@ -2177,7 +2175,13 @@ app.get('/api/payroll/export', async (req, res) => {
       const basicDa = Math.round(run.workedDays * 550.0);
       const calculatedPf = Math.round(basicDa * 0.12);
       const pfVal = run.pfDeduction > 0 ? run.pfDeduction : (run.workedDays > 0 ? calculatedPf : 0.0);
-      const totalDeductVal = pfVal + run.esicDeduction + run.ptDeduction + run.otherDeduction + run.accountAdvance + run.mlwlDeduction;
+      const calculatedEsic = run.grossSalary > 0 ? Math.round(run.grossSalary * 0.0075) : 0.0;
+      const esicVal = run.esicDeduction > 0 ? run.esicDeduction : calculatedEsic;
+      const ptVal = run.ptDeduction;
+      const canteenVal = run.otherDeduction;
+      const advanceVal = run.accountAdvance;
+      const mlwlVal = run.mlwlDeduction;
+      const totalDeductVal = pfVal + esicVal + ptVal + canteenVal + advanceVal + mlwlVal;
       const netSalVal = Math.max(0, run.grossSalary - totalDeductVal);
 
       const row = worksheet.addRow({
@@ -2192,11 +2196,11 @@ app.get('/api/payroll/export', async (req, res) => {
         jobEarnings: run.jobEarnings,
         gross: run.grossSalary,
         pf: pfVal,
-        esic: run.esicDeduction,
-        pt: run.ptDeduction,
-        canteen: run.otherDeduction,
-        advance: run.accountAdvance,
-        mlwl: run.mlwlDeduction,
+        esic: esicVal,
+        pt: ptVal,
+        canteen: canteenVal,
+        advance: advanceVal,
+        mlwl: mlwlVal,
         deductions: totalDeductVal,
         net: netSalVal
       });
@@ -2350,38 +2354,10 @@ app.get('/api/payroll/statutory-report', async (req, res) => {
       orderBy: { name: 'asc' }
     });
 
-    // Helper for format-agnostic date parsing
-    const parseMonthAndYear = (dateStr: string): { month: number; year: number } | null => {
-      if (!dateStr) return null;
-      if (dateStr.includes('-')) {
-        const p = dateStr.split('-');
-        if (p.length === 3) return { month: parseInt(p[1], 10), year: parseInt(p[0], 10) };
-      }
-      if (dateStr.includes('/')) {
-        const p = dateStr.split('/');
-        if (p.length === 3) {
-          const v0 = parseInt(p[0], 10), v1 = parseInt(p[1], 10), v2 = parseInt(p[2], 10);
-          if (v2 > 1000 && v0 >= 1 && v0 <= 12) return { month: v0, year: v2 };
-          if (v0 > 1000) return { month: v1, year: v0 };
-        }
-      }
-      return null;
-    };
-
     // Fetch attendance logs with employee relation for punchingCode lookup
     const attendanceRecords = await prisma.attendance.findMany({
       include: { employee: true }
     });
-
-    // Normalize a date string to m/d/yyyy format for consistent comparison
-    const normalizeDate = (dateStr: string): string => {
-      if (!dateStr) return dateStr;
-      if (dateStr.includes('-')) {
-        const p = dateStr.split('-');
-        if (p.length === 3) return `${parseInt(p[1])}/${parseInt(p[2])}/${p[0]}`;
-      }
-      return dateStr;
-    };
 
     // Group attendance logs by BOTH employeeId AND punchingCode as keys (dual indexing)
     const attendanceMap = new Map<string, any[]>();
