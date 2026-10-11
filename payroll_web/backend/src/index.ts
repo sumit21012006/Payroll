@@ -458,8 +458,8 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx', '/api/sync/essl-script'], async
 // -------------------------------------------------------------
 app.post('/api/auth/login', async (req, res) => {
   const { role, passcode, employeeId } = req.body;
-  const adminPass = process.env.ADMIN_PASSCODE || 'admin';
-  const supervisorPass = process.env.SUPERVISOR_PASSCODE || 'supervisor';
+  const adminPass = process.env.ADMIN_PASSCODE || 'Admin@2026';
+  const supervisorPass = process.env.SUPERVISOR_PASSCODE || 'Supervisor@2026';
   const systemToken = process.env.API_ACCESS_KEY || 'default-secure-key-2106';
 
   if (role === 'admin') {

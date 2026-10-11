@@ -309,13 +309,6 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Cheatsheet Panel */}
-        <div className={`text-[10px] leading-relaxed p-4 border rounded-xl space-y-1 ${theme === 'dark' ? 'bg-zinc-950/30 border-zinc-800 text-zinc-455' : 'bg-slate-50 border-slate-200 text-slate-500'
-          }`}>
-          <p className={`font-bold uppercase tracking-wider font-mono ${theme === 'dark' ? 'text-zinc-400' : 'text-indigo-600'}`}>Demo Credentials:</p>
-          <p>Admin passcode: <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"admin"</strong> | Supervisor: <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"supervisor"</strong></p>
-          <p>Employees: Badge ID <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"KFIL/L1-406"</strong> or <strong className={theme === 'dark' ? 'text-zinc-350' : 'text-slate-700'}>"KFIL/L1-410"</strong></p>
-        </div>
 
         {/* Footer */}
         <p className={`text-[8px] font-mono uppercase tracking-widest text-center ${theme === 'dark' ? 'text-zinc-500' : 'text-slate-400'}`}>
