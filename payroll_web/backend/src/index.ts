@@ -249,6 +249,7 @@ app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to the KFIL Solapur Web Payroll API!',
     status: 'online',
+    version: '2026-10-11-v2',
     database: 'connected (Supabase PostgreSQL)',
     environment: process.env.NODE_ENV || 'development',
     availableEndpoints: [
@@ -458,8 +459,10 @@ app.post(['/iclock/cdata', '/iclock/cdata.aspx', '/api/sync/essl-script'], async
 // -------------------------------------------------------------
 app.post('/api/auth/login', async (req, res) => {
   const { role, passcode, employeeId } = req.body;
-  const adminPass = process.env.ADMIN_PASSCODE || 'Admin@2026';
-  const supervisorPass = process.env.SUPERVISOR_PASSCODE || 'Supervisor@2026';
+  const envAdmin = process.env.ADMIN_PASSCODE;
+  const adminPass = (envAdmin && envAdmin !== 'admin') ? envAdmin : 'Admin@2026';
+  const envSupervisor = process.env.SUPERVISOR_PASSCODE;
+  const supervisorPass = (envSupervisor && envSupervisor !== 'supervisor') ? envSupervisor : 'Supervisor@2026';
   const systemToken = process.env.API_ACCESS_KEY || 'default-secure-key-2106';
 
   if (role === 'admin') {
